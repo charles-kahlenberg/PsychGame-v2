@@ -1,0 +1,89 @@
+Absolute Threshold - Minimum energy needed in external stimulus for it to be perceived by sensory system
+Action Potential - Electrical firing of neurons
+Addiction - Psychological or physical dependence
+Adolescence - Age where puberty starts
+Albert Bandura - Coined social learning theory, which states that observations and modeling play a role in how people learn
+All-or-none Principle - Neurons need a certain level of signal in order to fire, and when that level is reached, they fire a prescribed amount
+Amnesia - An inability to either create new memories or to retrieve old memories as a result of brain injury or disease
+Attachment - Our strong early emotional development between infants and their caregivers. Secure attachments lead to later psychological well-being.
+Basilar Membrane - The membrane that goes through the cochlea, where our hair cells are placed
+Brain Plasticity - The brain's ability to reorganize itself by forming new neural connections
+Broca?s Area - Area in the left frontal lobe of brain responsible for speech production
+Change Blindness - A psychological phenomenon where people fail to notice significant changes in their environment
+Chunking - Grouping information for easy recall
+Circadian Rhythms - psychological and physical processes that follow a 24-hour sleep-wake cycle
+Classical Conditioning - Neutral stimulus becomes associated with response
+Conditioned Response - Behavior as a result of constant exposure to pairing a neutral stimulus with the unconditioned response
+Cones - The photoreceptors that function best in brighter light and allow for color vision
+Confounding Variable - An outside factor that is potentially the true cause of the relationship seen between variables
+Consciousness - The awareness of our thoughts, feelings, sensations, and surroundings, enabling us to experience and interact with the world around us
+Conservation - When toddlers know events are reversible
+Consolidation - Process by which shorter terms memories are stored into long term memory
+Continuous Reinforcement - Providing reinforcement after every desired behavior
+Correlation - Exists when one variable increases and another variable also consistently either increases or decreases.
+Critical Period - A specific time window during development where the brain is sensitive to certain stimuli and experiences
+Demand Characteristics - The participant behaves in a particular way in an experiment due to expectations, not the manipulation
+Dependent Variable - The variable that the experimenter measures
+Depth Perception - Seeing in three dimensions
+Dopamine - A neurotransmitter that makes you feel good or rewarded; also involved in motor control
+Double-blind Study - Neither the participant nor the researcher knows which group is the treatment or the placebo
+Dreams - Visual experience during sleep
+Egocentrism - Seeing only from one?s own perspective
+Elizabeth Loftus - Memory researcher who did much work examining the fallibility of eyewitness testimony and recovered memories
+Experiment - Testing your independent and dependent variables, and having a control and experimental group
+Explicit Memory - Long-term memories that are able to be recalled, usually general knowledge or information about our personal experiences
+Extinction - Lack of reinforcement causing conditioned response to disappear
+False Memories - Memories of events or details that did not occur or are distorted
+Flow State - A highly focused mental state where a person is fully immersed and involved in an activity
+Formal Operations Stage - Logical thinking begins
+Fovea - Center part of the retina with entirely cones allowing for detailed vision
+Hallucinations - False sensory experiences
+Hawthorne Effect - Individuals alter their behaviors or performance due to being aware they are being studied
+Hippocampus - A subcortical brain region that maintains our working memory
+Homeostasis - The body's ability to maintain stable internal conditions
+Hypothesis - A testable prediction
+Imprinting - A deep level of social bonding to a caregiver that is innate and genetically programmed
+Independent Variable - The variable that the experimenter manipulates in a true experiment
+Learned Helplessness - A condition where individuals believe they have no control over their situation
+Limbic System - The forebrain structures regulate automatic and endocrine functioning, as well as aid in the functions of memory and emotion
+Long-term Memory - Has the capacity to store large amounts of information that can retrieved into working memory
+Mindfulness - The practice of paying attention to the present moment to promote mental clarity and well-being
+Mnemonic Device - Method to help remember
+Neurons - The special cells in our body that can quickly communicate with one another that underlie all of our sensations, thinking, and behavior
+Neurotransmitters - Chemicals that communicate between neurons
+Neutral Stimulus - Stimulus that when presented alone does not elicit an automatic response
+Night Terrors - Occurring during non-rem sleep a person can walk around speaking incoherently and then wake from sleep in a terrified state
+Object Permanence - The ability to understand an object continues to exist even when out of sight
+Occipital Lobe - One of the four brain lobes is the brain in the back responsible for the beginning stages of vision
+Phantom Limb Pain - When a person loses a limb they sometimes still feel pain in that missing body part
+Placebo Effect - The belief that you were treated causing improvement
+Positive Reinforcement - Increasing probability of response
+Preconventional Level - The first step is Kohlberg's theory. Focused on avoiding punishment or gaining rewards
+Priming - When memory retrieval improves due to an earlier exposure to the same or a similar stimulus
+Puberty - Sexual maturation begins and signals the start of adolescence
+Qualitative Research - Research that emphasizes the characteristics of what?s being study, not the numerical differences
+Random Assignment - A way to assign participants to groups where there?s an equal likelihood of being in any group
+Recency Effect - The tendency to remember the most recent information or events more easily than earlier ones
+REM Sleep - Stage in sleep with rapid eye movement and where dreams can occur. Plays an important role in learning and memory
+Representative Sample - The sample reflects the population
+Retrieval - Recalling information, that had been stored in long-term memory
+Scaffolding - Temporary support system that helps to tackle tasks
+Schema - A cognitive framework or structure that helps organize and interpret information
+Selective Attention - The process of focusing on one specific aspect of information while ignoring others
+Sensorimotor Stage - Development of sensory and motor processes
+Sensory Adaptation - Over time, our senses adapt to the signal they are receiving, causing us to perceive less of that signal
+Shaping - Reinforcement by successive approximations
+Sleep Apnea - Chronic sleep disorder when the person constantly pauses while asleep, resulting in poor sleep quality
+Stimulus Generalization - Responding to variations of the original stimulus
+Stroop Effect - When two skills come into conflict, the more practiced skill will be performed first
+Synapse - A way to assign participants to groups where there?s an equal likelihood of being in any group
+Taste Receptor Cells - The receptor cells in our taste buds that allow us to sense the chemicals in our food
+Temperament - Individual response style to environmental stimulus
+Thalamus - The forebrain structure that gets information from the senses and then sends the information to the cerebral cortex to be processed
+Theory of Mind - Ability to understand that others have mental states that may differ from your own
+Transduction - The process by which our sensory receptor neurons change an external energy source into neuronal energy
+Variable-ratio Schedule - A pattern of reinforcement is based on the number of responses needed for the reinforcement to change
+Vicarious Reinforcement - Behavior changes based on observing others being rewarded or punished
+Wilhelm Wundt - Created first lab for psychological research in 1879, founder of the structuralist movement
+Working Memory - Responsible for temporarily holding and manipulating both visual and verbal information needed for complex tasks
+Zone of Proximal Development - The range that a learner can perform with guidance, representing the space between current and potential development

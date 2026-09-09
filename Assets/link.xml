@@ -1,0 +1,11 @@
+<linker>
+	<!-- Keep Newtonsoft JSON intact -->
+	<assembly fullname="Newtonsoft.Json">
+		<type fullname="*" preserve="all"/>
+	</assembly>
+
+	<!-- Keep TextMeshPro intact -->
+	<assembly fullname="Unity.TextMeshPro">
+		<type fullname="*" preserve="all"/>
+	</assembly>
+</linker>

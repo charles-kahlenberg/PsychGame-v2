@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1045 &1
+EditorBuildSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/SplashScene.unity
+    guid: 8c9cfa26abfee488c85f1582747f6a02
+  - enabled: 1
+    path: Assets/Scenes/GameScene.unity
+    guid: 8153ede0a9332b94c8e3b7b0391f4740
+  - enabled: 1
+    path: Assets/Scenes/ReviewScene.unity
+    guid: 8e9707aeb34bb2f438845c00b7b699df
+  - enabled: 1
+    path: Assets/Scenes/SaveSelectScene.unity
+    guid: c04c625de885d0c4eb23c5a7594a6673
+  - enabled: 1
+    path: Assets/Scenes/LoadingScene.unity
+    guid: fc29b04d56f0f27428bbdfae01abcff8
+  - enabled: 1
+    path: Assets/Scenes/GradingScene.unity
+    guid: 84185cd9bd3ff18479cfdd6fd751138c
+  - enabled: 1
+    path: Assets/Scenes/GameEndScene.unity
+    guid: abe4eb33963c24b4d89bfdabece91368
+  - enabled: 1
+    path: Assets/Scenes/RulesScene.unity
+    guid: 8187eceb8a727834dad72dd08b8e88af
+  - enabled: 1
+    path: Assets/Scenes/IntroductionScene.unity
+    guid: 091ed678966a9d3499b4c7c7f781256a
+  m_configObjects:
+    com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  m_UseUCBPForAssetBundles: 0

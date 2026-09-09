@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PsychGame</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      background: #000;
+      overflow: hidden;
+    }
+
+    #unityContainer {
+      width: 100vw;
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+      background: #111;
+    }
+  </style>
+</head>
+<body>
+  <div id="unityContainer">
+    <canvas id="unity-canvas"></canvas>
+  </div>
+
+  <script>
+    const buildUrl = "Build";
+    const loaderUrl = buildUrl + "/WebGLBuild.loader.js";
+    const config = {
+      dataUrl: buildUrl + "/WebGLBuild.data.br",
+      frameworkUrl: buildUrl + "/WebGLBuild.framework.js.br",
+      codeUrl: buildUrl + "/WebGLBuild.wasm.br",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "DefaultCompany",
+      productName: "PsychGame",
+      productVersion: "1.0",
+    };
+
+    const canvas = document.querySelector("#unity-canvas");
+    // Remove hardcoded canvas width/height — let Unity resize it
+    window.addEventListener("resize", () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+
+    const script = document.createElement("script");
+    script.src = loaderUrl;
+    script.onload = () => {
+      createUnityInstance(canvas, config).then((unityInstance) => {
+        console.log("Unity loaded");
+      }).catch((message) => {
+        alert(message);
+      });
+    };
+    document.body.appendChild(script);
+  </script>
+</body>
+</html>
