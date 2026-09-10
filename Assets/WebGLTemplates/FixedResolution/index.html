@@ -64,13 +64,19 @@
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
 
-    // Try to enter real browser fullscreen immediately on launch. Browsers
-    // only allow requestFullscreen() during a user gesture, so this silently
-    // no-ops on load in most browsers; the click/keydown fallback below
-    // catches the very first user interaction as a launch-time trigger.
+    // Browsers only allow requestFullscreen() during a real user gesture
+    // (a click or keypress) — calling it on load throws in Safari and is a
+    // silent no-op elsewhere, so it must only ever be triggered from inside
+    // an actual click/keydown handler. The try/catch is a safety net for
+    // contexts (e.g. embedded iframes) where fullscreen is disallowed even
+    // during a gesture, so a rejection never surfaces as an error dialog.
     function goFullscreen(unityInstance) {
       if (!document.fullscreenElement) {
-        unityInstance.SetFullscreen(1);
+        try {
+          unityInstance.SetFullscreen(1);
+        } catch (e) {
+          console.warn("Fullscreen request failed:", e);
+        }
       }
     }
 
@@ -79,7 +85,6 @@
     script.onload = () => {
       createUnityInstance(canvas, config).then((unityInstance) => {
         console.log("Unity loaded");
-        goFullscreen(unityInstance);
         const enterFullscreenOnce = () => {
           goFullscreen(unityInstance);
           window.removeEventListener("click", enterFullscreenOnce);
