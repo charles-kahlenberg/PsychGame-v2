@@ -49,17 +49,44 @@
     };
 
     const canvas = document.querySelector("#unity-canvas");
-    // Remove hardcoded canvas width/height — let Unity resize it
-    window.addEventListener("resize", () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    });
+
+    // Size the canvas' internal render resolution to match the actual
+    // viewport (scaled by devicePixelRatio) so the game renders crisply
+    // instead of being stretched from a stale low-res buffer. Without this,
+    // the canvas keeps its default 300x150 backing size until the first
+    // resize event, which is what causes the blurry/scaled look on monitors
+    // with resolutions different from the one the game was last tested on.
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(window.innerWidth * dpr);
+      canvas.height = Math.round(window.innerHeight * dpr);
+    }
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    // Try to enter real browser fullscreen immediately on launch. Browsers
+    // only allow requestFullscreen() during a user gesture, so this silently
+    // no-ops on load in most browsers; the click/keydown fallback below
+    // catches the very first user interaction as a launch-time trigger.
+    function goFullscreen(unityInstance) {
+      if (!document.fullscreenElement) {
+        unityInstance.SetFullscreen(1);
+      }
+    }
 
     const script = document.createElement("script");
     script.src = loaderUrl;
     script.onload = () => {
       createUnityInstance(canvas, config).then((unityInstance) => {
         console.log("Unity loaded");
+        goFullscreen(unityInstance);
+        const enterFullscreenOnce = () => {
+          goFullscreen(unityInstance);
+          window.removeEventListener("click", enterFullscreenOnce);
+          window.removeEventListener("keydown", enterFullscreenOnce);
+        };
+        window.addEventListener("click", enterFullscreenOnce);
+        window.addEventListener("keydown", enterFullscreenOnce);
       }).catch((message) => {
         alert(message);
       });
