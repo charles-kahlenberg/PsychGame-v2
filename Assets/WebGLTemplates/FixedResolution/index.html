@@ -37,15 +37,15 @@
 
   <script>
     const buildUrl = "Build";
-    const loaderUrl = buildUrl + "/WebGLBuild.loader.js";
+    const loaderUrl = buildUrl + "/{{{ LOADER_FILENAME }}}";
     const config = {
-      dataUrl: buildUrl + "/WebGLBuild.data.br",
-      frameworkUrl: buildUrl + "/WebGLBuild.framework.js.br",
-      codeUrl: buildUrl + "/WebGLBuild.wasm.br",
+      dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
+      frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
+      codeUrl: buildUrl + "/{{{ CODE_FILENAME }}}",
       streamingAssetsUrl: "StreamingAssets",
-      companyName: "DefaultCompany",
-      productName: "PsychGame",
-      productVersion: "1.0",
+      companyName: "{{{ COMPANY_NAME }}}",
+      productName: "{{{ PRODUCT_NAME }}}",
+      productVersion: "{{{ PRODUCT_VERSION }}}",
     };
 
     const canvas = document.querySelector("#unity-canvas");
