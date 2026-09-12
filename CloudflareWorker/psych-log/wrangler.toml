@@ -5,4 +5,4 @@ compatibility_date = "2024-09-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "psych_log_db"
-database_id = "REPLACE_WITH_DATABASE_ID_AFTER_CREATE"
+database_id = "52402cfd-46fc-4db3-82fd-45e559dbba28"

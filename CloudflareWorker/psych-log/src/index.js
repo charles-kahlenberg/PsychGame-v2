@@ -15,6 +15,26 @@ function jsonResponse(obj, status = 200) {
   });
 }
 
+// Formats a UTC timestamp as a human-readable Eastern time string, e.g.
+// "2026-09-12 04:35:15 PM EDT". Intl handles the EST/EDT DST switch itself.
+function toEasternString(dateInput) {
+  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+    timeZoneName: "short",
+  }).formatToParts(date);
+
+  const get = (type) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")} ${get("dayPeriod")} ${get("timeZoneName")}`;
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
@@ -40,12 +60,13 @@ export default {
         if (!sessionId) return jsonResponse({ error: "Missing sessionId" }, 400);
 
         const userAgent = request.headers.get("User-Agent") || "";
+        const startedAt = new Date();
         await env.DB.prepare(
-          `INSERT INTO sessions (session_id, username, started_at, user_agent)
-           VALUES (?, ?, ?, ?)
+          `INSERT INTO sessions (session_id, username, started_at, started_at_et, user_agent)
+           VALUES (?, ?, ?, ?, ?)
            ON CONFLICT(session_id) DO NOTHING`
         )
-          .bind(sessionId, username || null, new Date().toISOString(), userAgent)
+          .bind(sessionId, username || null, startedAt.toISOString(), toEasternString(startedAt), userAgent)
           .run();
 
         return jsonResponse({ ok: true });
@@ -58,9 +79,9 @@ export default {
         }
 
         await env.DB.prepare(
-          `INSERT INTO click_events (session_id, timestamp, object_name) VALUES (?, ?, ?)`
+          `INSERT INTO click_events (session_id, timestamp, timestamp_et, object_name) VALUES (?, ?, ?, ?)`
         )
-          .bind(sessionId, timestamp, objectName || null)
+          .bind(sessionId, timestamp, toEasternString(timestamp), objectName || null)
           .run();
 
         return jsonResponse({ ok: true });
