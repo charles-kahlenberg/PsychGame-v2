@@ -16,6 +16,7 @@ public class ClickLogger : MonoBehaviour
 
     private static ClickLogger _instance;
     private string _sessionId;
+    private string _username;
 
     // click_events has a foreign key on sessions, so any click that fires
     // before /session/start finishes has to wait rather than be sent (and
@@ -36,12 +37,35 @@ public class ClickLogger : MonoBehaviour
     private void Awake()
     {
         _sessionId = Guid.NewGuid().ToString();
-        StartCoroutine(StartSession());
+        StartCoroutine(BootstrapUsernamePrompt());
+    }
+
+    private IEnumerator BootstrapUsernamePrompt()
+    {
+        // Wait for the current scene's own EventSystem to exist (we
+        // bootstrap BeforeSceneLoad, so at frame 0 none has loaded yet) so
+        // the prompt doesn't create a second, conflicting EventSystem.
+        for (int i = 0; i < 10 && EventSystem.current == null; i++)
+        {
+            yield return null;
+        }
+
+        string savedUsername = PlayerPrefs.GetString("LastUsername", "");
+        UsernamePromptUI.Show(savedUsername, username =>
+        {
+            _username = username;
+            if (!string.IsNullOrEmpty(username))
+            {
+                PlayerPrefs.SetString("LastUsername", username);
+                PlayerPrefs.Save();
+            }
+            StartCoroutine(StartSession());
+        });
     }
 
     private IEnumerator StartSession()
     {
-        yield return PostJson("/session/start", JsonUtility.ToJson(new SessionStartPayload { sessionId = _sessionId }));
+        yield return PostJson("/session/start", JsonUtility.ToJson(new SessionStartPayload { sessionId = _sessionId, username = _username }));
 
         _sessionReady = true;
         foreach (var payload in _pendingClicks)
@@ -131,6 +155,7 @@ public class ClickLogger : MonoBehaviour
     private class SessionStartPayload
     {
         public string sessionId;
+        public string username;
     }
 
     [Serializable]
