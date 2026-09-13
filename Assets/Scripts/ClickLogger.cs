@@ -3,7 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.Networking;
+using UnityEngine.UI;
 
 // Captures a timestamp for every click during play and reports it to the
 // research logging backend (Cloudflare Worker -> D1). Bootstraps itself on
@@ -53,22 +55,21 @@ public class ClickLogger : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
-            LogClick();
+            LogClick(Input.mousePosition);
         }
         else if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
         {
-            LogClick();
+            LogClick(Input.GetTouch(0).position);
         }
     }
 
-    private void LogClick()
+    private void LogClick(Vector2 screenPosition)
     {
-        // TODO: eventually attach the clicked GameObject's name (via an
-        // EventSystem raycast) and the participant's entered username here.
         var payload = new ClickLogPayload
         {
             sessionId = _sessionId,
             timestamp = DateTime.UtcNow.ToString("o"),
+            objectName = ResolveClickedObjectName(screenPosition),
         };
 
         if (_sessionReady)
@@ -79,6 +80,32 @@ public class ClickLogger : MonoBehaviour
         {
             _pendingClicks.Add(payload);
         }
+    }
+
+    // Walks up from the raycast hit to the nearest Button/Toggle/CardBehavior
+    // so a click anywhere on a card or button resolves to its real editor
+    // name (e.g. "Card1", "RefreshCardsButton") instead of a child label's.
+    private string ResolveClickedObjectName(Vector2 screenPosition)
+    {
+        if (EventSystem.current == null) return null;
+
+        var pointerData = new PointerEventData(EventSystem.current) { position = screenPosition };
+        var results = new List<RaycastResult>();
+        EventSystem.current.RaycastAll(pointerData, results);
+
+        if (results.Count == 0) return null;
+
+        for (Transform t = results[0].gameObject.transform; t != null; t = t.parent)
+        {
+            if (t.GetComponent<Button>() != null ||
+                t.GetComponent<Toggle>() != null ||
+                t.GetComponent<CardBehavior>() != null)
+            {
+                return t.name;
+            }
+        }
+
+        return results[0].gameObject.name;
     }
 
     private IEnumerator PostJson(string path, string json)
@@ -111,5 +138,6 @@ public class ClickLogger : MonoBehaviour
     {
         public string sessionId;
         public string timestamp;
+        public string objectName;
     }
 }
