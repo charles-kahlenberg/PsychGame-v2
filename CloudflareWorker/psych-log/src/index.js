@@ -16,7 +16,9 @@ function jsonResponse(obj, status = 200) {
 }
 
 // Formats a UTC timestamp as a human-readable Eastern time string, e.g.
-// "2026-09-12 04:35:15 PM EDT". Intl handles the EST/EDT DST switch itself.
+// "2026-09-12 04:35:15.748 PM EDT". Intl handles the EST/EDT DST switch
+// itself. Millisecond precision matters here since clicks in the same
+// scenario often land within the same second.
 function toEasternString(dateInput) {
   const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -27,12 +29,13 @@ function toEasternString(dateInput) {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
+    fractionalSecondDigits: 3,
     hour12: true,
     timeZoneName: "short",
   }).formatToParts(date);
 
   const get = (type) => parts.find((p) => p.type === type)?.value ?? "";
-  return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")} ${get("dayPeriod")} ${get("timeZoneName")}`;
+  return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")}.${get("fractionalSecond")} ${get("dayPeriod")} ${get("timeZoneName")}`;
 }
 
 // Research data export. Kept separate from the write path above: the game
