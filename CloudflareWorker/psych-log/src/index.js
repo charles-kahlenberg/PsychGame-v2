@@ -4,8 +4,8 @@
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, X-Export-Key",
 };
 
 function jsonResponse(obj, status = 200) {
@@ -35,17 +35,81 @@ function toEasternString(dateInput) {
   return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")} ${get("dayPeriod")} ${get("timeZoneName")}`;
 }
 
+// Research data export. Kept separate from the write path above: the game
+// client posts to /session/start and /log with no auth (it has to, it's a
+// public WebGL build), but reading exported data back out — including
+// free-text participant responses in later variables — needs a shared
+// secret so the export URLs aren't scrapeable by anyone who finds them.
+function isAuthorizedExport(request, url, env) {
+  if (!env.EXPORT_KEY) return false;
+  const provided = request.headers.get("X-Export-Key") || url.searchParams.get("key");
+  return provided === env.EXPORT_KEY;
+}
+
+async function handleListSessions(env) {
+  const { results } = await env.DB.prepare(
+    `SELECT s.session_id, s.username, s.started_at, s.started_at_et, s.user_agent,
+            (SELECT COUNT(*) FROM click_events c WHERE c.session_id = s.session_id) AS click_count
+     FROM sessions s
+     ORDER BY s.started_at DESC`
+  ).all();
+
+  return jsonResponse({ sessions: results });
+}
+
+async function handleExportSession(env, sessionId) {
+  const session = await env.DB.prepare(`SELECT * FROM sessions WHERE session_id = ?`)
+    .bind(sessionId)
+    .first();
+
+  if (!session) return jsonResponse({ error: "Session not found" }, 404);
+
+  const { results: clickEvents } = await env.DB.prepare(
+    `SELECT id, timestamp, timestamp_et, object_name FROM click_events WHERE session_id = ? ORDER BY id ASC`
+  )
+    .bind(sessionId)
+    .all();
+
+  const document = { ...session, click_events: clickEvents };
+
+  return new Response(JSON.stringify(document, null, 2), {
+    headers: {
+      ...CORS_HEADERS,
+      "Content-Type": "application/json",
+      "Content-Disposition": `attachment; filename="session_${sessionId}.json"`,
+    },
+  });
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });
     }
 
+    const url = new URL(request.url);
+
+    if (request.method === "GET" && url.pathname.startsWith("/export/")) {
+      if (!isAuthorizedExport(request, url, env)) {
+        return jsonResponse({ error: "Unauthorized" }, 401);
+      }
+
+      if (url.pathname === "/export/sessions") {
+        return handleListSessions(env);
+      }
+
+      const sessionPrefix = "/export/session/";
+      if (url.pathname.startsWith(sessionPrefix)) {
+        const sessionId = decodeURIComponent(url.pathname.slice(sessionPrefix.length));
+        return handleExportSession(env, sessionId);
+      }
+
+      return jsonResponse({ error: "Not found" }, 404);
+    }
+
     if (request.method !== "POST") {
       return jsonResponse({ error: "Method not allowed" }, 405);
     }
-
-    const url = new URL(request.url);
 
     let body;
     try {

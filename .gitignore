@@ -76,3 +76,6 @@ crashlytics-build.properties
 
 # Wrangler local cache
 .wrangler/
+
+# Exported research data - contains real participant data, never commit
+CloudflareWorker/psych-log/scripts/exports/
