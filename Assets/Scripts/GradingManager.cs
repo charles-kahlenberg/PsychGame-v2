@@ -101,6 +101,8 @@ public class GradingManager : MonoBehaviour
         aiResponseText.text =
             $"<b><color=#000000>Brainy's Feedback:</color></b><color=#FFFFFF>{trimmedFeedback}</color>";
 
+        ClickLogger.LogAiResponse("grading_feedback", scenario, trimmedFeedback);
+
         ExtractScore(trimmedFeedback);
 
         Canvas.ForceUpdateCanvases();
@@ -223,7 +225,7 @@ public class GradingManager : MonoBehaviour
 
         if (string.IsNullOrEmpty(nextScenario))
         {
-            Debug.Log("[GradingManager] All scenarios completed — showing GameEndScene.");
+            Debug.Log("[GradingManager] All scenarios completed ï¿½ showing GameEndScene.");
             SceneManager.LoadScene("GameEndScene");
             return;
         }

@@ -127,8 +127,11 @@ public class HintManager : MonoBehaviour
                 yield break;
             }
 
-            SafeOpenOverlay(hint.Trim());
-            OnHintReady?.Invoke(hint.Trim());
+            string trimmedHint = hint.Trim();
+            ClickLogger.LogAiResponse(payload.mode == "concept" ? "concept_help" : "hint", payload.scenario, trimmedHint);
+
+            SafeOpenOverlay(trimmedHint);
+            OnHintReady?.Invoke(trimmedHint);
         }
     }
 

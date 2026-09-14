@@ -34,6 +34,8 @@ public class GameManager : MonoBehaviour
     private bool isTyping = false;
     private bool skipTyping = false;
 
+    private System.DateTime cardsShownAt;
+
     void Update()
     {
         if (isTyping && Input.GetMouseButtonDown(0))
@@ -101,6 +103,10 @@ public class GameManager : MonoBehaviour
 
         refreshUsesRemaining = 2;
         UpdateRefreshUI();
+
+        ClickLogger.SetActiveScenario(currentScenario);
+        ClickLogger.LogCardEvent(currentScenario, "initial", currentCards, -1);
+        cardsShownAt = System.DateTime.UtcNow;
     }
 
     // -------------------- VOCAB --------------------
@@ -172,6 +178,8 @@ public class GameManager : MonoBehaviour
     {
         if (refreshUsesRemaining <= 0) return;
 
+        long elapsedMs = (long)(System.DateTime.UtcNow - cardsShownAt).TotalMilliseconds;
+
         GenerateNewCards();
         refreshUsesRemaining--;
         UpdateRefreshUI();
@@ -180,6 +188,9 @@ public class GameManager : MonoBehaviour
             cardTexts[i].text = i < currentCards.Count ? currentCards[i] : "[Empty]";
 
         SetCardBacks();
+
+        ClickLogger.LogCardEvent(currentScenario, "refresh", currentCards, elapsedMs);
+        cardsShownAt = System.DateTime.UtcNow;
     }
 
     void UpdateRefreshUI()
@@ -210,6 +221,8 @@ public class GameManager : MonoBehaviour
             response = userResponse,
             aiFeedback = ""
         });
+
+        ClickLogger.LogUserResponse(currentScenario, userResponse);
 
         // THIS WAS MISSING
         PlayerPrefs.SetString("LastResponse", userResponse);

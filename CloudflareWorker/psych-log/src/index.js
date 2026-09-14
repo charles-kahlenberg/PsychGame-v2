@@ -52,7 +52,8 @@ function isAuthorizedExport(request, url, env) {
 async function handleListSessions(env) {
   const { results } = await env.DB.prepare(
     `SELECT s.session_id, s.username, s.started_at, s.started_at_et, s.user_agent,
-            (SELECT COUNT(*) FROM click_events c WHERE c.session_id = s.session_id) AS click_count
+            (SELECT COUNT(*) FROM click_events c WHERE c.session_id = s.session_id) AS click_count,
+            (SELECT COUNT(*) FROM user_responses r WHERE r.session_id = s.session_id) AS response_count
      FROM sessions s
      ORDER BY s.started_at DESC`
   ).all();
@@ -73,7 +74,38 @@ async function handleExportSession(env, sessionId) {
     .bind(sessionId)
     .all();
 
-  const document = { ...session, click_events: clickEvents };
+  const { results: aiResponses } = await env.DB.prepare(
+    `SELECT id, timestamp, timestamp_et, kind, scenario, content FROM ai_responses WHERE session_id = ? ORDER BY id ASC`
+  )
+    .bind(sessionId)
+    .all();
+
+  const { results: userResponses } = await env.DB.prepare(
+    `SELECT id, timestamp, timestamp_et, scenario, response FROM user_responses WHERE session_id = ? ORDER BY id ASC`
+  )
+    .bind(sessionId)
+    .all();
+
+  const { results: cardEvents } = await env.DB.prepare(
+    `SELECT id, timestamp, timestamp_et, scenario, event_type, cards, elapsed_ms FROM card_events WHERE session_id = ? ORDER BY id ASC`
+  )
+    .bind(sessionId)
+    .all();
+
+  const { results: menuDurations } = await env.DB.prepare(
+    `SELECT id, timestamp, timestamp_et, menu_name, duration_ms, scenario FROM menu_durations WHERE session_id = ? ORDER BY id ASC`
+  )
+    .bind(sessionId)
+    .all();
+
+  const document = {
+    ...session,
+    click_events: clickEvents,
+    ai_responses: aiResponses,
+    user_responses: userResponses,
+    card_events: cardEvents,
+    menu_durations: menuDurations,
+  };
 
   return new Response(JSON.stringify(document, null, 2), {
     headers: {
@@ -149,6 +181,74 @@ export default {
           `INSERT INTO click_events (session_id, timestamp, timestamp_et, object_name) VALUES (?, ?, ?, ?)`
         )
           .bind(sessionId, timestamp, toEasternString(timestamp), objectName || null)
+          .run();
+
+        return jsonResponse({ ok: true });
+      }
+
+      if (url.pathname === "/log/ai-response") {
+        const { sessionId, timestamp, kind, scenario, content } = body;
+        if (!sessionId || !timestamp || !kind) {
+          return jsonResponse({ error: "Missing sessionId, timestamp, or kind" }, 400);
+        }
+
+        await env.DB.prepare(
+          `INSERT INTO ai_responses (session_id, timestamp, timestamp_et, kind, scenario, content) VALUES (?, ?, ?, ?, ?, ?)`
+        )
+          .bind(sessionId, timestamp, toEasternString(timestamp), kind, scenario || null, content || null)
+          .run();
+
+        return jsonResponse({ ok: true });
+      }
+
+      if (url.pathname === "/log/user-response") {
+        const { sessionId, timestamp, scenario, response } = body;
+        if (!sessionId || !timestamp) {
+          return jsonResponse({ error: "Missing sessionId or timestamp" }, 400);
+        }
+
+        await env.DB.prepare(
+          `INSERT INTO user_responses (session_id, timestamp, timestamp_et, scenario, response) VALUES (?, ?, ?, ?, ?)`
+        )
+          .bind(sessionId, timestamp, toEasternString(timestamp), scenario || null, response || null)
+          .run();
+
+        return jsonResponse({ ok: true });
+      }
+
+      if (url.pathname === "/log/card-event") {
+        const { sessionId, timestamp, scenario, eventType, cards, elapsedMs } = body;
+        if (!sessionId || !timestamp || !eventType) {
+          return jsonResponse({ error: "Missing sessionId, timestamp, or eventType" }, 400);
+        }
+
+        await env.DB.prepare(
+          `INSERT INTO card_events (session_id, timestamp, timestamp_et, scenario, event_type, cards, elapsed_ms) VALUES (?, ?, ?, ?, ?, ?, ?)`
+        )
+          .bind(
+            sessionId,
+            timestamp,
+            toEasternString(timestamp),
+            scenario || null,
+            eventType,
+            cards || null,
+            typeof elapsedMs === "number" && elapsedMs >= 0 ? elapsedMs : null
+          )
+          .run();
+
+        return jsonResponse({ ok: true });
+      }
+
+      if (url.pathname === "/log/menu-duration") {
+        const { sessionId, timestamp, menuName, durationMs, scenario } = body;
+        if (!sessionId || !timestamp || !menuName || typeof durationMs !== "number") {
+          return jsonResponse({ error: "Missing sessionId, timestamp, menuName, or durationMs" }, 400);
+        }
+
+        await env.DB.prepare(
+          `INSERT INTO menu_durations (session_id, timestamp, timestamp_et, menu_name, duration_ms, scenario) VALUES (?, ?, ?, ?, ?, ?)`
+        )
+          .bind(sessionId, timestamp, toEasternString(timestamp), menuName, durationMs, scenario || null)
           .run();
 
         return jsonResponse({ ok: true });
