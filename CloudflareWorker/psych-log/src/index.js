@@ -116,6 +116,69 @@ async function handleExportSession(env, sessionId) {
   });
 }
 
+// Builds the D1 prepared statements for one /log/batch request. Client sends
+// everything it cached since the last menu load in one payload instead of
+// one request per event; malformed entries (missing required fields) are
+// skipped rather than failing the whole batch.
+function buildBatchStatements(env, body) {
+  const statements = [];
+
+  for (const c of body.clicks || []) {
+    if (!c.sessionId || !c.timestamp) continue;
+    statements.push(
+      env.DB.prepare(
+        `INSERT INTO click_events (session_id, timestamp, timestamp_et, object_name) VALUES (?, ?, ?, ?)`
+      ).bind(c.sessionId, c.timestamp, toEasternString(c.timestamp), c.objectName || null)
+    );
+  }
+
+  for (const a of body.aiResponses || []) {
+    if (!a.sessionId || !a.timestamp || !a.kind) continue;
+    statements.push(
+      env.DB.prepare(
+        `INSERT INTO ai_responses (session_id, timestamp, timestamp_et, kind, scenario, content) VALUES (?, ?, ?, ?, ?, ?)`
+      ).bind(a.sessionId, a.timestamp, toEasternString(a.timestamp), a.kind, a.scenario || null, a.content || null)
+    );
+  }
+
+  for (const u of body.userResponses || []) {
+    if (!u.sessionId || !u.timestamp) continue;
+    statements.push(
+      env.DB.prepare(
+        `INSERT INTO user_responses (session_id, timestamp, timestamp_et, scenario, response) VALUES (?, ?, ?, ?, ?)`
+      ).bind(u.sessionId, u.timestamp, toEasternString(u.timestamp), u.scenario || null, u.response || null)
+    );
+  }
+
+  for (const ce of body.cardEvents || []) {
+    if (!ce.sessionId || !ce.timestamp || !ce.eventType) continue;
+    statements.push(
+      env.DB.prepare(
+        `INSERT INTO card_events (session_id, timestamp, timestamp_et, scenario, event_type, cards, elapsed_ms) VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        ce.sessionId,
+        ce.timestamp,
+        toEasternString(ce.timestamp),
+        ce.scenario || null,
+        ce.eventType,
+        ce.cards || null,
+        typeof ce.elapsedMs === "number" && ce.elapsedMs >= 0 ? ce.elapsedMs : null
+      )
+    );
+  }
+
+  for (const md of body.menuDurations || []) {
+    if (!md.sessionId || !md.timestamp || !md.menuName || typeof md.durationMs !== "number") continue;
+    statements.push(
+      env.DB.prepare(
+        `INSERT INTO menu_durations (session_id, timestamp, timestamp_et, menu_name, duration_ms, scenario) VALUES (?, ?, ?, ?, ?, ?)`
+      ).bind(md.sessionId, md.timestamp, toEasternString(md.timestamp), md.menuName, md.durationMs, md.scenario || null)
+    );
+  }
+
+  return statements;
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
@@ -237,6 +300,15 @@ export default {
           .run();
 
         return jsonResponse({ ok: true });
+      }
+
+      if (url.pathname === "/log/batch") {
+        const statements = buildBatchStatements(env, body);
+        if (statements.length > 0) {
+          await env.DB.batch(statements);
+        }
+
+        return jsonResponse({ ok: true, count: statements.length });
       }
 
       if (url.pathname === "/log/menu-duration") {
