@@ -71,3 +71,10 @@ CREATE TABLE IF NOT EXISTS menu_durations (
   scenario TEXT,                   -- populated for 'respond' visits
   FOREIGN KEY (session_id) REFERENCES sessions(session_id)
 );
+
+-- Tracks, per table, the last D1 rowid already appended to the Dropbox CSV,
+-- so each sync only reads/exports rows written since the previous run.
+CREATE TABLE IF NOT EXISTS csv_sync_state (
+  table_name TEXT PRIMARY KEY,
+  last_rowid INTEGER NOT NULL DEFAULT 0
+);

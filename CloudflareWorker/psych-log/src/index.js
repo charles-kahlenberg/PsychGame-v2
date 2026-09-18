@@ -5,7 +5,7 @@
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-Export-Key",
+  "Access-Control-Allow-Headers": "Content-Type",
 };
 
 function jsonResponse(obj, status = 200) {
@@ -38,82 +38,272 @@ function toEasternString(dateInput) {
   return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")}.${get("fractionalSecond")} ${get("dayPeriod")} ${get("timeZoneName")}`;
 }
 
-// Research data export. Kept separate from the write path above: the game
-// client posts to /session/start and /log with no auth (it has to, it's a
-// public WebGL build), but reading exported data back out — including
-// free-text participant responses in later variables — needs a shared
-// secret so the export URLs aren't scrapeable by anyone who finds them.
-function isAuthorizedExport(request, url, env) {
-  if (!env.EXPORT_KEY) return false;
-  const provided = request.headers.get("X-Export-Key") || url.searchParams.get("key");
-  return provided === env.EXPORT_KEY;
+// --- Incremental CSV export to Dropbox ---------------------------------
+// Every write below ends by kicking this off in the background (ctx.waitUntil),
+// so the CSV in Dropbox stays current without the client waiting on it.
+// Rather than re-reading the whole database each time, csv_sync_state tracks
+// the last D1 rowid we've already exported per table, so each run only reads
+// and appends rows that arrived since the previous menu load.
+
+const SYNC_TABLE_NAMES = [
+  "sessions",
+  "click_events",
+  "ai_responses",
+  "user_responses",
+  "card_events",
+  "menu_durations",
+];
+
+// Union of every column across all six tables, so all rows can share one CSV.
+const CSV_COLUMNS = [
+  "table_name",
+  "row_id",
+  "session_id",
+  "timestamp",
+  "timestamp_et",
+  "username",
+  "user_agent",
+  "object_name",
+  "kind",
+  "scenario",
+  "content",
+  "response",
+  "event_type",
+  "cards",
+  "elapsed_ms",
+  "menu_name",
+  "duration_ms",
+];
+const CSV_HEADER = CSV_COLUMNS.join(",");
+
+const MAX_ROWS_PER_TABLE_PER_SYNC = 2000;
+
+function rowToCsvRecord(tableName, row) {
+  const base = { table_name: tableName, row_id: row.row_id, session_id: row.session_id };
+  switch (tableName) {
+    case "sessions":
+      return {
+        ...base,
+        timestamp: row.started_at,
+        timestamp_et: row.started_at_et,
+        username: row.username,
+        user_agent: row.user_agent,
+      };
+    case "click_events":
+      return { ...base, timestamp: row.timestamp, timestamp_et: row.timestamp_et, object_name: row.object_name };
+    case "ai_responses":
+      return {
+        ...base,
+        timestamp: row.timestamp,
+        timestamp_et: row.timestamp_et,
+        kind: row.kind,
+        scenario: row.scenario,
+        content: row.content,
+      };
+    case "user_responses":
+      return {
+        ...base,
+        timestamp: row.timestamp,
+        timestamp_et: row.timestamp_et,
+        scenario: row.scenario,
+        response: row.response,
+      };
+    case "card_events":
+      return {
+        ...base,
+        timestamp: row.timestamp,
+        timestamp_et: row.timestamp_et,
+        scenario: row.scenario,
+        event_type: row.event_type,
+        cards: row.cards,
+        elapsed_ms: row.elapsed_ms,
+      };
+    case "menu_durations":
+      return {
+        ...base,
+        timestamp: row.timestamp,
+        timestamp_et: row.timestamp_et,
+        menu_name: row.menu_name,
+        duration_ms: row.duration_ms,
+        scenario: row.scenario,
+      };
+  }
 }
 
-async function handleListSessions(env) {
+function csvEscape(value) {
+  if (value === null || value === undefined) return "";
+  const str = String(value);
+  if (/[",\n\r]/.test(str)) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
+function recordToCsvLine(record) {
+  return CSV_COLUMNS.map((col) => csvEscape(record[col])).join(",");
+}
+
+async function ensureSyncState(env) {
+  await env.DB.batch(
+    SYNC_TABLE_NAMES.map((name) =>
+      env.DB.prepare(`INSERT OR IGNORE INTO csv_sync_state (table_name, last_rowid) VALUES (?, 0)`).bind(name)
+    )
+  );
+}
+
+async function getLastRowids(env) {
+  const { results } = await env.DB.prepare(`SELECT table_name, last_rowid FROM csv_sync_state`).all();
+  const map = {};
+  for (const r of results) map[r.table_name] = r.last_rowid;
+  return map;
+}
+
+// tableName always comes from the SYNC_TABLE_NAMES whitelist above, never
+// from request input, so interpolating it into the query is safe.
+async function fetchNewRowsForTable(env, tableName, lastRowid) {
   const { results } = await env.DB.prepare(
-    `SELECT s.session_id, s.username, s.started_at, s.started_at_et, s.user_agent,
-            (SELECT COUNT(*) FROM click_events c WHERE c.session_id = s.session_id) AS click_count,
-            (SELECT COUNT(*) FROM user_responses r WHERE r.session_id = s.session_id) AS response_count
-     FROM sessions s
-     ORDER BY s.started_at DESC`
-  ).all();
-
-  return jsonResponse({ sessions: results });
+    `SELECT rowid AS row_id, * FROM ${tableName} WHERE rowid > ?1 ORDER BY rowid ASC LIMIT ?2`
+  )
+    .bind(lastRowid, MAX_ROWS_PER_TABLE_PER_SYNC)
+    .all();
+  return results;
 }
 
-async function handleExportSession(env, sessionId) {
-  const session = await env.DB.prepare(`SELECT * FROM sessions WHERE session_id = ?`)
-    .bind(sessionId)
-    .first();
+async function getDropboxAccessToken(env) {
+  const resp = await fetch("https://api.dropbox.com/oauth2/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: env.DROPBOX_REFRESH_TOKEN,
+      client_id: env.DROPBOX_APP_KEY,
+      client_secret: env.DROPBOX_APP_SECRET,
+    }),
+  });
+  if (!resp.ok) {
+    throw new Error(`Dropbox token refresh failed: ${resp.status} ${await resp.text()}`);
+  }
+  const data = await resp.json();
+  return data.access_token;
+}
 
-  if (!session) return jsonResponse({ error: "Session not found" }, 404);
-
-  const { results: clickEvents } = await env.DB.prepare(
-    `SELECT id, timestamp, timestamp_et, object_name FROM click_events WHERE session_id = ? ORDER BY id ASC`
-  )
-    .bind(sessionId)
-    .all();
-
-  const { results: aiResponses } = await env.DB.prepare(
-    `SELECT id, timestamp, timestamp_et, kind, scenario, content FROM ai_responses WHERE session_id = ? ORDER BY id ASC`
-  )
-    .bind(sessionId)
-    .all();
-
-  const { results: userResponses } = await env.DB.prepare(
-    `SELECT id, timestamp, timestamp_et, scenario, response FROM user_responses WHERE session_id = ? ORDER BY id ASC`
-  )
-    .bind(sessionId)
-    .all();
-
-  const { results: cardEvents } = await env.DB.prepare(
-    `SELECT id, timestamp, timestamp_et, scenario, event_type, cards, elapsed_ms FROM card_events WHERE session_id = ? ORDER BY id ASC`
-  )
-    .bind(sessionId)
-    .all();
-
-  const { results: menuDurations } = await env.DB.prepare(
-    `SELECT id, timestamp, timestamp_et, menu_name, duration_ms, scenario FROM menu_durations WHERE session_id = ? ORDER BY id ASC`
-  )
-    .bind(sessionId)
-    .all();
-
-  const document = {
-    ...session,
-    click_events: clickEvents,
-    ai_responses: aiResponses,
-    user_responses: userResponses,
-    card_events: cardEvents,
-    menu_durations: menuDurations,
-  };
-
-  return new Response(JSON.stringify(document, null, 2), {
+async function downloadDropboxFile(accessToken, path) {
+  const resp = await fetch("https://content.dropboxapi.com/2/files/download", {
+    method: "POST",
     headers: {
-      ...CORS_HEADERS,
-      "Content-Type": "application/json",
-      "Content-Disposition": `attachment; filename="session_${sessionId}.json"`,
+      Authorization: `Bearer ${accessToken}`,
+      "Dropbox-API-Arg": JSON.stringify({ path }),
     },
   });
+
+  if (resp.status === 409) {
+    const err = await resp.json().catch(() => null);
+    if (err?.error?.[".tag"] === "path" && err.error.path?.[".tag"] === "not_found") {
+      return { content: null, rev: null };
+    }
+    throw new Error(`Dropbox download failed: ${JSON.stringify(err)}`);
+  }
+
+  if (!resp.ok) {
+    throw new Error(`Dropbox download failed: ${resp.status} ${await resp.text()}`);
+  }
+
+  const resultHeader = resp.headers.get("Dropbox-API-Result");
+  const rev = resultHeader ? JSON.parse(resultHeader).rev : null;
+  const content = await resp.text();
+  return { content, rev };
+}
+
+async function uploadDropboxFile(accessToken, path, content, rev) {
+  const mode = rev ? { ".tag": "update", update: rev } : { ".tag": "add" };
+  const resp = await fetch("https://content.dropboxapi.com/2/files/upload", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/octet-stream",
+      "Dropbox-API-Arg": JSON.stringify({ path, mode, mute: true }),
+    },
+    body: content,
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text();
+    const conflict = resp.status === 409 && errText.includes("conflict");
+    throw Object.assign(new Error(`Dropbox upload failed: ${resp.status} ${errText}`), { conflict });
+  }
+
+  return resp.json();
+}
+
+// Downloads the current CSV, appends the new lines, and uploads it back.
+// Uses Dropbox's rev-based optimistic locking so two overlapping syncs (e.g.
+// two players hitting a menu load at once) can't silently clobber each
+// other's rows — a conflict just means "someone updated it first," so we
+// re-download the now-current file and retry the append.
+async function appendCsvLinesToDropbox(env, accessToken, newLines) {
+  const path = env.DROPBOX_CSV_PATH || "/psych_log.csv";
+  const MAX_ATTEMPTS = 3;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const { content, rev } = await downloadDropboxFile(accessToken, path);
+    const existing = content && content.length > 0 ? content : `${CSV_HEADER}\n`;
+    const separator = existing.endsWith("\n") ? "" : "\n";
+    const newContent = existing + separator + newLines.join("\n") + "\n";
+
+    try {
+      await uploadDropboxFile(accessToken, path, newContent, rev);
+      return;
+    } catch (err) {
+      if (err.conflict && attempt < MAX_ATTEMPTS) continue;
+      throw err;
+    }
+  }
+}
+
+async function syncNewRowsToDropbox(env) {
+  if (!env.DROPBOX_REFRESH_TOKEN || !env.DROPBOX_APP_KEY || !env.DROPBOX_APP_SECRET) {
+    return; // Dropbox secrets not configured yet
+  }
+
+  await ensureSyncState(env);
+  const lastRowids = await getLastRowids(env);
+
+  const newRowsByTable = {};
+  let totalNew = 0;
+  for (const tableName of SYNC_TABLE_NAMES) {
+    const rows = await fetchNewRowsForTable(env, tableName, lastRowids[tableName] || 0);
+    if (rows.length > 0) {
+      newRowsByTable[tableName] = rows;
+      totalNew += rows.length;
+    }
+  }
+
+  if (totalNew === 0) return;
+
+  const csvLines = [];
+  const newLastRowid = { ...lastRowids };
+  for (const tableName of SYNC_TABLE_NAMES) {
+    const rows = newRowsByTable[tableName];
+    if (!rows) continue;
+    for (const row of rows) {
+      csvLines.push(recordToCsvLine(rowToCsvRecord(tableName, row)));
+    }
+    newLastRowid[tableName] = rows[rows.length - 1].row_id;
+  }
+
+  const accessToken = await getDropboxAccessToken(env);
+  await appendCsvLinesToDropbox(env, accessToken, csvLines);
+
+  const updateStmts = SYNC_TABLE_NAMES.filter((name) => newLastRowid[name] !== lastRowids[name]).map((name) =>
+    env.DB.prepare(`UPDATE csv_sync_state SET last_rowid = ? WHERE table_name = ?`).bind(newLastRowid[name], name)
+  );
+  if (updateStmts.length > 0) {
+    await env.DB.batch(updateStmts);
+  }
+}
+
+function triggerDropboxSync(ctx, env) {
+  ctx.waitUntil(syncNewRowsToDropbox(env).catch((err) => console.error("Dropbox sync failed:", err)));
 }
 
 // Builds the D1 prepared statements for one /log/batch request. Client sends
@@ -180,30 +370,12 @@ function buildBatchStatements(env, body) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });
     }
 
     const url = new URL(request.url);
-
-    if (request.method === "GET" && url.pathname.startsWith("/export/")) {
-      if (!isAuthorizedExport(request, url, env)) {
-        return jsonResponse({ error: "Unauthorized" }, 401);
-      }
-
-      if (url.pathname === "/export/sessions") {
-        return handleListSessions(env);
-      }
-
-      const sessionPrefix = "/export/session/";
-      if (url.pathname.startsWith(sessionPrefix)) {
-        const sessionId = decodeURIComponent(url.pathname.slice(sessionPrefix.length));
-        return handleExportSession(env, sessionId);
-      }
-
-      return jsonResponse({ error: "Not found" }, 404);
-    }
 
     if (request.method !== "POST") {
       return jsonResponse({ error: "Method not allowed" }, 405);
@@ -231,6 +403,7 @@ export default {
           .bind(sessionId, username || null, startedAt.toISOString(), toEasternString(startedAt), userAgent)
           .run();
 
+        triggerDropboxSync(ctx, env);
         return jsonResponse({ ok: true });
       }
 
@@ -246,6 +419,7 @@ export default {
           .bind(sessionId, timestamp, toEasternString(timestamp), objectName || null)
           .run();
 
+        triggerDropboxSync(ctx, env);
         return jsonResponse({ ok: true });
       }
 
@@ -261,6 +435,7 @@ export default {
           .bind(sessionId, timestamp, toEasternString(timestamp), kind, scenario || null, content || null)
           .run();
 
+        triggerDropboxSync(ctx, env);
         return jsonResponse({ ok: true });
       }
 
@@ -276,6 +451,7 @@ export default {
           .bind(sessionId, timestamp, toEasternString(timestamp), scenario || null, response || null)
           .run();
 
+        triggerDropboxSync(ctx, env);
         return jsonResponse({ ok: true });
       }
 
@@ -299,6 +475,7 @@ export default {
           )
           .run();
 
+        triggerDropboxSync(ctx, env);
         return jsonResponse({ ok: true });
       }
 
@@ -308,6 +485,7 @@ export default {
           await env.DB.batch(statements);
         }
 
+        triggerDropboxSync(ctx, env);
         return jsonResponse({ ok: true, count: statements.length });
       }
 
@@ -323,6 +501,7 @@ export default {
           .bind(sessionId, timestamp, toEasternString(timestamp), menuName, durationMs, scenario || null)
           .run();
 
+        triggerDropboxSync(ctx, env);
         return jsonResponse({ ok: true });
       }
 
