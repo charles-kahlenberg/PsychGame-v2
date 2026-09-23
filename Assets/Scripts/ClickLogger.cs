@@ -211,7 +211,11 @@ public class ClickLogger : MonoBehaviour
         _instance._activeScenario = scenario;
     }
 
-    public static void LogAiResponse(string kind, string scenario, string content)
+    // score: the numeric grade Brainy gave (0-100), when kind is
+    // "grading_feedback". Pass -1 (the default) when there's no score to
+    // report, e.g. for hints/concept help, or when grading text didn't
+    // parse to a number.
+    public static void LogAiResponse(string kind, string scenario, string content, int score = -1)
     {
         if (_instance == null) return;
 
@@ -222,6 +226,7 @@ public class ClickLogger : MonoBehaviour
             kind = kind,
             scenario = scenario,
             content = content,
+            score = score,
         });
     }
 
@@ -370,6 +375,7 @@ public class ClickLogger : MonoBehaviour
         public string kind;
         public string scenario;
         public string content;
+        public int score;
     }
 
     [Serializable]

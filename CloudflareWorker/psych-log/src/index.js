@@ -55,6 +55,10 @@ const SYNC_TABLE_NAMES = [
 ];
 
 // Union of every column across all six tables, so all rows can share one CSV.
+// New columns must be appended at the end, never inserted in the middle:
+// the live Dropbox file's header was already written by an earlier sync, and
+// rows are appended positionally, so shifting existing column positions
+// would misalign every row written after the change against that header.
 const CSV_COLUMNS = [
   "table_name",
   "row_id",
@@ -73,6 +77,7 @@ const CSV_COLUMNS = [
   "elapsed_ms",
   "menu_name",
   "duration_ms",
+  "score",
 ];
 const CSV_HEADER = CSV_COLUMNS.join(",");
 
@@ -99,6 +104,7 @@ function rowToCsvRecord(tableName, row) {
         kind: row.kind,
         scenario: row.scenario,
         content: row.content,
+        score: row.score,
       };
     case "user_responses":
       return {
@@ -326,8 +332,16 @@ function buildBatchStatements(env, body) {
     if (!a.sessionId || !a.timestamp || !a.kind) continue;
     statements.push(
       env.DB.prepare(
-        `INSERT INTO ai_responses (session_id, timestamp, timestamp_et, kind, scenario, content) VALUES (?, ?, ?, ?, ?, ?)`
-      ).bind(a.sessionId, a.timestamp, toEasternString(a.timestamp), a.kind, a.scenario || null, a.content || null)
+        `INSERT INTO ai_responses (session_id, timestamp, timestamp_et, kind, scenario, content, score) VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        a.sessionId,
+        a.timestamp,
+        toEasternString(a.timestamp),
+        a.kind,
+        a.scenario || null,
+        a.content || null,
+        typeof a.score === "number" && a.score >= 0 ? a.score : null
+      )
     );
   }
 
@@ -424,15 +438,23 @@ export default {
       }
 
       if (url.pathname === "/log/ai-response") {
-        const { sessionId, timestamp, kind, scenario, content } = body;
+        const { sessionId, timestamp, kind, scenario, content, score } = body;
         if (!sessionId || !timestamp || !kind) {
           return jsonResponse({ error: "Missing sessionId, timestamp, or kind" }, 400);
         }
 
         await env.DB.prepare(
-          `INSERT INTO ai_responses (session_id, timestamp, timestamp_et, kind, scenario, content) VALUES (?, ?, ?, ?, ?, ?)`
+          `INSERT INTO ai_responses (session_id, timestamp, timestamp_et, kind, scenario, content, score) VALUES (?, ?, ?, ?, ?, ?, ?)`
         )
-          .bind(sessionId, timestamp, toEasternString(timestamp), kind, scenario || null, content || null)
+          .bind(
+            sessionId,
+            timestamp,
+            toEasternString(timestamp),
+            kind,
+            scenario || null,
+            content || null,
+            typeof score === "number" && score >= 0 ? score : null
+          )
           .run();
 
         triggerDropboxSync(ctx, env);

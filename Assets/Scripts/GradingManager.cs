@@ -101,9 +101,8 @@ public class GradingManager : MonoBehaviour
         aiResponseText.text =
             $"<b><color=#000000>Brainy's Feedback:</color></b><color=#FFFFFF>{trimmedFeedback}</color>";
 
-        ClickLogger.LogAiResponse("grading_feedback", scenario, trimmedFeedback);
-
-        ExtractScore(trimmedFeedback);
+        int? score = ExtractScore(trimmedFeedback);
+        ClickLogger.LogAiResponse("grading_feedback", scenario, trimmedFeedback, score ?? -1);
 
         Canvas.ForceUpdateCanvases();
         if (aiResponseScrollView != null)
@@ -238,30 +237,35 @@ public class GradingManager : MonoBehaviour
         SceneManager.LoadScene("IntroductionScene");
     }
 
-    private void ExtractScore(string content)
+    // Returns the parsed score so callers can log it, independent of
+    // whether scoreText is wired up in the inspector.
+    private int? ExtractScore(string content)
     {
-        if (scoreText == null)
-            return;
+        int? score = null;
 
-        if (string.IsNullOrEmpty(content))
+        if (!string.IsNullOrEmpty(content))
         {
-            scoreText.text = "Score: N/A";
-            return;
+            Match m = Regex.Match(
+                content,
+                @"(?i)(?:score(?:d)?|earned)?\s*[:\-]?\s*([0-9]{1,3})\s*(?:out of|/)\s*100");
+
+            if (m.Success && int.TryParse(m.Groups[1].Value, out int parsed))
+                score = parsed;
         }
 
-        Match m = Regex.Match(
-            content,
-            @"(?i)(?:score(?:d)?|earned)?\s*[:\-]?\s*([0-9]{1,3})\s*(?:out of|/)\s*100");
+        if (scoreText == null)
+            return score;
 
-        if (m.Success &&
-            int.TryParse(m.Groups[1].Value, out int score))
+        if (score.HasValue)
         {
-            scoreText.text = $"Score: {score}/100";
+            scoreText.text = $"Score: {score.Value}/100";
         }
         else
         {
             scoreText.text = "Score: N/A";
         }
+
+        return score;
     }
 
     private IEnumerator AnimateLoadingDots()

@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS ai_responses (
   kind TEXT NOT NULL,              -- 'grading_feedback', 'hint', or 'concept_help'
   scenario TEXT,
   content TEXT,
+  score INTEGER,                   -- Brainy's 0-100 grade, only set when kind = 'grading_feedback'
   FOREIGN KEY (session_id) REFERENCES sessions(session_id)
 );
 
