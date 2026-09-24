@@ -199,6 +199,13 @@ public class GameManager : MonoBehaviour
             cardTexts[i].text = i < currentCards.Count ? currentCards[i] : "[Empty]";
 
         SetCardBacks();
+
+        // Group 2: new terms are dealt face-down; the player flips each one to see it.
+        if (TestGroups.IsEnabled(Feature.FaceDownCards))
+        {
+            foreach (var card in FindObjectsByType<CardBehavior>(FindObjectsSortMode.None))
+                card.TurnFaceDown();
+        }
     }
 
     // Group 2 (Feature.CardTweening): the old hand drops away, the new words

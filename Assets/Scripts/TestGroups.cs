@@ -10,6 +10,7 @@ public enum Feature
     BrainyAttentionCue,       // Brainy hops every few seconds while idle (BrainBehavior)
     BrainyBesideResponseBox,  // Brainy rests just left of the response box instead of bottom right (BrainBehavior)
     CardTweening,             // cards deal in, sweep out/in on refresh, and float while idle (CardBehavior, GameManager)
+    FaceDownCards,            // cards are dealt blank and flipped to reveal the term; the AI Help button becomes a Definition popup (CardBehavior, GameManager)
     HoverAnimations,          // buttons pop on hover (ButtonHoverPop)
     NewCardArt,               // not built yet: no new art exists
     BackgroundTweening,       // scene backgrounds slowly drift and zoom (BackgroundDrift)
@@ -40,6 +41,7 @@ public static class TestGroups
                 Feature.BrainyAttentionCue,
                 Feature.BrainyBesideResponseBox,
                 Feature.CardTweening,
+                Feature.FaceDownCards,
                 Feature.HoverAnimations,
                 Feature.BackgroundTweening,
                 Feature.ImprovedMenuTransitions,

@@ -9,11 +9,12 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
     private Vector3 originalScale;
     private Quaternion originalRot;
     private bool isFocused = false;
-    private bool isFlipped = false;
+    private bool isFlipped = false;  // group 1: definition side showing
+    private bool isRevealed = false; // group 2: term showing (cards are dealt face-down)
 
     [Header("Faces")]
-    public TextMeshProUGUI frontText;
-    public TextMeshProUGUI backText;
+    public TextMeshProUGUI frontText;        // the term
+    public TextMeshProUGUI backText;         // the definition (filled by GameManager)
     public GameObject frontFace;
     public GameObject backFace;
 
@@ -47,6 +48,15 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
     private float floatWeight = 0f;   // eases the float in so it never jumps
     private int cardIndex;
 
+    // -------------------- GROUP 2 FACE-DOWN CARDS --------------------
+    // Feature.FaceDownCards: cards are dealt blank, like the back of a real
+    // card. Clicking a focused card flips it over to reveal the term, and it
+    // stays face-up. The Help button becomes "Definition" and pops the term's
+    // definition up in the hint bubble instead of asking the AI.
+
+    private static bool FaceDownCards => TestGroups.IsEnabled(Feature.FaceDownCards);
+    private const float DefinitionButtonWidth = 60f; // "Definition" doesn't fit the "Help" button's width
+
     void Start()
     {
         originalPos = transform.localPosition;
@@ -54,7 +64,15 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
         originalRot = transform.localRotation;
         cardIndex = int.TryParse(name.Replace("Card", ""), out int n) ? n - 1 : 0;
 
-        ShowFront();
+        if (FaceDownCards)
+        {
+            SetUpDefinitionButton();
+            TurnFaceDown();
+        }
+        else
+        {
+            ShowFront();
+        }
 
         if (TestGroups.IsEnabled(Feature.CardTweening))
             DealIn(cardIndex * DealStagger);
@@ -122,7 +140,21 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
             isFocused = true;
             currentlyFocusedCard = this;
 
-            if (helpButton != null) helpButton.gameObject.SetActive(true);
+            if (FaceDownCards) ShowFaceDownState();
+            else if (helpButton != null) helpButton.gameObject.SetActive(true);
+        }
+        else if (FaceDownCards)
+        {
+            if (isRevealed) return;
+
+            // Flip the face-down card over to reveal its term. It stays
+            // face-up from then on, like a real card.
+            isRevealed = true;
+            LeanTween.rotateY(gameObject, 90f, 0.15f).setOnComplete(() =>
+            {
+                ShowFaceDownState();
+                LeanTween.rotateY(gameObject, 0f, 0.15f);
+            });
         }
         else if (!isFlipped)
         {
@@ -170,8 +202,22 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
         isFlipped = false;
         currentlyFocusedCard = null;
 
+        if (FaceDownCards)
+        {
+            ShowFaceDownState();
+            return;
+        }
+
         if (helpButton != null) helpButton.gameObject.SetActive(false);
         ShowFront();
+    }
+
+    // Group 2: puts the card back face-down (blank). GameManager calls this
+    // whenever a new hand is shown, so fresh terms always start hidden.
+    public void TurnFaceDown()
+    {
+        isRevealed = false;
+        ShowFaceDownState();
     }
 
     // Flies the card up from below the screen into its place in the hand.
@@ -248,25 +294,58 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
         if (backFace) backFace.SetActive(true);
     }
 
-    // PUBLIC so you can wire it in Button OnClick exactly like BrainHint.OnBrainClicked
+    // Group 2. Face-down: just the blank card, no text. Face-up: the term,
+    // plus the Definition button while the card is focused. The back face
+    // (definition text) is never shown on the card; it opens in the popup.
+    void ShowFaceDownState()
+    {
+        if (frontFace) frontFace.SetActive(isRevealed);
+        if (backFace) backFace.SetActive(false);
+        if (helpButton != null) helpButton.gameObject.SetActive(isRevealed && isFocused);
+    }
+
+    // Group 2: relabels the scene's Help button as Definition. Renaming the
+    // object keeps the click logs accurate ("DefinitionButton", not "HelpButton").
+    void SetUpDefinitionButton()
+    {
+        if (helpButton == null) return;
+
+        helpButton.name = "DefinitionButton";
+        var label = helpButton.GetComponentInChildren<TMP_Text>(true);
+        if (label != null) label.text = "Definition";
+
+        var rect = (RectTransform)helpButton.transform;
+        rect.sizeDelta = new Vector2(Mathf.Max(rect.sizeDelta.x, DefinitionButtonWidth), rect.sizeDelta.y);
+    }
+
+    // PUBLIC so you can wire it in Button OnClick exactly like BrainHint.OnBrainClicked.
+    // Group 1 asks the AI for help with the concept; group 2 shows the definition.
     public void OnHelpButtonPressed()
     {
-        if (hintManager == null)
-        {
-            hintManager = FindObjectOfType<HintManager>();
-            if (hintManager == null)
-            {
-                Debug.LogWarning("[CardBehavior] No HintManager assigned/found.");
-                return;
-            }
-        }
+        if (FaceDownCards) ShowDefinition();
+        else RequestAiConceptHelp();
+    }
 
+    // Group 2: pops the term's definition up in the same bubble Brainy's hints use.
+    void ShowDefinition()
+    {
         if (hintOverlay == null || hintText == null)
         {
             Debug.LogWarning("[CardBehavior] Assign Hint Overlay and Hint Text fields on the card.");
             return;
         }
 
+        string term = frontText != null ? frontText.text.Trim() : "";
+        string definition = backText != null ? backText.text.Trim() : "";
+
+        OpenHintBubble();
+        hintText.text = string.IsNullOrEmpty(definition)
+            ? "No definition available."
+            : $"<b>{term}</b>\n\n{definition}";
+    }
+
+    void OpenHintBubble()
+    {
         // 1) Open overlay + bubble
         hintOverlay.SetActive(true);
         if (hintBubbleContainer != null) hintBubbleContainer.gameObject.SetActive(true);
@@ -291,6 +370,28 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
             if (bubbleCanvas.sortingOrder <= (overlayCanvas != null ? overlayCanvas.sortingOrder : 50))
                 bubbleCanvas.sortingOrder = (overlayCanvas != null ? overlayCanvas.sortingOrder + 1 : 51);
         }
+    }
+
+    // Group 1: asks the AI how this card's concept applies to the current scenario.
+    public void RequestAiConceptHelp()
+    {
+        if (hintManager == null)
+        {
+            hintManager = FindObjectOfType<HintManager>();
+            if (hintManager == null)
+            {
+                Debug.LogWarning("[CardBehavior] No HintManager assigned/found.");
+                return;
+            }
+        }
+
+        if (hintOverlay == null || hintText == null)
+        {
+            Debug.LogWarning("[CardBehavior] Assign Hint Overlay and Hint Text fields on the card.");
+            return;
+        }
+
+        OpenHintBubble();
 
         // 3) Point HintManager at the SAME TMP the bubble uses, so the AI fills it
         hintManager.hintText = hintText;
