@@ -8,6 +8,7 @@ using UnityEngine;
 public enum Feature
 {
     BrainyAttentionCue,       // Brainy hops every few seconds while idle (BrainBehavior)
+    BrainyBesideResponseBox,  // Brainy rests just left of the response box instead of bottom right (BrainBehavior)
     CardTweening,             // cards deal in, sweep out/in on refresh, and float while idle (CardBehavior, GameManager)
     HoverAnimations,          // buttons pop on hover (ButtonHoverPop)
     NewCardArt,               // not built yet: no new art exists
@@ -37,6 +38,7 @@ public static class TestGroups
         { 2, new HashSet<Feature>
             {
                 Feature.BrainyAttentionCue,
+                Feature.BrainyBesideResponseBox,
                 Feature.CardTweening,
                 Feature.HoverAnimations,
                 Feature.BackgroundTweening,

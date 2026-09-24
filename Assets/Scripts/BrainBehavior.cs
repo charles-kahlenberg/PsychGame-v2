@@ -16,6 +16,10 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     private const float AttentionCueInterval = 6f;
     private const float AttentionCueHopHeight = 12f;
 
+    // Group 2 resting spot (Feature.BrainyBesideResponseBox): this far to the
+    // left of the response box, vertically centered on it.
+    private const float ResponseBoxGap = 12f;
+
     public Vector3 focusPosition = new Vector3(500f, 0f, 0f);
     public GameObject hintOverlay;
     public GameObject hintText;
@@ -24,6 +28,9 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
     void Start()
     {
+        if (TestGroups.IsEnabled(Feature.BrainyBesideResponseBox))
+            MoveBesideResponseBox();
+
         originalPos = transform.localPosition;
         originalScale = transform.localScale;
 
@@ -32,6 +39,29 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
         if (TestGroups.IsEnabled(Feature.BrainyAttentionCue))
             StartCoroutine(AttentionCueLoop());
+    }
+
+    // Measured from the box itself, so Brainy follows it if the layout changes
+    // and stays beside it on any screen shape. Only the resting spot moves:
+    // clicking still flies Brainy to the same focusPosition by the hint bubble.
+    void MoveBesideResponseBox()
+    {
+        var box = GameObject.Find("ResponseInput")?.transform as RectTransform;
+        if (box == null || box.anchorMin != box.anchorMax)
+        {
+            Debug.LogWarning("[BrainBehavior] ResponseInput not found (or not point-anchored); leaving Brainy where it is.");
+            return;
+        }
+
+        var rt = (RectTransform)transform;
+        rt.anchorMin = box.anchorMin;
+        rt.anchorMax = box.anchorMax;
+
+        float boxLeft = box.anchoredPosition.x - box.rect.width * box.pivot.x;
+        float boxMiddle = box.anchoredPosition.y + (0.5f - box.pivot.y) * box.rect.height;
+        rt.anchoredPosition = new Vector2(
+            boxLeft - ResponseBoxGap - rt.rect.width * (1f - rt.pivot.x),
+            boxMiddle - (0.5f - rt.pivot.y) * rt.rect.height);
     }
 
     IEnumerator AttentionCueLoop()
