@@ -16,12 +16,21 @@ public class ClickLogger : MonoBehaviour
 {
     private const string WorkerUrl = "https://psych-log.charliekahlenberg.workers.dev";
 
-    // Scenes whose time-on-screen we report, and what to call them in the data.
+    // What to call each scene in the data. Every scene's time-on-screen is
+    // reported; a scene missing from this map is logged under its raw scene
+    // name rather than dropped. Keep the worker's SCREEN_LABELS (reports.js)
+    // in sync when adding entries.
     private static readonly Dictionary<string, string> SceneToMenuName = new Dictionary<string, string>
     {
         { "SplashScene", "main_menu" },
+        { "IntroductionScene", "introduction" },
+        { "RulesScene", "rules" },
+        { "SaveSelectScene", "save_select" },
+        { "LoadingScene", "loading" },
         { "GameScene", "respond" },
+        { "GradingScene", "grading" },
         { "ReviewScene", "review" },
+        { "GameEndScene", "game_end" },
     };
 
     private static ClickLogger _instance;
@@ -171,15 +180,8 @@ public class ClickLogger : MonoBehaviour
 
     private void EnterMenu(string sceneName)
     {
-        if (SceneToMenuName.TryGetValue(sceneName, out string menuName))
-        {
-            _currentMenuName = menuName;
-            _menuEnteredAt = DateTime.UtcNow;
-        }
-        else
-        {
-            _currentMenuName = null;
-        }
+        _currentMenuName = SceneToMenuName.TryGetValue(sceneName, out string menuName) ? menuName : sceneName;
+        _menuEnteredAt = DateTime.UtcNow;
     }
 
     private void ExitMenu()

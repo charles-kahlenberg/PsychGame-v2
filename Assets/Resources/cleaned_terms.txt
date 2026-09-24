@@ -8,7 +8,7 @@ Amnesia - An inability to either create new memories or to retrieve old memories
 Attachment - Our strong early emotional development between infants and their caregivers. Secure attachments lead to later psychological well-being.
 Basilar Membrane - The membrane that goes through the cochlea, where our hair cells are placed
 Brain Plasticity - The brain's ability to reorganize itself by forming new neural connections
-Broca?s Area - Area in the left frontal lobe of brain responsible for speech production
+Broca's Area - Area in the left frontal lobe of brain responsible for speech production
 Change Blindness - A psychological phenomenon where people fail to notice significant changes in their environment
 Chunking - Grouping information for easy recall
 Circadian Rhythms - psychological and physical processes that follow a 24-hour sleep-wake cycle
@@ -28,7 +28,7 @@ Depth Perception - Seeing in three dimensions
 Dopamine - A neurotransmitter that makes you feel good or rewarded; also involved in motor control
 Double-blind Study - Neither the participant nor the researcher knows which group is the treatment or the placebo
 Dreams - Visual experience during sleep
-Egocentrism - Seeing only from one?s own perspective
+Egocentrism - Seeing only from one's own perspective
 Elizabeth Loftus - Memory researcher who did much work examining the fallibility of eyewitness testimony and recovered memories
 Experiment - Testing your independent and dependent variables, and having a control and experimental group
 Explicit Memory - Long-term memories that are able to be recalled, usually general knowledge or information about our personal experiences
@@ -61,8 +61,8 @@ Positive Reinforcement - Increasing probability of response
 Preconventional Level - The first step is Kohlberg's theory. Focused on avoiding punishment or gaining rewards
 Priming - When memory retrieval improves due to an earlier exposure to the same or a similar stimulus
 Puberty - Sexual maturation begins and signals the start of adolescence
-Qualitative Research - Research that emphasizes the characteristics of what?s being study, not the numerical differences
-Random Assignment - A way to assign participants to groups where there?s an equal likelihood of being in any group
+Qualitative Research - Research that emphasizes the characteristics of what's being study, not the numerical differences
+Random Assignment - A way to assign participants to groups where there's an equal likelihood of being in any group
 Recency Effect - The tendency to remember the most recent information or events more easily than earlier ones
 REM Sleep - Stage in sleep with rapid eye movement and where dreams can occur. Plays an important role in learning and memory
 Representative Sample - The sample reflects the population
@@ -76,7 +76,7 @@ Shaping - Reinforcement by successive approximations
 Sleep Apnea - Chronic sleep disorder when the person constantly pauses while asleep, resulting in poor sleep quality
 Stimulus Generalization - Responding to variations of the original stimulus
 Stroop Effect - When two skills come into conflict, the more practiced skill will be performed first
-Synapse - A way to assign participants to groups where there?s an equal likelihood of being in any group
+Synapse - A way to assign participants to groups where there's an equal likelihood of being in any group
 Taste Receptor Cells - The receptor cells in our taste buds that allow us to sense the chemicals in our food
 Temperament - Individual response style to environmental stimulus
 Thalamus - The forebrain structure that gets information from the senses and then sends the information to the cerebral cortex to be processed
