@@ -75,9 +75,38 @@ CREATE TABLE IF NOT EXISTS menu_durations (
   FOREIGN KEY (session_id) REFERENCES sessions(session_id)
 );
 
--- Tracks, per table, the last D1 rowid already appended to the Dropbox CSV,
--- so each sync only reads/exports rows written since the previous run.
+-- Per-session report rebuilds look rows up by session_id.
+CREATE INDEX IF NOT EXISTS idx_click_events_session ON click_events(session_id);
+CREATE INDEX IF NOT EXISTS idx_ai_responses_session ON ai_responses(session_id);
+CREATE INDEX IF NOT EXISTS idx_user_responses_session ON user_responses(session_id);
+CREATE INDEX IF NOT EXISTS idx_card_events_session ON card_events(session_id);
+CREATE INDEX IF NOT EXISTS idx_menu_durations_session ON menu_durations(session_id);
+
+-- ---- Dropbox report sync bookkeeping (see src/sync.js) ----
+
+-- Tracks, per table, the last D1 rowid already appended to the raw CSV,
+-- so each sync only reads rows written since the previous run.
 CREATE TABLE IF NOT EXISTS csv_sync_state (
   table_name TEXT PRIMARY KEY,
   last_rowid INTEGER NOT NULL DEFAULT 0
+);
+
+-- Sessions with new events whose report files still need regenerating.
+CREATE TABLE IF NOT EXISTS csv_dirty_sessions (
+  session_id TEXT PRIMARY KEY
+);
+
+-- Each session's pre-rendered rows for the two summary CSVs, so those files
+-- can be rebuilt without re-reading every event.
+CREATE TABLE IF NOT EXISTS csv_session_reports (
+  session_id TEXT PRIMARY KEY,
+  session_num INTEGER NOT NULL,
+  overview_line TEXT NOT NULL,
+  attempt_lines TEXT NOT NULL      -- JSON array of CSV lines
+);
+
+-- Sync lock lease and README version.
+CREATE TABLE IF NOT EXISTS csv_meta (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
 );

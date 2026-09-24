@@ -8,8 +8,13 @@ database_name = "psych_log_db"
 database_id = "52402cfd-46fc-4db3-82fd-45e559dbba28"
 
 [vars]
-# Path (in the connected Dropbox account) of the combined CSV log.
-DROPBOX_CSV_PATH = "/PsychGameLogs/psych_log.csv"
+# Folder (inside the Dropbox app folder) that holds the reports.
+DROPBOX_FOLDER = "/PsychGameLogs"
+
+# Safety net: re-runs the Dropbox sync in case a write-triggered one was
+# skipped (lock held) or failed (Dropbox hiccup).
+[triggers]
+crons = ["*/5 * * * *"]
 
 # Set these as secrets, not here — never commit real values:
 #   wrangler secret put DROPBOX_APP_KEY

@@ -2,6 +2,8 @@
 // and writes them to a D1 database. This is the only thing the client ever
 // talks to directly — the D1 binding (and any future secrets) stay server-side.
 
+import { syncToDropbox } from "./sync.js";
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -38,282 +40,10 @@ function toEasternString(dateInput) {
   return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")}.${get("fractionalSecond")} ${get("dayPeriod")} ${get("timeZoneName")}`;
 }
 
-// --- Incremental CSV export to Dropbox ---------------------------------
-// Every write below ends by kicking this off in the background (ctx.waitUntil),
-// so the CSV in Dropbox stays current without the client waiting on it.
-// Rather than re-reading the whole database each time, csv_sync_state tracks
-// the last D1 rowid we've already exported per table, so each run only reads
-// and appends rows that arrived since the previous menu load.
-
-const SYNC_TABLE_NAMES = [
-  "sessions",
-  "click_events",
-  "ai_responses",
-  "user_responses",
-  "card_events",
-  "menu_durations",
-];
-
-// Union of every column across all six tables, so all rows can share one CSV.
-// New columns must be appended at the end, never inserted in the middle:
-// the live Dropbox file's header was already written by an earlier sync, and
-// rows are appended positionally, so shifting existing column positions
-// would misalign every row written after the change against that header.
-const CSV_COLUMNS = [
-  "table_name",
-  "row_id",
-  "session_id",
-  "timestamp",
-  "timestamp_et",
-  "username",
-  "user_agent",
-  "object_name",
-  "kind",
-  "scenario",
-  "content",
-  "response",
-  "event_type",
-  "cards",
-  "elapsed_ms",
-  "menu_name",
-  "duration_ms",
-  "score",
-  "test_group",
-  "features",
-];
-const CSV_HEADER = CSV_COLUMNS.join(",");
-
-const MAX_ROWS_PER_TABLE_PER_SYNC = 2000;
-
-function rowToCsvRecord(tableName, row) {
-  const base = { table_name: tableName, row_id: row.row_id, session_id: row.session_id };
-  switch (tableName) {
-    case "sessions":
-      return {
-        ...base,
-        timestamp: row.started_at,
-        timestamp_et: row.started_at_et,
-        username: row.username,
-        user_agent: row.user_agent,
-        test_group: row.test_group,
-        features: row.features,
-      };
-    case "click_events":
-      return { ...base, timestamp: row.timestamp, timestamp_et: row.timestamp_et, object_name: row.object_name };
-    case "ai_responses":
-      return {
-        ...base,
-        timestamp: row.timestamp,
-        timestamp_et: row.timestamp_et,
-        kind: row.kind,
-        scenario: row.scenario,
-        content: row.content,
-        score: row.score,
-      };
-    case "user_responses":
-      return {
-        ...base,
-        timestamp: row.timestamp,
-        timestamp_et: row.timestamp_et,
-        scenario: row.scenario,
-        response: row.response,
-      };
-    case "card_events":
-      return {
-        ...base,
-        timestamp: row.timestamp,
-        timestamp_et: row.timestamp_et,
-        scenario: row.scenario,
-        event_type: row.event_type,
-        cards: row.cards,
-        elapsed_ms: row.elapsed_ms,
-      };
-    case "menu_durations":
-      return {
-        ...base,
-        timestamp: row.timestamp,
-        timestamp_et: row.timestamp_et,
-        menu_name: row.menu_name,
-        duration_ms: row.duration_ms,
-        scenario: row.scenario,
-      };
-  }
-}
-
-function csvEscape(value) {
-  if (value === null || value === undefined) return "";
-  const str = String(value);
-  if (/[",\n\r]/.test(str)) {
-    return `"${str.replace(/"/g, '""')}"`;
-  }
-  return str;
-}
-
-function recordToCsvLine(record) {
-  return CSV_COLUMNS.map((col) => csvEscape(record[col])).join(",");
-}
-
-async function ensureSyncState(env) {
-  await env.DB.batch(
-    SYNC_TABLE_NAMES.map((name) =>
-      env.DB.prepare(`INSERT OR IGNORE INTO csv_sync_state (table_name, last_rowid) VALUES (?, 0)`).bind(name)
-    )
-  );
-}
-
-async function getLastRowids(env) {
-  const { results } = await env.DB.prepare(`SELECT table_name, last_rowid FROM csv_sync_state`).all();
-  const map = {};
-  for (const r of results) map[r.table_name] = r.last_rowid;
-  return map;
-}
-
-// tableName always comes from the SYNC_TABLE_NAMES whitelist above, never
-// from request input, so interpolating it into the query is safe.
-async function fetchNewRowsForTable(env, tableName, lastRowid) {
-  const { results } = await env.DB.prepare(
-    `SELECT rowid AS row_id, * FROM ${tableName} WHERE rowid > ?1 ORDER BY rowid ASC LIMIT ?2`
-  )
-    .bind(lastRowid, MAX_ROWS_PER_TABLE_PER_SYNC)
-    .all();
-  return results;
-}
-
-async function getDropboxAccessToken(env) {
-  const resp = await fetch("https://api.dropbox.com/oauth2/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      refresh_token: env.DROPBOX_REFRESH_TOKEN,
-      client_id: env.DROPBOX_APP_KEY,
-      client_secret: env.DROPBOX_APP_SECRET,
-    }),
-  });
-  if (!resp.ok) {
-    throw new Error(`Dropbox token refresh failed: ${resp.status} ${await resp.text()}`);
-  }
-  const data = await resp.json();
-  return data.access_token;
-}
-
-async function downloadDropboxFile(accessToken, path) {
-  const resp = await fetch("https://content.dropboxapi.com/2/files/download", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Dropbox-API-Arg": JSON.stringify({ path }),
-    },
-  });
-
-  if (resp.status === 409) {
-    const err = await resp.json().catch(() => null);
-    if (err?.error?.[".tag"] === "path" && err.error.path?.[".tag"] === "not_found") {
-      return { content: null, rev: null };
-    }
-    throw new Error(`Dropbox download failed: ${JSON.stringify(err)}`);
-  }
-
-  if (!resp.ok) {
-    throw new Error(`Dropbox download failed: ${resp.status} ${await resp.text()}`);
-  }
-
-  const resultHeader = resp.headers.get("Dropbox-API-Result");
-  const rev = resultHeader ? JSON.parse(resultHeader).rev : null;
-  const content = await resp.text();
-  return { content, rev };
-}
-
-async function uploadDropboxFile(accessToken, path, content, rev) {
-  const mode = rev ? { ".tag": "update", update: rev } : { ".tag": "add" };
-  const resp = await fetch("https://content.dropboxapi.com/2/files/upload", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/octet-stream",
-      "Dropbox-API-Arg": JSON.stringify({ path, mode, mute: true }),
-    },
-    body: content,
-  });
-
-  if (!resp.ok) {
-    const errText = await resp.text();
-    const conflict = resp.status === 409 && errText.includes("conflict");
-    throw Object.assign(new Error(`Dropbox upload failed: ${resp.status} ${errText}`), { conflict });
-  }
-
-  return resp.json();
-}
-
-// Downloads the current CSV, appends the new lines, and uploads it back.
-// Uses Dropbox's rev-based optimistic locking so two overlapping syncs (e.g.
-// two players hitting a menu load at once) can't silently clobber each
-// other's rows — a conflict just means "someone updated it first," so we
-// re-download the now-current file and retry the append.
-async function appendCsvLinesToDropbox(env, accessToken, newLines) {
-  const path = env.DROPBOX_CSV_PATH || "/psych_log.csv";
-  const MAX_ATTEMPTS = 3;
-
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const { content, rev } = await downloadDropboxFile(accessToken, path);
-    const existing = content && content.length > 0 ? content : `${CSV_HEADER}\n`;
-    const separator = existing.endsWith("\n") ? "" : "\n";
-    const newContent = existing + separator + newLines.join("\n") + "\n";
-
-    try {
-      await uploadDropboxFile(accessToken, path, newContent, rev);
-      return;
-    } catch (err) {
-      if (err.conflict && attempt < MAX_ATTEMPTS) continue;
-      throw err;
-    }
-  }
-}
-
-async function syncNewRowsToDropbox(env) {
-  if (!env.DROPBOX_REFRESH_TOKEN || !env.DROPBOX_APP_KEY || !env.DROPBOX_APP_SECRET) {
-    return; // Dropbox secrets not configured yet
-  }
-
-  await ensureSyncState(env);
-  const lastRowids = await getLastRowids(env);
-
-  const newRowsByTable = {};
-  let totalNew = 0;
-  for (const tableName of SYNC_TABLE_NAMES) {
-    const rows = await fetchNewRowsForTable(env, tableName, lastRowids[tableName] || 0);
-    if (rows.length > 0) {
-      newRowsByTable[tableName] = rows;
-      totalNew += rows.length;
-    }
-  }
-
-  if (totalNew === 0) return;
-
-  const csvLines = [];
-  const newLastRowid = { ...lastRowids };
-  for (const tableName of SYNC_TABLE_NAMES) {
-    const rows = newRowsByTable[tableName];
-    if (!rows) continue;
-    for (const row of rows) {
-      csvLines.push(recordToCsvLine(rowToCsvRecord(tableName, row)));
-    }
-    newLastRowid[tableName] = rows[rows.length - 1].row_id;
-  }
-
-  const accessToken = await getDropboxAccessToken(env);
-  await appendCsvLinesToDropbox(env, accessToken, csvLines);
-
-  const updateStmts = SYNC_TABLE_NAMES.filter((name) => newLastRowid[name] !== lastRowids[name]).map((name) =>
-    env.DB.prepare(`UPDATE csv_sync_state SET last_rowid = ? WHERE table_name = ?`).bind(newLastRowid[name], name)
-  );
-  if (updateStmts.length > 0) {
-    await env.DB.batch(updateStmts);
-  }
-}
-
+// Every write ends by refreshing the Dropbox reports in the background, so the
+// client never waits on Dropbox. See sync.js for how that stays incremental.
 function triggerDropboxSync(ctx, env) {
-  ctx.waitUntil(syncNewRowsToDropbox(env).catch((err) => console.error("Dropbox sync failed:", err)));
+  ctx.waitUntil(syncToDropbox(env).catch((err) => console.error("Dropbox sync failed:", err)));
 }
 
 // Builds the D1 prepared statements for one /log/batch request. Client sends
@@ -543,5 +273,10 @@ export default {
     } catch (err) {
       return jsonResponse({ error: "Server error", details: String(err) }, 500);
     }
+  },
+
+  // Fallback for anything a write-triggered sync skipped or failed on.
+  async scheduled(event, env, ctx) {
+    triggerDropboxSync(ctx, env);
   },
 };
