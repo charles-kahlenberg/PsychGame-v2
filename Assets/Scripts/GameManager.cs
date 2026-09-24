@@ -184,13 +184,45 @@ public class GameManager : MonoBehaviour
         refreshUsesRemaining--;
         UpdateRefreshUI();
 
+        if (TestGroups.IsEnabled(Feature.CardTweening))
+            StartCoroutine(AnimateCardRefresh());
+        else
+            ShowCurrentCards();
+
+        ClickLogger.LogCardEvent(currentScenario, "refresh", currentCards, elapsedMs);
+        cardsShownAt = System.DateTime.UtcNow;
+    }
+
+    void ShowCurrentCards()
+    {
         for (int i = 0; i < cardTexts.Length; i++)
             cardTexts[i].text = i < currentCards.Count ? currentCards[i] : "[Empty]";
 
         SetCardBacks();
+    }
 
-        ClickLogger.LogCardEvent(currentScenario, "refresh", currentCards, elapsedMs);
-        cardsShownAt = System.DateTime.UtcNow;
+    // Group 2 (Feature.CardTweening): the old hand drops away, the new words
+    // are swapped in while the cards are off screen, then the hand is dealt
+    // back in. Refresh is locked until the new hand has landed.
+    IEnumerator AnimateCardRefresh()
+    {
+        if (refreshButton) refreshButton.interactable = false;
+
+        var cards = FindObjectsByType<CardBehavior>(FindObjectsSortMode.None);
+        System.Array.Sort(cards, (a, b) => string.CompareOrdinal(a.name, b.name));
+
+        for (int i = 0; i < cards.Length; i++)
+            cards[i].SweepOut(i * CardBehavior.DealStagger);
+
+        yield return new WaitForSeconds(CardBehavior.SweepOutTime(cards.Length));
+
+        ShowCurrentCards();
+
+        for (int i = 0; i < cards.Length; i++)
+            cards[i].DealIn(i * CardBehavior.DealStagger);
+
+        yield return new WaitForSeconds(CardBehavior.DealInTime(cards.Length));
+        UpdateRefreshUI();
     }
 
     void UpdateRefreshUI()
@@ -235,7 +267,7 @@ public class GameManager : MonoBehaviour
         PlayerPrefs.Save();
 
         field.text = "";
-        SceneManager.LoadScene("GradingScene");
+        SceneTransition.Load("GradingScene");
     }
 
 
@@ -290,7 +322,7 @@ public class GameManager : MonoBehaviour
         usedVocab.Clear();
         responseHistory.Clear();
 
-        SceneManager.LoadScene("LoadingScene");
+        SceneTransition.Load("LoadingScene");
     }
 
     public void SetNewGameSlot(int idx)
@@ -300,17 +332,17 @@ public class GameManager : MonoBehaviour
         PlayerPrefs.DeleteKey("RemainingScenarios");
         PlayerPrefs.Save();
 
-        SceneManager.LoadScene("LoadingScene");
+        SceneTransition.Load("LoadingScene");
     }
 
-    public void ContinueGame() => SceneManager.LoadScene("SaveSelectScene");
+    public void ContinueGame() => SceneTransition.Load("SaveSelectScene");
 
     public void PromptSave() => savePromptPanel.SetActive(true);
 
     public void CancelAndExit()
     {
         savePromptPanel.SetActive(false);
-        SceneManager.LoadScene("SplashScene");
+        SceneTransition.Load("SplashScene");
     }
 
     public void ConfirmSave()
@@ -340,7 +372,7 @@ public class GameManager : MonoBehaviour
         PlayerPrefs.Save();
 
         savePromptPanel.SetActive(false);
-        SceneManager.LoadScene("SplashScene");
+        SceneTransition.Load("SplashScene");
     }
 
 }

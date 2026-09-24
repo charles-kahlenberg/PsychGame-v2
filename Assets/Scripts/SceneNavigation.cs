@@ -19,21 +19,21 @@ public class SceneNavigation : MonoBehaviour
 
     public void GoToSplash()
     {
-        SceneManager.LoadScene("SplashScene");
+        SceneTransition.Load("SplashScene");
     }
 
     public void GoToReview()
     {
-        SceneManager.LoadScene("ReviewScene");
+        SceneTransition.Load("ReviewScene");
     }
 
     public void GoToSaveSelect()
     {
-        SceneManager.LoadScene("SaveSelectScene");
+        SceneTransition.Load("SaveSelectScene");
     }
 
     public void GoToGame()
     {
-        SceneManager.LoadScene("GameScene");
+        SceneTransition.Load("GameScene");
     }
 }

@@ -177,7 +177,7 @@ public class RulesManager : MonoBehaviour
 
     public void OnReturnMenuClicked()
     {
-        SceneManager.LoadScene("SplashScene");
+        SceneTransition.Load("SplashScene");
     }
 
     IEnumerator TypeText(string text, System.Action onComplete = null)

@@ -78,6 +78,8 @@ const CSV_COLUMNS = [
   "menu_name",
   "duration_ms",
   "score",
+  "test_group",
+  "features",
 ];
 const CSV_HEADER = CSV_COLUMNS.join(",");
 
@@ -93,6 +95,8 @@ function rowToCsvRecord(tableName, row) {
         timestamp_et: row.started_at_et,
         username: row.username,
         user_agent: row.user_agent,
+        test_group: row.test_group,
+        features: row.features,
       };
     case "click_events":
       return { ...base, timestamp: row.timestamp, timestamp_et: row.timestamp_et, object_name: row.object_name };
@@ -404,17 +408,25 @@ export default {
 
     try {
       if (url.pathname === "/session/start") {
-        const { sessionId, username } = body;
+        const { sessionId, username, testGroup, features } = body;
         if (!sessionId) return jsonResponse({ error: "Missing sessionId" }, 400);
 
         const userAgent = request.headers.get("User-Agent") || "";
         const startedAt = new Date();
         await env.DB.prepare(
-          `INSERT INTO sessions (session_id, username, started_at, started_at_et, user_agent)
-           VALUES (?, ?, ?, ?, ?)
+          `INSERT INTO sessions (session_id, username, started_at, started_at_et, user_agent, test_group, features)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(session_id) DO NOTHING`
         )
-          .bind(sessionId, username || null, startedAt.toISOString(), toEasternString(startedAt), userAgent)
+          .bind(
+            sessionId,
+            username || null,
+            startedAt.toISOString(),
+            toEasternString(startedAt),
+            userAgent,
+            typeof testGroup === "number" && testGroup > 0 ? testGroup : null,
+            typeof features === "string" ? features : null
+          )
           .run();
 
         triggerDropboxSync(ctx, env);

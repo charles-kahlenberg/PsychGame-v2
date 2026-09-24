@@ -38,7 +38,7 @@ public class SaveSelectUI : MonoBehaviour
         if (isReviewMode)
         {
             isReviewMode = false; // Reset for next use
-            SceneManager.LoadScene("ReviewScene");
+            SceneTransition.Load("ReviewScene");
         }
         else
         {
@@ -53,7 +53,7 @@ public class SaveSelectUI : MonoBehaviour
                 PlayerPrefs.Save();
             }
 
-            SceneManager.LoadScene("IntroductionScene");
+            SceneTransition.Load("IntroductionScene");
         }
     }
 }

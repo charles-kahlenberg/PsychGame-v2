@@ -52,26 +52,26 @@ public class SplashUI : MonoBehaviour
         SaveManager.Delete(-1);
 
         // Load loading screen, GameManager will generate new scenario & cards
-        SceneManager.LoadScene("LoadingScene");
+        SceneTransition.Load("LoadingScene");
     }
 
     // CONTINUE
     public void OnContinueClicked()
     {
-        SceneManager.LoadScene("SaveSelectScene");
+        SceneTransition.Load("SaveSelectScene");
     }
 
     // VIEW RESPONSES
     public void OnViewResponsesClicked()
     {
         SaveSelectUI.isReviewMode = true;
-        SceneManager.LoadScene("SaveSelectScene");
+        SceneTransition.Load("SaveSelectScene");
     }
 
     // RULES
     public void OnRulesClicked()
     {
-        SceneManager.LoadScene("RulesScene");
+        SceneTransition.Load("RulesScene");
     }
 
     // STUDY MODE (future use)

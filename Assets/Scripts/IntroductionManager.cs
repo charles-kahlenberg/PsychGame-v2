@@ -215,7 +215,7 @@ public class IntroductionManager : MonoBehaviour
 
     public void OnContinueClicked()
     {
-        SceneManager.LoadScene("GameScene");
+        SceneTransition.Load("GameScene");
     }
 
     // ---------------- DTOs ----------------

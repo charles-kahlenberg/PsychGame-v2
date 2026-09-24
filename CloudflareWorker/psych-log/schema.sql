@@ -7,7 +7,9 @@ CREATE TABLE IF NOT EXISTS sessions (
   username TEXT,
   started_at TEXT NOT NULL,        -- raw UTC ISO 8601, for sorting/analysis
   started_at_et TEXT NOT NULL,     -- human-readable Eastern time, e.g. "2026-09-12 04:35:15 PM EDT"
-  user_agent TEXT
+  user_agent TEXT,
+  test_group INTEGER,              -- which study condition (see Assets/Scripts/TestGroups.cs); NULL = original build, group 1
+  features TEXT                    -- pipe-separated features that were on, e.g. "CardTweening|HoverAnimations"
 );
 
 CREATE TABLE IF NOT EXISTS click_events (

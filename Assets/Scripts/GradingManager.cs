@@ -225,7 +225,7 @@ public class GradingManager : MonoBehaviour
         if (string.IsNullOrEmpty(nextScenario))
         {
             Debug.Log("[GradingManager] All scenarios completed � showing GameEndScene.");
-            SceneManager.LoadScene("GameEndScene");
+            SceneTransition.Load("GameEndScene");
             return;
         }
 
@@ -234,7 +234,7 @@ public class GradingManager : MonoBehaviour
         PlayerPrefs.SetInt("FromGrading", 1);
         PlayerPrefs.Save();
 
-        SceneManager.LoadScene("IntroductionScene");
+        SceneTransition.Load("IntroductionScene");
     }
 
     // Returns the parsed score so callers can log it, independent of

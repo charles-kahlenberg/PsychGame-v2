@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using System.Collections;
 using System.Collections.Generic;
 
 public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
@@ -8,6 +9,12 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     private Vector3 originalPos;
     private Vector3 originalScale;
     private bool isActive = false;
+    private bool isHovered = false;
+
+    // Group 2 attention cue (Feature.BrainyAttentionCue): while idle, Brainy
+    // hops every AttentionCueInterval seconds so players notice it.
+    private const float AttentionCueInterval = 6f;
+    private const float AttentionCueHopHeight = 12f;
 
     public Vector3 focusPosition = new Vector3(500f, 0f, 0f);
     public GameObject hintOverlay;
@@ -22,6 +29,33 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
         if (hintOverlay != null) hintOverlay.SetActive(false);
         if (hintText != null) hintText.SetActive(false);
+
+        if (TestGroups.IsEnabled(Feature.BrainyAttentionCue))
+            StartCoroutine(AttentionCueLoop());
+    }
+
+    IEnumerator AttentionCueLoop()
+    {
+        var wait = new WaitForSeconds(AttentionCueInterval);
+        while (true)
+        {
+            yield return wait;
+            if (isActive || isHovered) continue;
+
+            // Two quick hops with a little grow, then back to rest.
+            LeanTween.moveLocalY(gameObject, originalPos.y + AttentionCueHopHeight, 0.15f).setEaseOutQuad().setLoopPingPong(2);
+            LeanTween.scale(gameObject, originalScale * 1.08f, 0.15f).setEaseOutQuad().setLoopPingPong(2);
+        }
+    }
+
+    // Stops a hop in progress so it can't fight the hover/click tweens.
+    void CancelAttentionCue()
+    {
+        if (!TestGroups.IsEnabled(Feature.BrainyAttentionCue)) return;
+
+        LeanTween.cancel(gameObject);
+        transform.localPosition = originalPos;
+        transform.localScale = originalScale;
     }
 
     public void OnPointerClick(PointerEventData eventData)
@@ -30,6 +64,7 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
         isActive = true;
 
+        CancelAttentionCue();
         LeanTween.moveLocal(gameObject, focusPosition, 0.4f).setEaseOutExpo();
         LeanTween.scale(gameObject, originalScale * 1.3f, 0.4f).setEaseOutBack();
 
@@ -122,12 +157,17 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
     public void OnPointerEnter(PointerEventData eventData)
     {
+        isHovered = true;
+        if (!isActive) CancelAttentionCue();
+
         if (!isActive)
             LeanTween.scale(gameObject, originalScale * 1.1f, 0.2f).setEaseOutSine();
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
+        isHovered = false;
+
         if (!isActive)
             LeanTween.scale(gameObject, originalScale, 0.2f).setEaseInSine();
     }

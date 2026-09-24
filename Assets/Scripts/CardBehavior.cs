@@ -29,13 +29,35 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
 
     private static CardBehavior currentlyFocusedCard;
 
+    // -------------------- GROUP 2 CARD TWEENING --------------------
+    // Feature.CardTweening: cards deal in when the screen opens, sweep out and
+    // back in on refresh, and gently float while sitting in the hand.
+
+    public const float DealDuration = 0.45f;
+    public const float DealStagger = 0.08f;           // delay between each card
+    private static readonly Vector3 DealOffset = new Vector3(0f, -420f, 0f); // start below the screen
+    private const float DealTilt = 12f;                // degrees of extra tilt while flying in
+
+    private const float FloatHeight = 5f;              // px up/down while idle
+    private const float FloatSway = 1.2f;              // degrees of rotation while idle
+    private const float FloatSpeed = 1.6f;
+
+    private bool isDealing = false;   // deal/sweep in progress: ignore clicks, no float
+    private bool isReturning = false; // ResetCard's return tween in progress: no float
+    private float floatWeight = 0f;   // eases the float in so it never jumps
+    private int cardIndex;
+
     void Start()
     {
         originalPos = transform.localPosition;
         originalScale = transform.localScale;
         originalRot = transform.localRotation;
+        cardIndex = int.TryParse(name.Replace("Card", ""), out int n) ? n - 1 : 0;
 
         ShowFront();
+
+        if (TestGroups.IsEnabled(Feature.CardTweening))
+            DealIn(cardIndex * DealStagger);
 
         // Hide Help on start; wire click through UnityEvent OR here
         if (helpButton != null)
@@ -52,6 +74,9 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
 
     void Update()
     {
+        if (TestGroups.IsEnabled(Feature.CardTweening))
+            ApplyIdleFloat();
+
         // Click-off to reset
         if (isFocused && Input.GetMouseButtonDown(0))
         {
@@ -81,6 +106,8 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
 
     public void OnPointerClick(PointerEventData eventData)
     {
+        if (isDealing) return;
+
         // Only one focused at a time
         if (currentlyFocusedCard != null && currentlyFocusedCard != this)
             currentlyFocusedCard.ResetCard();
@@ -129,16 +156,84 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
 
     public void ResetCard()
     {
-        LeanTween.moveLocal(gameObject, originalPos, 0.3f).setEaseInOutCubic();
+        isReturning = true;
+        LeanTween.moveLocal(gameObject, originalPos, 0.3f).setEaseInOutCubic().setOnComplete(() => isReturning = false);
         LeanTween.scale(gameObject, originalScale, 0.3f);
         LeanTween.rotateLocal(gameObject, originalRot.eulerAngles, 0.3f);
 
+        ClearFocus();
+    }
+
+    void ClearFocus()
+    {
         isFocused = false;
         isFlipped = false;
         currentlyFocusedCard = null;
 
         if (helpButton != null) helpButton.gameObject.SetActive(false);
         ShowFront();
+    }
+
+    // Flies the card up from below the screen into its place in the hand.
+    public void DealIn(float delay)
+    {
+        isDealing = true;
+        isReturning = false; // cancel() below would skip ResetCard's onComplete
+        LeanTween.cancel(gameObject);
+
+        transform.localPosition = originalPos + DealOffset;
+        transform.localScale = originalScale;
+        SetTilt(DealTilt);
+
+        LeanTween.moveLocal(gameObject, originalPos, DealDuration).setDelay(delay).setEaseOutBack();
+        LeanTween.value(gameObject, 1f, 0f, DealDuration).setDelay(delay).setEaseOutCubic()
+            .setOnUpdate(t => SetTilt(DealTilt * t))
+            .setOnComplete(() => isDealing = false);
+    }
+
+    // Drops the card out of the hand, below the screen. It stays there until DealIn.
+    public void SweepOut(float delay)
+    {
+        isDealing = true;
+        isReturning = false;
+        LeanTween.cancel(gameObject);
+        if (isFocused) ClearFocus();
+        transform.localScale = originalScale;
+
+        LeanTween.moveLocal(gameObject, originalPos + DealOffset, DealDuration * 0.7f).setDelay(delay).setEaseInBack();
+        LeanTween.value(gameObject, 0f, -1f, DealDuration * 0.7f).setDelay(delay).setEaseInCubic()
+            .setOnUpdate(t => SetTilt(DealTilt * t));
+    }
+
+    // How long a whole hand takes to sweep out / deal in with the stagger.
+    public static float SweepOutTime(int cardCount) => DealDuration * 0.7f + DealStagger * (cardCount - 1);
+    public static float DealInTime(int cardCount) => DealDuration + DealStagger * (cardCount - 1);
+
+    // Rotation relative to where the card rests in the hand, around Z only.
+    // Driven through LeanTween.value rather than rotateLocal so it never
+    // takes the long way around when the angle wraps past 0/360.
+    void SetTilt(float degrees)
+    {
+        transform.localRotation = originalRot * Quaternion.Euler(0f, 0f, degrees);
+    }
+
+    // Gentle bob and sway while the card is just sitting in the hand. Each
+    // card is out of phase with the others so the hand looks alive.
+    void ApplyIdleFloat()
+    {
+        bool idle = !isFocused && !isDealing && !isReturning;
+        if (!idle)
+        {
+            floatWeight = 0f;
+            return;
+        }
+
+        floatWeight = Mathf.MoveTowards(floatWeight, 1f, Time.deltaTime / 0.6f);
+        float phase = cardIndex * 1.3f;
+        float t = Time.time * FloatSpeed + phase;
+
+        transform.localPosition = originalPos + new Vector3(0f, Mathf.Sin(t) * FloatHeight * floatWeight, 0f);
+        SetTilt(Mathf.Sin(t * 0.8f + phase) * FloatSway * floatWeight);
     }
 
     void ShowFront()

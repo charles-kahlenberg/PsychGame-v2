@@ -130,7 +130,13 @@ public class ClickLogger : MonoBehaviour
 
     private IEnumerator StartSession()
     {
-        yield return PostJson("/session/start", JsonUtility.ToJson(new SessionStartPayload { sessionId = _sessionId, username = _username }));
+        yield return PostJson("/session/start", JsonUtility.ToJson(new SessionStartPayload
+        {
+            sessionId = _sessionId,
+            username = _username,
+            testGroup = TestGroups.CurrentGroup,
+            features = TestGroups.EnabledFeaturesString(),
+        }));
 
         _sessionReady = true;
         // Send anything that piled up (e.g. clicks during the username
@@ -357,6 +363,8 @@ public class ClickLogger : MonoBehaviour
     {
         public string sessionId;
         public string username;
+        public int testGroup;
+        public string features;
     }
 
     [Serializable]

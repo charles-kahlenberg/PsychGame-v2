@@ -5,11 +5,11 @@ public class GameEndManager : MonoBehaviour
 {
     public void GoToMenu()
     {
-        SceneManager.LoadScene("SplashScene");
+        SceneTransition.Load("SplashScene");
     }
 
     public void RestartGame()
     {
-        SceneManager.LoadScene("GameScene");
+        SceneTransition.Load("GameScene");
     }
 }
