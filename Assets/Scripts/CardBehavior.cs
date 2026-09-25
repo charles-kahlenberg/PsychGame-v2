@@ -66,6 +66,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
         originalScale = transform.localScale;
         originalRot = transform.localRotation;
         cardIndex = int.TryParse(name.Replace("Card", ""), out int n) ? n - 1 : 0;
+        handSiblingIndex = transform.GetSiblingIndex();
 
         if (FaceDownCards)
         {
@@ -132,20 +133,18 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
     {
         if (isDealing) return;
 
+        if (FaceDownCards)
+        {
+            OnFaceDownCardClicked();
+            return;
+        }
+
         // Only one focused at a time
         if (currentlyFocusedCard != null && currentlyFocusedCard != this)
             currentlyFocusedCard.ResetCard();
 
         if (!isFocused)
         {
-            if (FaceDownCards)
-            {
-                // Clicked again while still flipping back / heading home:
-                // drop that and come straight back to the center.
-                LeanTween.cancel(gameObject);
-                isReturning = false;
-            }
-
             // Focus animation
             LeanTween.moveLocal(gameObject, Vector3.zero, FocusDuration).setEaseOutCubic();
             LeanTween.scale(gameObject, originalScale * 1.5f, FocusDuration).setEaseOutCubic();
@@ -154,12 +153,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
             isFocused = true;
             currentlyFocusedCard = this;
 
-            if (FaceDownCards) LeanTween.delayedCall(gameObject, FocusDuration, OnReachedCenter);
-            else if (helpButton != null) helpButton.gameObject.SetActive(true);
-        }
-        else if (FaceDownCards)
-        {
-            // Group 2 flips on its own; clicking the focused card does nothing.
+            if (helpButton != null) helpButton.gameObject.SetActive(true);
         }
         else if (!isFlipped)
         {
@@ -202,6 +196,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
             // Group 2: turn the card face-down where it is, then send it home.
             LeanTween.cancel(gameObject);
             isReturning = true;
+            cardHeadingHome = this;
             ClearFocus();
 
             if (isRevealed) Flip(false, ReturnToHand);
@@ -217,9 +212,92 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
 
     void ReturnToHand()
     {
-        LeanTween.moveLocal(gameObject, originalPos, 0.3f).setEaseInOutCubic().setOnComplete(() => isReturning = false);
+        LeanTween.moveLocal(gameObject, originalPos, 0.3f).setEaseInOutCubic().setOnComplete(OnLandedInHand);
         LeanTween.scale(gameObject, originalScale, 0.3f);
         LeanTween.rotateLocal(gameObject, originalRot.eulerAngles, 0.3f);
+    }
+
+    void OnLandedInHand()
+    {
+        isReturning = false;
+        if (!FaceDownCards) return;
+
+        // Group 2: back in its place in the hand, then bring up whichever
+        // card was clicked while this one was on its way home.
+        LeaveCenterStage();
+
+        var next = nextCard;
+        nextCard = null;
+        if (next != null && !next.isDealing) next.Present();
+    }
+
+    // -------------------- GROUP 2 ONE CARD AT A TIME --------------------
+    // Only one card is ever up at the center. Clicking another card while one
+    // is presented (or still heading home) sends that one back to the hand
+    // first; the clicked card comes up once it has landed. The presented card
+    // is moved later in the draw order, since UI draws in hierarchy order and
+    // the hand's later cards would otherwise cover it.
+
+    private static CardBehavior cardHeadingHome; // flipping back / returning, not yet landed
+    private static CardBehavior nextCard;        // clicked while another card had the center
+    private int handSiblingIndex;                // draw order in the hand, restored on landing
+
+    void OnFaceDownCardClicked()
+    {
+        if (isFocused) return; // it flips on its own; clicking it again does nothing
+
+        var occupant = currentlyFocusedCard != null ? currentlyFocusedCard : cardHeadingHome;
+        if (occupant != null && occupant != this)
+        {
+            if (occupant.isFocused) occupant.ResetCard();
+            nextCard = this; // the most recent click wins
+            return;
+        }
+
+        Present();
+    }
+
+    // Brings the card up to the center, where it flips face-up on arrival.
+    void Present()
+    {
+        // Clicked again while still flipping back / heading home: drop that
+        // (and any card queued behind it) and come straight back.
+        LeanTween.cancel(gameObject);
+        isReturning = false;
+        if (cardHeadingHome == this) cardHeadingHome = null;
+        nextCard = null;
+
+        transform.SetSiblingIndex(TopOfHandSiblingIndex()); // draw above the cards in the hand
+
+        LeanTween.moveLocal(gameObject, Vector3.zero, FocusDuration).setEaseOutCubic();
+        LeanTween.scale(gameObject, originalScale * 1.5f, FocusDuration).setEaseOutCubic();
+        LeanTween.rotateLocal(gameObject, Vector3.zero, FocusDuration).setEaseOutCubic();
+
+        isFocused = true;
+        currentlyFocusedCard = this;
+
+        LeanTween.delayedCall(gameObject, FocusDuration, OnReachedCenter);
+    }
+
+    // The cards share the Canvas with the hint popup, Brainy and the save
+    // panel, so the presented card goes just above the topmost card in the
+    // hand rather than to the very top (where it would cover the popup).
+    int TopOfHandSiblingIndex()
+    {
+        int top = transform.GetSiblingIndex();
+        foreach (Transform sibling in transform.parent)
+        {
+            if (sibling.GetComponent<CardBehavior>() != null)
+                top = Mathf.Max(top, sibling.GetSiblingIndex());
+        }
+        return top;
+    }
+
+    // Puts the card back in its own spot in the hand's draw order.
+    void LeaveCenterStage()
+    {
+        if (cardHeadingHome == this) cardHeadingHome = null;
+        transform.SetSiblingIndex(handSiblingIndex);
     }
 
     // Group 2: the card has arrived at the center, so turn it face-up.
@@ -291,6 +369,13 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
         LeanTween.cancel(gameObject);
         if (isFocused) ClearFocus();
         transform.localScale = originalScale;
+
+        if (FaceDownCards)
+        {
+            // A whole new hand is coming; nothing is waiting for the center.
+            LeaveCenterStage();
+            nextCard = null;
+        }
 
         LeanTween.moveLocal(gameObject, originalPos + DealOffset, DealDuration * 0.7f).setDelay(delay).setEaseInBack();
         LeanTween.value(gameObject, 0f, -1f, DealDuration * 0.7f).setDelay(delay).setEaseInCubic()
