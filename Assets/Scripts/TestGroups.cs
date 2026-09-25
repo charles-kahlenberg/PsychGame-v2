@@ -12,7 +12,8 @@ public enum Feature
     CardTweening,             // cards deal in, sweep out/in on refresh, and float while idle (CardBehavior, GameManager)
     FaceDownCards,            // cards are dealt face-down and flip over in the hand when clicked, staying face-up; the AI Help button becomes a Definition popup (CardBehavior, GameManager)
     HoverAnimations,          // buttons pop on hover (ButtonHoverPop)
-    NewCardArt,               // layered card back/front art per area of psychology from Resources/CardArt; placeholders for areas still being drawn (CardBehavior, CardArt, TermAreas, GameManager)
+    RaisedHand,               // the hand is a bit smaller, flatter and higher so no card hangs off the bottom; the response box makes room (GameManager)
+    NewCardArt,              // layered card back/front art per area of psychology from Resources/CardArt; placeholders for areas still being drawn (CardBehavior, CardArt, TermAreas, GameManager)
     BackgroundTweening,       // scene backgrounds slowly drift and zoom (BackgroundDrift)
     ImprovedMenuTransitions,  // screens fade out and in between scenes (SceneTransition)
 }
@@ -42,6 +43,7 @@ public static class TestGroups
                 Feature.BrainyBesideResponseBox,
                 Feature.CardTweening,
                 Feature.FaceDownCards,
+                Feature.RaisedHand,
                 Feature.NewCardArt,
                 Feature.HoverAnimations,
                 Feature.BackgroundTweening,
