@@ -39,8 +39,8 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
     private static readonly Vector3 DealOffset = new Vector3(0f, -420f, 0f); // start below the screen
     private const float DealTilt = 12f;                // degrees of extra tilt while flying in
 
-    private const float FloatHeight = 5f;              // px up/down while idle
-    private const float FloatSway = 1.2f;              // degrees of rotation while idle
+    private const float FloatHeight = 3.5f;            // px up/down while idle
+    private const float FloatSway = 0.84f;             // degrees of rotation while idle
     private const float FloatSpeed = 1.6f;
 
     private bool isDealing = false;   // deal/sweep in progress: ignore clicks, no float
@@ -49,13 +49,16 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
     private int cardIndex;
 
     // -------------------- GROUP 2 FACE-DOWN CARDS --------------------
-    // Feature.FaceDownCards: cards are dealt blank, like the back of a real
-    // card. Clicking a focused card flips it over to reveal the term, and it
-    // stays face-up. The Help button becomes "Definition" and pops the term's
-    // definition up in the hint bubble instead of asking the AI.
+    // Feature.FaceDownCards: cards sit face-down in the hand, like real cards.
+    // Clicking one brings it to the center, where it flips over on its own to
+    // reveal the term; clicking off flips it face-down again before it goes
+    // back to the hand. The Help button becomes "Definition" and pops the
+    // term's definition up in the hint bubble instead of asking the AI.
 
     private static bool FaceDownCards => TestGroups.IsEnabled(Feature.FaceDownCards);
     private const float DefinitionButtonWidth = 60f; // "Definition" doesn't fit the "Help" button's width
+    private const float FocusDuration = 0.3f;
+    private const float FlipHalfDuration = 0.15f;    // edge-on, then the other side
 
     void Start()
     {
@@ -95,6 +98,9 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
         if (TestGroups.IsEnabled(Feature.CardTweening))
             ApplyIdleFloat();
 
+        if (driftLayers.Count > 0)
+            ApplyDrift();
+
         // Click-off to reset
         if (isFocused && Input.GetMouseButtonDown(0))
         {
@@ -132,29 +138,28 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
 
         if (!isFocused)
         {
+            if (FaceDownCards)
+            {
+                // Clicked again while still flipping back / heading home:
+                // drop that and come straight back to the center.
+                LeanTween.cancel(gameObject);
+                isReturning = false;
+            }
+
             // Focus animation
-            LeanTween.moveLocal(gameObject, Vector3.zero, 0.3f).setEaseOutCubic();
-            LeanTween.scale(gameObject, originalScale * 1.5f, 0.3f).setEaseOutCubic();
-            LeanTween.rotateLocal(gameObject, Vector3.zero, 0.3f).setEaseOutCubic();
+            LeanTween.moveLocal(gameObject, Vector3.zero, FocusDuration).setEaseOutCubic();
+            LeanTween.scale(gameObject, originalScale * 1.5f, FocusDuration).setEaseOutCubic();
+            LeanTween.rotateLocal(gameObject, Vector3.zero, FocusDuration).setEaseOutCubic();
 
             isFocused = true;
             currentlyFocusedCard = this;
 
-            if (FaceDownCards) ShowFaceDownState();
+            if (FaceDownCards) LeanTween.delayedCall(gameObject, FocusDuration, OnReachedCenter);
             else if (helpButton != null) helpButton.gameObject.SetActive(true);
         }
         else if (FaceDownCards)
         {
-            if (isRevealed) return;
-
-            // Flip the face-down card over to reveal its term. It stays
-            // face-up from then on, like a real card.
-            isRevealed = true;
-            LeanTween.rotateY(gameObject, 90f, 0.15f).setOnComplete(() =>
-            {
-                ShowFaceDownState();
-                LeanTween.rotateY(gameObject, 0f, 0.15f);
-            });
+            // Group 2 flips on its own; clicking the focused card does nothing.
         }
         else if (!isFlipped)
         {
@@ -178,22 +183,63 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (!isFocused) LeanTween.scale(gameObject, originalScale * 1.1f, 0.15f).setEaseOutSine();
+        if (CanHoverPop) LeanTween.scale(gameObject, originalScale * 1.1f, 0.15f).setEaseOutSine();
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        if (!isFocused) LeanTween.scale(gameObject, originalScale, 0.15f).setEaseInSine();
+        if (CanHoverPop) LeanTween.scale(gameObject, originalScale, 0.15f).setEaseInSine();
     }
+
+    // Group 2 cards flip over at the center on the way home; a hover pop
+    // there would shrink the card mid-flip.
+    bool CanHoverPop => !isFocused && !(FaceDownCards && isReturning);
 
     public void ResetCard()
     {
+        if (FaceDownCards)
+        {
+            // Group 2: turn the card face-down where it is, then send it home.
+            LeanTween.cancel(gameObject);
+            isReturning = true;
+            ClearFocus();
+
+            if (isRevealed) Flip(false, ReturnToHand);
+            else ReturnToHand();
+            return;
+        }
+
         isReturning = true;
+        ReturnToHand();
+
+        ClearFocus();
+    }
+
+    void ReturnToHand()
+    {
         LeanTween.moveLocal(gameObject, originalPos, 0.3f).setEaseInOutCubic().setOnComplete(() => isReturning = false);
         LeanTween.scale(gameObject, originalScale, 0.3f);
         LeanTween.rotateLocal(gameObject, originalRot.eulerAngles, 0.3f);
+    }
 
-        ClearFocus();
+    // Group 2: the card has arrived at the center, so turn it face-up.
+    void OnReachedCenter()
+    {
+        if (!isFocused) return;
+
+        if (isRevealed) ShowFaceDownState(); // already face-up (clicked back mid flip-back)
+        else Flip(true);
+    }
+
+    // Group 2: turns the card edge-on, swaps sides, then turns it back.
+    void Flip(bool faceUp, System.Action onDone = null)
+    {
+        LeanTween.rotateY(gameObject, 90f, FlipHalfDuration).setOnComplete(() =>
+        {
+            isRevealed = faceUp;
+            ShowFaceDownState();
+            LeanTween.rotateY(gameObject, 0f, FlipHalfDuration).setOnComplete(() => onDone?.Invoke());
+        });
     }
 
     void ClearFocus()
@@ -212,8 +258,8 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
         ShowFront();
     }
 
-    // Group 2: puts the card back face-down (blank). GameManager calls this
-    // whenever a new hand is shown, so fresh terms always start hidden.
+    // Group 2: puts the card face-down. GameManager calls this whenever a new
+    // hand is shown, so fresh terms always start hidden.
     public void TurnFaceDown()
     {
         isRevealed = false;
@@ -282,6 +328,114 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
         SetTilt(Mathf.Sin(t * 0.8f + phase) * FloatSway * floatWeight);
     }
 
+    // -------------------- GROUP 2 CARD ART --------------------
+    // Feature.NewCardArt: GameManager hands each card the art for its term's
+    // area of psychology whenever a hand is shown. The layers are stacked onto
+    // each side of the card, bottom layer first, underneath the text and
+    // buttons already there. Each layer fills the whole card; layers marked
+    // "drift" (the back's icon) gently move on their own on top of the card's
+    // own float.
+
+    private const float DriftBob = 2.5f;     // px up/down
+    private const float DriftSway = 2.5f;    // degrees of rotation
+    private const float DriftPulse = 0.025f; // fraction of size it breathes in/out
+    private const float DriftSpeed = 1.1f;   // deliberately out of step with the card's float
+
+    private readonly System.Collections.Generic.List<RectTransform> driftLayers =
+        new System.Collections.Generic.List<RectTransform>();
+    private readonly System.Collections.Generic.List<GameObject> artLayers =
+        new System.Collections.Generic.List<GameObject>();
+    private Color? plainBodyColor; // the card's own color, from before any art was applied
+
+    // Dresses the card in one area's art, replacing whatever it wore for the
+    // last hand. Null puts the plain card back.
+    public void ShowArt(CardArt.AreaArt art)
+    {
+        foreach (var layer in artLayers)
+        {
+            layer.SetActive(false);
+            Destroy(layer);
+        }
+        artLayers.Clear();
+        driftLayers.Clear();
+
+        var body = GetComponent<Image>();
+        if (body != null && plainBodyColor == null) plainBodyColor = body.color;
+
+        int back = 0, front = 0;
+        if (art != null)
+        {
+            // Take the shape of the card back so the art isn't squashed (keeps
+            // the card's height, adjusts its width).
+            var cardRect = (RectTransform)transform;
+            var shape = FirstSprite(art.backLayers);
+            if (shape != null)
+            {
+                float aspect = shape.rect.width / shape.rect.height;
+                cardRect.sizeDelta = new Vector2(cardRect.sizeDelta.y * aspect, cardRect.sizeDelta.y);
+            }
+
+            var cardSize = cardRect.rect.size;
+            back = AddArtLayers(backFace, art.backLayers, cardSize);
+            front = AddArtLayers(frontFace, art.frontLayers, cardSize);
+        }
+
+        // With art on both sides, the art is the card: the plain card image
+        // goes invisible but still catches clicks (it's the Button's graphic).
+        if (body != null) body.color = back > 0 && front > 0 ? Color.clear : plainBodyColor.Value;
+    }
+
+    static Sprite FirstSprite(CardArt.Layer[] layers)
+    {
+        if (layers == null) return null;
+        foreach (var l in layers)
+            if (l != null && l.sprite != null) return l.sprite;
+        return null;
+    }
+
+    int AddArtLayers(GameObject face, CardArt.Layer[] layers, Vector2 cardSize)
+    {
+        if (face == null || layers == null) return 0;
+
+        int added = 0;
+        foreach (var l in layers)
+        {
+            if (l == null || l.sprite == null) continue;
+
+            var layer = new GameObject($"ArtLayer{added + 1}", typeof(RectTransform), typeof(Image));
+            var rect = (RectTransform)layer.transform;
+            rect.SetParent(face.transform, false);
+            rect.SetSiblingIndex(added); // above earlier layers, below the face's text
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = cardSize;   // the face objects aren't card-sized, so size to the card
+
+            var image = layer.GetComponent<Image>();
+            image.sprite = l.sprite;
+            image.raycastTarget = false; // clicks go to the card itself
+
+            artLayers.Add(layer);
+            if (l.drift) driftLayers.Add(rect);
+            added++;
+        }
+        return added;
+    }
+
+    // A slow bob, sway and breathe, each on its own rhythm so the icon never
+    // just moves in lockstep with the card underneath it.
+    void ApplyDrift()
+    {
+        float t = Time.time * DriftSpeed + cardIndex * 2.1f;
+        foreach (var rect in driftLayers)
+        {
+            if (!rect.gameObject.activeInHierarchy) continue;
+
+            rect.anchoredPosition = new Vector2(0f, Mathf.Sin(t * 1.7f) * DriftBob);
+            rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * 1.1f + 0.8f) * DriftSway);
+            rect.localScale = Vector3.one * (1f + Mathf.Sin(t * 2.3f + 1.9f) * DriftPulse);
+        }
+    }
+
     void ShowFront()
     {
         if (frontFace) frontFace.SetActive(true);
@@ -294,20 +448,21 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
         if (backFace) backFace.SetActive(true);
     }
 
-    // Group 2. Face-down: just the blank card, no text. Face-up: the term,
-    // plus the Definition button while the card is focused. The back face
-    // (definition text) is never shown on the card; it opens in the popup.
+    // Group 2. Face-down: the card back (its art, no text). Face-up: the term,
+    // plus the Definition button while the card is focused.
     void ShowFaceDownState()
     {
         if (frontFace) frontFace.SetActive(isRevealed);
-        if (backFace) backFace.SetActive(false);
+        if (backFace) backFace.SetActive(!isRevealed);
         if (helpButton != null) helpButton.gameObject.SetActive(isRevealed && isFocused);
     }
 
     // Group 2: relabels the scene's Help button as Definition. Renaming the
     // object keeps the click logs accurate ("DefinitionButton", not "HelpButton").
+    // The definition text moves off the card back and into the popup.
     void SetUpDefinitionButton()
     {
+        if (backText != null) backText.gameObject.SetActive(false);
         if (helpButton == null) return;
 
         helpButton.name = "DefinitionButton";

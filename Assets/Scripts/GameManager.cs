@@ -100,6 +100,7 @@ public class GameManager : MonoBehaviour
             cardTexts[i].text = i < currentCards.Count ? currentCards[i] : "[Empty]";
 
         SetCardBacks();
+        DealCardArt();
 
         refreshUsesRemaining = 2;
         UpdateRefreshUI();
@@ -172,6 +173,32 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // Group 2 (Feature.NewCardArt): each card wears the art for its term's
+    // area of psychology. A term in several areas gets one of them at random,
+    // kept until the next hand is shown.
+    void DealCardArt()
+    {
+        if (!TestGroups.IsEnabled(Feature.NewCardArt)) return;
+
+        CardArt art = CardArt.Load();
+        if (art == null)
+        {
+            Debug.LogWarning($"[GameManager] No CardArt asset at Resources/{CardArt.ResourcePath}.");
+            return;
+        }
+
+        for (int i = 0; i < currentCards.Count; i++)
+        {
+            GameObject cardObj = GameObject.Find($"Card{i + 1}");
+            CardBehavior card = cardObj ? cardObj.GetComponent<CardBehavior>() : null;
+            if (card == null) continue;
+
+            PsychArea? area = TermAreas.PickArea(currentCards[i]);
+            if (area == null) Debug.LogWarning($"[GameManager] No area listed for \"{currentCards[i]}\" in term_areas.txt.");
+            card.ShowArt(art.For(area));
+        }
+    }
+
     // -------------------- REFRESH --------------------
 
     public void RefreshCards()
@@ -199,6 +226,7 @@ public class GameManager : MonoBehaviour
             cardTexts[i].text = i < currentCards.Count ? currentCards[i] : "[Empty]";
 
         SetCardBacks();
+        DealCardArt();
 
         // Group 2: new terms are dealt face-down; the player flips each one to see it.
         if (TestGroups.IsEnabled(Feature.FaceDownCards))

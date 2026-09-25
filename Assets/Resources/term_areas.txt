@@ -1,0 +1,93 @@
+# Area(s) of psychology each term belongs to (most related first is not implied).
+# From Words_by_Chapter-Composite-final.xlsx, column "Area". Term names match cleaned_terms.txt.
+# 1 = Research Methods, 2 = Biopsychology, 3 = Cognitive Psychology, 4 = Developmental Psychology,
+# 5 = Social Psychology, 6 = Clinical Psychology, 7 = Learning
+Absolute Threshold - 2
+Action Potential - 2
+Addiction - 2, 6
+Adolescence - 4
+Albert Bandura - 5, 7
+All-or-none Principle - 2
+Amnesia - 2, 3, 6
+Attachment - 4, 5
+Basilar Membrane - 2
+Brain Plasticity - 2
+Broca's Area - 2, 3
+Change Blindness - 3
+Chunking - 3
+Circadian Rhythms - 2
+Classical Conditioning - 7
+Conditioned Response - 7
+Cones - 2
+Confounding Variable - 1
+Consciousness - 2, 3, 6
+Conservation - 4
+Consolidation - 2, 3
+Continuous Reinforcement - 7
+Correlation - 1
+Critical Period - 4
+Demand Characteristics - 1
+Dependent Variable - 1
+Depth Perception - 2, 3
+Dopamine - 2
+Double-blind Study - 1
+Dreams - 2, 3, 6
+Egocentrism - 4
+Elizabeth Loftus - 1, 3
+Experiment - 1
+Explicit Memory - 2, 3
+Extinction - 7
+False Memories - 3
+Flow State - 2, 3, 6
+Formal Operations Stage - 4
+Fovea - 2
+Hallucinations - 2, 6
+Hawthorne Effect - 1
+Hippocampus - 2
+Homeostasis - 2, 6
+Hypothesis - 1
+Imprinting - 4
+Independent Variable - 1
+Learned Helplessness - 2, 6, 7
+Limbic System - 2
+Long-term Memory - 2, 3
+Mindfulness - 2, 3, 6
+Mnemonic Device - 3
+Neurons - 2
+Neurotransmitters - 2
+Neutral Stimulus - 7
+Night Terrors - 2, 4, 6
+Object Permanence - 4
+Occipital Lobe - 2
+Phantom Limb Pain - 2, 6, 7
+Placebo Effect - 1
+Positive Reinforcement - 7
+Preconventional Level - 4
+Priming - 1, 3
+Puberty - 4
+Qualitative Research - 1
+Random Assignment - 1
+Recency Effect - 3
+REM Sleep - 2, 4, 6
+Representative Sample - 1
+Retrieval - 2, 3
+Scaffolding - 4
+Schema - 3
+Selective Attention - 2, 3
+Sensorimotor Stage - 4
+Sensory Adaptation - 2
+Shaping - 7
+Sleep Apnea - 2, 6
+Stimulus Generalization - 7
+Stroop Effect - 2, 3, 6
+Synapse - 2
+Taste Receptor Cells - 2
+Temperament - 4, 5, 6
+Thalamus - 2
+Theory of Mind - 4, 5
+Transduction - 2
+Variable-ratio Schedule - 7
+Vicarious Reinforcement - 5, 7
+Wilhelm Wundt - 1
+Working Memory - 2, 3
+Zone of Proximal Development - 4, 7
