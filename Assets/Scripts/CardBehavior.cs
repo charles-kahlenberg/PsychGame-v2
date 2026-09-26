@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.EventSystems;
 
-public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
+public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHandler, IPointerEnterHandler, IPointerExitHandler
 {
     private Vector3 originalPos;
     private Vector3 originalScale;
@@ -62,6 +62,32 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
     private bool isFlippingInHand = false;
     private float tilt;       // current extra tilt around Z (deal, sweep, idle sway)
     private float flipAngle;  // current turn around the card's own Y while flipping in the hand
+
+    void Awake()
+    {
+        if (TestGroups.IsEnabled(Feature.CardTweening))
+            GiveOwnCanvas();
+    }
+
+    // Group 2's cards move every frame (float, icon drift). On the scene's
+    // one big Canvas, each tiny move made Unity rebatch everything on it
+    // (text, response box, background) on the main thread, every frame. A
+    // nested Canvas per card keeps that work to the card itself. It also
+    // turns off the scene's Pixel Perfect for the card: snapping a few-pixel
+    // bob to whole pixels made the cards step instead of glide.
+    void GiveOwnCanvas()
+    {
+        var parent = transform.parent != null ? transform.parent.GetComponentInParent<Canvas>() : null;
+        if (parent == null || GetComponent<Canvas>() != null) return;
+
+        var canvas = gameObject.AddComponent<Canvas>();
+        canvas.overridePixelPerfect = true;
+        canvas.pixelPerfect = false;
+        canvas.additionalShaderChannels = parent.additionalShaderChannels; // TextMeshPro needs these
+
+        // A nested Canvas's graphics are only clickable through its own raycaster.
+        gameObject.AddComponent<GraphicRaycaster>();
+    }
 
     void Start()
     {
@@ -179,6 +205,15 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
         }
     }
 
+    // Group 2: a face-down card starts flipping as soon as it's pressed,
+    // rather than on release, so the card answers the click right away.
+    // OnPointerClick then sees it's already flipping and does nothing.
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        if (eventData.button != PointerEventData.InputButton.Left) return;
+        if (FaceDownCards && !isDealing && !isRevealed && !isFlippingInHand) FlipInHand();
+    }
+
     public void OnPointerEnter(PointerEventData eventData)
     {
         if (!isFocused) LeanTween.scale(gameObject, originalScale * 1.1f, 0.15f).setEaseOutSine();
@@ -212,19 +247,31 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerEnterHa
     // Group 2: turns the card edge-on where it sits in the hand, swaps it to
     // the term side, then turns it back. Driven through flipAngle (rather
     // than rotateY) so it combines with the hand's tilt and idle sway.
+    //
+    // The UI is flat, so turning around Y only narrows the card to cos(angle)
+    // of its width. Tweening that width instead of the angle makes the card
+    // visibly start turning the instant it's clicked (easing the angle left it
+    // looking still for the first few frames), then the term side settles in.
     void FlipInHand()
     {
         isFlippingInHand = true;
-        LeanTween.value(gameObject, 0f, 90f, FlipHalfDuration).setEaseInSine()
-            .setOnUpdate(a => { flipAngle = a; ApplyRotation(); })
+        LeanTween.value(gameObject, 1f, 0f, FlipHalfDuration)
+            .setOnUpdate(SetFlipWidth)
             .setOnComplete(() =>
             {
                 isRevealed = true;
                 ShowFaceDownState();
-                LeanTween.value(gameObject, 90f, 0f, FlipHalfDuration).setEaseOutSine()
-                    .setOnUpdate(a => { flipAngle = a; ApplyRotation(); })
+                LeanTween.value(gameObject, 0f, 1f, FlipHalfDuration).setEaseOutQuad()
+                    .setOnUpdate(SetFlipWidth)
                     .setOnComplete(() => isFlippingInHand = false);
             });
+    }
+
+    // Width as a fraction of the card's full width: 1 flat on, 0 edge-on.
+    void SetFlipWidth(float width)
+    {
+        flipAngle = Mathf.Acos(Mathf.Clamp01(width)) * Mathf.Rad2Deg;
+        ApplyRotation();
     }
 
     // Stops a flip partway (a new hand is being dealt) and squares the card up.
