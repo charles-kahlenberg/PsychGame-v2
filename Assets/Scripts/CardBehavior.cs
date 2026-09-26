@@ -66,7 +66,15 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
     void Awake()
     {
         if (TestGroups.IsEnabled(Feature.CardTweening))
+        {
             GiveOwnCanvas();
+
+            // The card's Button uses Animation transitions, but every clip in
+            // its controller is empty: the Animator does nothing visible yet
+            // still runs every frame. LeanTween drives all of group 2's motion.
+            var animator = GetComponent<Animator>();
+            if (animator != null) animator.enabled = false;
+        }
     }
 
     // Group 2's cards move every frame (float, icon drift). On the scene's
@@ -109,8 +117,9 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         if (TestGroups.IsEnabled(Feature.CardTweening))
             DealIn(cardIndex * DealStagger);
 
-        // Hide Help on start; wire click through UnityEvent OR here
-        if (helpButton != null)
+        // Hide Help on start; wire click through UnityEvent OR here. Group 2's
+        // Definition button stays active and shows and hides with the front face.
+        if (helpButton != null && !FaceDownCards)
         {
             helpButton.gameObject.SetActive(false);
             // If you prefer auto-wiring (no UnityEvent), uncomment:
@@ -384,26 +393,22 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
 
     private readonly System.Collections.Generic.List<RectTransform> driftLayers =
         new System.Collections.Generic.List<RectTransform>();
-    private readonly System.Collections.Generic.List<GameObject> artLayers =
-        new System.Collections.Generic.List<GameObject>();
+    // Each face's art layer images, reused from hand to hand: re-creating
+    // them on every refresh made a slow frame right as the new hand dealt in.
+    private readonly System.Collections.Generic.Dictionary<GameObject, System.Collections.Generic.List<Image>> artLayers =
+        new System.Collections.Generic.Dictionary<GameObject, System.Collections.Generic.List<Image>>();
     private Color? plainBodyColor; // the card's own color, from before any art was applied
 
     // Dresses the card in one area's art, replacing whatever it wore for the
     // last hand. Null puts the plain card back.
     public void ShowArt(CardArt.AreaArt art)
     {
-        foreach (var layer in artLayers)
-        {
-            layer.SetActive(false);
-            Destroy(layer);
-        }
-        artLayers.Clear();
         driftLayers.Clear();
 
         var body = GetComponent<Image>();
         if (body != null && plainBodyColor == null) plainBodyColor = body.color;
 
-        int back = 0, front = 0;
+        Vector2 cardSize = Vector2.zero;
         if (art != null)
         {
             // Take the shape of the card back so the art isn't squashed (keeps
@@ -413,13 +418,14 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
             if (shape != null)
             {
                 float aspect = shape.rect.width / shape.rect.height;
-                cardRect.sizeDelta = new Vector2(cardRect.sizeDelta.y * aspect, cardRect.sizeDelta.y);
+                var size = new Vector2(cardRect.sizeDelta.y * aspect, cardRect.sizeDelta.y);
+                if (cardRect.sizeDelta != size) cardRect.sizeDelta = size;
             }
-
-            var cardSize = cardRect.rect.size;
-            back = AddArtLayers(backFace, art.backLayers, cardSize);
-            front = AddArtLayers(frontFace, art.frontLayers, cardSize);
+            cardSize = cardRect.rect.size;
         }
+
+        int back = SetArtLayers(backFace, art?.backLayers, cardSize);
+        int front = SetArtLayers(frontFace, art?.frontLayers, cardSize);
 
         // With art on both sides, the art is the card: the plain card image
         // goes invisible but still catches clicks (it's the Button's graphic).
@@ -434,32 +440,54 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         return null;
     }
 
-    int AddArtLayers(GameObject face, CardArt.Layer[] layers, Vector2 cardSize)
+    // Shows the given layers on a face, bottom first, underneath the face's
+    // text; any of the face's layers left over from the last hand are hidden.
+    int SetArtLayers(GameObject face, CardArt.Layer[] layers, Vector2 cardSize)
     {
-        if (face == null || layers == null) return 0;
+        if (face == null) return 0;
+        if (!artLayers.TryGetValue(face, out var pool))
+            artLayers[face] = pool = new System.Collections.Generic.List<Image>();
 
-        int added = 0;
-        foreach (var l in layers)
+        int used = 0;
+        if (layers != null)
         {
-            if (l == null || l.sprite == null) continue;
+            foreach (var l in layers)
+            {
+                if (l == null || l.sprite == null) continue;
 
-            var layer = new GameObject($"ArtLayer{added + 1}", typeof(RectTransform), typeof(Image));
-            var rect = (RectTransform)layer.transform;
-            rect.SetParent(face.transform, false);
-            rect.SetSiblingIndex(added); // above earlier layers, below the face's text
-            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = Vector2.zero;
-            rect.sizeDelta = cardSize;   // the face objects aren't card-sized, so size to the card
+                Image image = used < pool.Count ? pool[used] : NewArtLayer(face, pool);
+                var rect = image.rectTransform;
+                if (rect.GetSiblingIndex() != used) rect.SetSiblingIndex(used); // above earlier layers, below the face's text
+                rect.anchoredPosition = Vector2.zero;
+                rect.localRotation = Quaternion.identity;
+                rect.localScale = Vector3.one;
+                if (rect.sizeDelta != cardSize) rect.sizeDelta = cardSize; // the face objects aren't card-sized, so size to the card
 
-            var image = layer.GetComponent<Image>();
-            image.sprite = l.sprite;
-            image.raycastTarget = false; // clicks go to the card itself
+                if (image.sprite != l.sprite) image.sprite = l.sprite;
+                if (!image.gameObject.activeSelf) image.gameObject.SetActive(true);
 
-            artLayers.Add(layer);
-            if (l.drift) driftLayers.Add(rect);
-            added++;
+                if (l.drift) driftLayers.Add(rect);
+                used++;
+            }
         }
-        return added;
+
+        for (int i = used; i < pool.Count; i++)
+            if (pool[i].gameObject.activeSelf) pool[i].gameObject.SetActive(false);
+
+        return used;
+    }
+
+    static Image NewArtLayer(GameObject face, System.Collections.Generic.List<Image> pool)
+    {
+        var layer = new GameObject($"ArtLayer{pool.Count + 1}", typeof(RectTransform), typeof(Image));
+        var rect = (RectTransform)layer.transform;
+        rect.SetParent(face.transform, false);
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+
+        var image = layer.GetComponent<Image>();
+        image.raycastTarget = false; // clicks go to the card itself
+        pool.Add(image);
+        return image;
     }
 
     // A slow bob, sway and breathe, each on its own rhythm so the icon never
@@ -469,7 +497,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         float t = Time.time * DriftSpeed + cardIndex * 2.1f;
         foreach (var rect in driftLayers)
         {
-            if (!rect.gameObject.activeInHierarchy) continue;
+            if (!rect.gameObject.activeInHierarchy || !FaceShowing(rect.parent)) continue;
 
             rect.anchoredPosition = new Vector2(0f, Mathf.Sin(t * 1.7f) * DriftBob);
             rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * 1.1f + 0.8f) * DriftSway);
@@ -491,11 +519,42 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
 
     // Group 2. Face-down: the card back (its art, no text). Face-up: the term
     // and its Definition button.
+    //
+    // Both faces stay active and are shown and hidden through CanvasGroups.
+    // Re-activating a face mid-flip made Unity rebuild all its graphics and
+    // text in that frame, and the flip's second half stuttered on it.
+    private CanvasGroup frontGroup, backGroup;
+
     void ShowFaceDownState()
     {
-        if (frontFace) frontFace.SetActive(isRevealed);
-        if (backFace) backFace.SetActive(!isRevealed);
-        if (helpButton != null) helpButton.gameObject.SetActive(isRevealed);
+        if (frontGroup == null && frontFace) frontGroup = FaceGroup(frontFace);
+        if (backGroup == null && backFace) backGroup = FaceGroup(backFace);
+
+        SetFaceShown(frontGroup, isRevealed);
+        SetFaceShown(backGroup, !isRevealed);
+    }
+
+    static CanvasGroup FaceGroup(GameObject face)
+    {
+        face.SetActive(true);
+        var group = face.GetComponent<CanvasGroup>();
+        return group != null ? group : face.AddComponent<CanvasGroup>();
+    }
+
+    static void SetFaceShown(CanvasGroup group, bool shown)
+    {
+        if (group == null) return;
+        group.alpha = shown ? 1f : 0f;
+        group.blocksRaycasts = shown; // a hidden face's Definition button can't be clicked
+        group.interactable = shown;
+    }
+
+    // False for a group 2 face hidden by its CanvasGroup.
+    bool FaceShowing(Transform face)
+    {
+        if (frontGroup != null && face == frontGroup.transform) return frontGroup.alpha > 0f;
+        if (backGroup != null && face == backGroup.transform) return backGroup.alpha > 0f;
+        return true;
     }
 
     // Group 2: relabels the scene's Help button as Definition. Renaming the

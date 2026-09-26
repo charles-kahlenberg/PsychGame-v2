@@ -329,9 +329,15 @@ public class GameManager : MonoBehaviour
     // Group 2 (Feature.CardTweening): the old hand drops away, the new words
     // are swapped in while the cards are off screen, then the hand is dealt
     // back in. Refresh is locked until the new hand has landed.
+    //
+    // Each animation starts a frame after the heavy work before it (saving
+    // the new hand, then swapping in its words and art). A tween begun in a
+    // slow frame takes that frame's whole length as its first step and
+    // visibly jumps.
     IEnumerator AnimateCardRefresh()
     {
         if (refreshButton) refreshButton.interactable = false;
+        yield return null;
 
         var cards = FindObjectsByType<CardBehavior>(FindObjectsSortMode.None);
         System.Array.Sort(cards, (a, b) => string.CompareOrdinal(a.name, b.name));
@@ -342,6 +348,7 @@ public class GameManager : MonoBehaviour
         yield return new WaitForSeconds(CardBehavior.SweepOutTime(cards.Length));
 
         ShowCurrentCards();
+        yield return null;
 
         for (int i = 0; i < cards.Length; i++)
             cards[i].DealIn(i * CardBehavior.DealStagger);
