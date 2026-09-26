@@ -597,6 +597,13 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         hintText.text = string.IsNullOrEmpty(definition)
             ? "No definition available."
             : $"<b>{term}</b>\n\n{definition}";
+
+        // Group 2: Brainy steps up to the bubble its tail points at.
+        if (TextBoxTheme.Enabled)
+        {
+            var brain = FindFirstObjectByType<BrainBehavior>();
+            if (brain != null) brain.SpeakDefinition();
+        }
     }
 
     void OpenHintBubble()

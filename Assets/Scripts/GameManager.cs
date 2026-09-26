@@ -100,7 +100,10 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        StartCoroutine(TypeText(scenarioText, currentScenario, 0.03f));
+        if (TextBoxTheme.Enabled)
+            StartCoroutine(RevealText(scenarioText, currentScenario, 0.03f));
+        else
+            StartCoroutine(TypeText(scenarioText, currentScenario, 0.03f));
 
         for (int i = 0; i < cardTexts.Length; i++)
             cardTexts[i].text = i < currentCards.Count ? currentCards[i] : "[Empty]";
@@ -423,6 +426,32 @@ public class GameManager : MonoBehaviour
             yield return new WaitForSeconds(delay);
         }
 
+        isTyping = false;
+    }
+
+    // Group 2 (Feature.ThemedTextBoxes): the same letter-by-letter reveal and
+    // click-to-finish, but the whole text is laid out up front and only
+    // uncovered. Words no longer jump to the next line mid-type, and the
+    // scenario box is its final size from the first letter.
+    IEnumerator RevealText(TextMeshProUGUI textObj, string fullText, float delay)
+    {
+        isTyping = true;
+        skipTyping = false;
+        textObj.text = fullText;
+        textObj.maxVisibleCharacters = 0;
+        textObj.ForceMeshUpdate();
+        int total = textObj.textInfo.characterCount;
+
+        float start = Time.time;
+        while (!skipTyping)
+        {
+            int shown = Mathf.FloorToInt((Time.time - start) / delay) + 1;
+            if (shown >= total) break;
+            textObj.maxVisibleCharacters = shown;
+            yield return null;
+        }
+
+        textObj.maxVisibleCharacters = 99999; // TMP's default: no limit
         isTyping = false;
     }
 

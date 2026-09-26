@@ -93,6 +93,8 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         if (isActive) return;
 
         isActive = true;
+        awaitingBubble = true;
+        activatedFrame = Time.frameCount;
 
         CancelAttentionCue();
         LeanTween.moveLocal(gameObject, focusPosition, 0.4f).setEaseOutExpo();
@@ -101,8 +103,23 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         Invoke(nameof(ShowHint), 0.5f);
     }
 
+    // Group 2 (Feature.ThemedTextBoxes): a card's definition opens in Brainy's
+    // bubble, so Brainy steps forward to it the same way it does for a hint
+    // (without asking for one), and steps back when it closes.
+    public void SpeakDefinition()
+    {
+        if (isActive) return;
+
+        isActive = true;
+        activatedFrame = Time.frameCount;
+        CancelAttentionCue();
+        LeanTween.moveLocal(gameObject, focusPosition, 0.4f).setEaseOutExpo();
+        LeanTween.scale(gameObject, originalScale * 1.3f, 0.4f).setEaseOutBack();
+    }
+
     void ShowHint()
     {
+        awaitingBubble = false;
         if (hintOverlay != null) hintOverlay.SetActive(true);
         if (hintText != null) hintText.SetActive(true);
 
@@ -142,9 +159,26 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         hintManager.RequestHint(scenario, currentCards);
     }
 
+    private bool awaitingBubble; // clicked, but the bubble opens a moment later
+    private int activatedFrame = -1; // the click that activated Brainy isn't a click away
+
     void Update()
     {
-        if (isActive && Input.GetMouseButtonDown(0))
+        if (TextBoxTheme.Enabled && isActive && !awaitingBubble && hintText != null)
+        {
+            // However the bubble was closed (a click outside it, Esc), Brainy
+            // steps back with it. While it's open Brainy stays above the dimmed
+            // overlay, beside the bubble's tail.
+            if (!hintText.activeInHierarchy)
+            {
+                ResetBrain();
+                return;
+            }
+            if (transform.GetSiblingIndex() != transform.parent.childCount - 1)
+                transform.SetAsLastSibling();
+        }
+
+        if (isActive && Input.GetMouseButtonDown(0) && Time.frameCount != activatedFrame)
         {
             PointerEventData pointerData = new PointerEventData(EventSystem.current)
             {

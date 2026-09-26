@@ -23,6 +23,7 @@ public class OverlayClickCloser : MonoBehaviour
     public bool closeOnEscape = true;
 
     private EventSystem _eventSystem;
+    private int _openedFrame = -1;
 
     void Awake()
     {
@@ -30,9 +31,18 @@ public class OverlayClickCloser : MonoBehaviour
         if (hintOverlay == null) hintOverlay = gameObject; // default to this object
     }
 
+    // When a quick click's press and release land in the same frame, the
+    // button it hit can open this overlay on release, and the press would
+    // then read as a click outside the bubble and close it again at once.
+    void OnEnable()
+    {
+        _openedFrame = Time.frameCount;
+    }
+
     void Update()
     {
         if (!hintOverlay || !hintOverlay.activeInHierarchy) return;
+        if (Time.frameCount == _openedFrame) return;
 
         // Close on Esc
         if (closeOnEscape && Input.GetKeyDown(KeyCode.Escape))

@@ -40,8 +40,12 @@ public class BrainHint : MonoBehaviour
 
         hintShown = true;
 
-        LeanTween.moveLocal(brainButton.gameObject, new Vector3(600f, 0f, 0f), 0.3f).setEaseOutExpo();
-        LeanTween.scale(brainButton.gameObject, originalScale * 1.5f, 0.3f).setEaseOutExpo();
+        // Group 2: BrainBehavior moves Brainy beside the restyled bubble.
+        if (!TextBoxTheme.Enabled)
+        {
+            LeanTween.moveLocal(brainButton.gameObject, new Vector3(600f, 0f, 0f), 0.3f).setEaseOutExpo();
+            LeanTween.scale(brainButton.gameObject, originalScale * 1.5f, 0.3f).setEaseOutExpo();
+        }
 
         StartCoroutine(ShowHintWithDelay());
     }
