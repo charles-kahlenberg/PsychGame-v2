@@ -14,7 +14,8 @@ public enum Feature
     HoverAnimations,          // buttons pop on hover (ButtonHoverPop)
     RaisedHand,               // the hand is a bit smaller, flatter and higher so no card hangs off the bottom; the response box makes room (GameManager)
     NewCardArt,              // layered card back/front art per area of psychology from Resources/CardArt; placeholders for areas still being drawn (CardBehavior, CardArt, TermAreas, GameManager)
-    BackgroundTweening,       // scene backgrounds slowly drift and zoom (BackgroundDrift)
+    BackgroundTweening,       // scene backgrounds slowly drift and zoom, except where ShaderBackground replaces them (BackgroundDrift)
+    ShaderBackground,         // the response screen's (GameScene) room image becomes a slow animated shader, Resources/ThoughtCurrents (ShaderBackground)
     ImprovedMenuTransitions,  // screens fade out and in between scenes (SceneTransition)
 }
 
@@ -47,6 +48,7 @@ public static class TestGroups
                 Feature.NewCardArt,
                 Feature.HoverAnimations,
                 Feature.BackgroundTweening,
+                Feature.ShaderBackground,
                 Feature.ImprovedMenuTransitions,
             }
         },

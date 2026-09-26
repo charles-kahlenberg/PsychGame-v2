@@ -8,6 +8,8 @@ using UnityEngine.UI;
 //    (Splash, SaveSelect, Loading, Rules, GameEnd), or
 //  - the Canvas's own Image (GameScene). That one is copied onto a new
 //    bottom child first, so the rest of the UI doesn't drift with it.
+//    With Feature.ShaderBackground, GameScene's background is an animated
+//    shader instead, which moves on its own, so it's skipped.
 // Scenes whose background is just the camera color (Grading, Review) and
 // plain color panels (Introduction) have nothing to drift.
 public class BackgroundDrift : MonoBehaviour
@@ -29,6 +31,8 @@ public class BackgroundDrift : MonoBehaviour
 
     private static void AddToBackgroundsIn(Scene scene)
     {
+        if (ShaderBackground.Replaces(scene)) return;
+
         foreach (GameObject root in scene.GetRootGameObjects())
         {
             var canvas = root.GetComponent<Canvas>();
