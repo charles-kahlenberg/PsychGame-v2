@@ -7,8 +7,14 @@
 // think: muted colours, low contrast, slow morphing rather than spinning, and
 // a vignette that keeps the edges quiet.
 //
-// Every look-and-feel knob is a property below; tweak the defaults here, or
-// live in Play mode on the runtime material (Canvas > ShaderBackground > Image).
+// For speed it runs in two halves. The flowing noise is the expensive part,
+// so ShaderBackground.cs renders it small (ThoughtCurrentsField.shader) into
+// _FieldTex. This shader samples that smoothly at full resolution and does
+// the cheap part: layers, shadows, contours and vignette, crisp at any size.
+//
+// Every look-and-feel knob is a property below (Scale, Flow Speed and Warp
+// are passed on to the field pass); tweak the defaults here, or live in Play
+// mode on the runtime material (Canvas > ShaderBackground > Image).
 Shader "PsychGame/ThoughtCurrents"
 {
     Properties
@@ -29,9 +35,8 @@ Shader "PsychGame/ThoughtCurrents"
         _LayerShadow ("Layer Shadow", Range(0, 1)) = 0.14
         _Vignette ("Vignette", Range(0, 1)) = 0.4
 
-        // Width / height of the rect, set every frame by ShaderBackground.cs
-        // so the pattern isn't stretched on wide screens.
-        [HideInInspector] _Aspect ("Aspect", Float) = 1.7778
+        // The noise field, rendered each frame by ShaderBackground.cs.
+        [HideInInspector] _FieldTex ("Field", 2D) = "gray" {}
 
         // Standard UI boilerplate, so masks and RectMask2D still work.
         _StencilComp ("Stencil Comparison", Float) = 8
@@ -106,14 +111,12 @@ Shader "PsychGame/ThoughtCurrents"
             float4 _ColorMid;
             float4 _ColorLight;
             float4 _LineColor;
-            float _Scale;
-            float _FlowSpeed;
-            float _Warp;
+            sampler2D _FieldTex;
+            float4 _FieldTex_TexelSize;
             float _Layers;
             float _LineStrength;
             float _LayerShadow;
             float _Vignette;
-            float _Aspect;
 
             v2f vert(appdata_t v)
             {
@@ -127,39 +130,45 @@ Shader "PsychGame/ThoughtCurrents"
                 return OUT;
             }
 
-            // Sine-free hash, so it looks the same on every GPU (WebGL included).
-            float hash12(float2 p)
+            // Cubic B-spline weights for bicubic sampling.
+            float4 cubicWeights(float v)
             {
-                float3 p3 = frac(float3(p.xyx) * 0.1031);
-                p3 += dot(p3, p3.yzx + 33.33);
-                return frac((p3.x + p3.y) * p3.z);
+                float4 n = float4(1.0, 2.0, 3.0, 4.0) - v;
+                float4 c = n * n * n;
+                float x = c.x;
+                float y = c.y - 4.0 * c.x;
+                float z = c.z - 4.0 * c.y + 6.0 * c.x;
+                float w = 6.0 - x - y - z;
+                return float4(x, y, z, w) * (1.0 / 6.0);
             }
 
-            float valueNoise(float2 p)
+            // Smooth (bicubic) lookup of the small field texture in 4 bilinear
+            // taps. Plain bilinear would leave faint kinks in the contours
+            // where it crosses texel boundaries.
+            float sampleField(float2 uv)
             {
-                float2 i = floor(p);
-                float2 f = frac(p);
-                float2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0); // quintic: no grid creases
+                float2 texSize = _FieldTex_TexelSize.zw;
+                float2 invSize = _FieldTex_TexelSize.xy;
 
-                float a = hash12(i);
-                float b = hash12(i + float2(1, 0));
-                float c = hash12(i + float2(0, 1));
-                float d = hash12(i + float2(1, 1));
-                return lerp(lerp(a, b, u.x), lerp(c, d, u.x), u.y);
-            }
+                uv = uv * texSize - 0.5;
+                float2 fxy = frac(uv);
+                uv -= fxy;
 
-            float fbm(float2 p)
-            {
-                const float2x2 turn = float2x2(0.8, -0.6, 0.6, 0.8);
-                float sum = 0.0;
-                float amp = 0.5;
-                for (int i = 0; i < 4; i++)
-                {
-                    sum += amp * valueNoise(p);
-                    p = mul(turn, p) * 2.03 + 17.1;
-                    amp *= 0.42; // fades fine detail fast, for big calm shapes
-                }
-                return sum;
+                float4 xw = cubicWeights(fxy.x);
+                float4 yw = cubicWeights(fxy.y);
+
+                float4 c = uv.xxyy + float2(-0.5, 1.5).xyxy;
+                float4 s = float4(xw.xz + xw.yw, yw.xz + yw.yw);
+                float4 offset = (c + float4(xw.yw, yw.yw) / s) * invSize.xxyy;
+
+                float s0 = tex2D(_FieldTex, offset.xz).r;
+                float s1 = tex2D(_FieldTex, offset.yz).r;
+                float s2 = tex2D(_FieldTex, offset.xw).r;
+                float s3 = tex2D(_FieldTex, offset.yw).r;
+
+                float sx = s.x / (s.x + s.y);
+                float sy = s.z / (s.z + s.w);
+                return lerp(lerp(s3, s2, sx), lerp(s1, s0, sx), sy);
             }
 
             float3 palette(float k)
@@ -172,16 +181,7 @@ Shader "PsychGame/ThoughtCurrents"
             fixed4 frag(v2f IN) : SV_Target
             {
                 float2 centered = IN.uv - 0.5;
-                float2 p = centered * float2(_Aspect, 1.0) * _Scale;
-                float t = _Time.y * _FlowSpeed;
-
-                // Two rounds of domain warping: noise pushes noise around, and
-                // the time offsets make the shapes fold into each other slowly.
-                float2 q = float2(fbm(p + float2(0.0, t)),
-                                  fbm(p + float2(5.2, 1.3) - t));
-                float2 r = float2(fbm(p + _Warp * q + float2(1.7, 9.2) + 0.6 * t),
-                                  fbm(p + _Warp * q + float2(8.3, 2.8) - 0.4 * t));
-                float field = saturate((fbm(p + _Warp * r) - 0.2) / 0.6);
+                float field = saturate(sampleField(IN.uv));
 
                 // Cut the field into flat layers. The half-step offset keeps
                 // the flat spots where field clamps to 0 or 1 mid-layer, so no
