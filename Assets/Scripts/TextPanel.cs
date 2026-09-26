@@ -77,7 +77,9 @@ public class TextPanel : MonoBehaviour
         return p;
     }
 
-    public void AddTail(TailSide side, float along)
+    // `along` is how far along the edge (0-1) the tail sits; `offset` nudges
+    // it from there in canvas units, e.g. a fixed distance below the top.
+    public void AddTail(TailSide side, float along, float offset = 0f)
     {
         var tail = NewChild("Tail", _panel);
         var image = tail.gameObject.AddComponent<Image>();
@@ -91,12 +93,12 @@ public class TextPanel : MonoBehaviour
         if (side == TailSide.Bottom)
         {
             tail.anchorMin = tail.anchorMax = new Vector2(along, 0f);
-            tail.anchoredPosition = new Vector2(0f, PanelSprites.EdgeWidth);
+            tail.anchoredPosition = new Vector2(offset, PanelSprites.EdgeWidth);
         }
         else
         {
             tail.anchorMin = tail.anchorMax = new Vector2(0f, along);
-            tail.anchoredPosition = new Vector2(PanelSprites.EdgeWidth, 0f);
+            tail.anchoredPosition = new Vector2(PanelSprites.EdgeWidth, offset);
             tail.localRotation = Quaternion.Euler(0f, 0f, -90f); // points left, tip a little low
         }
 
@@ -116,6 +118,7 @@ public class TextPanel : MonoBehaviour
         own.sprite = null;
         own.color = new Color(1f, 1f, 1f, 0f);
         own.raycastTarget = true;
+        own.canvasRenderer.cullTransparentMesh = false; // a culled graphic can't be clicked or scrolled
 
         var paper = NewChild("Paper", panel);
         paper.SetAsFirstSibling();

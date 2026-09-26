@@ -22,6 +22,9 @@ public class OverlayClickCloser : MonoBehaviour
     [Tooltip("Also close when pressing Escape.")]
     public bool closeOnEscape = true;
 
+    [Tooltip("Clicks on these don't close the overlay either (group 2 keeps the response box usable).")]
+    public RectTransform[] keepOpenWhenClicked;
+
     private EventSystem _eventSystem;
     private int _openedFrame = -1;
 
@@ -76,9 +79,22 @@ public class OverlayClickCloser : MonoBehaviour
                 }
             }
 
-            if (!clickedInsideBubble)
+            if (!clickedInsideBubble && !ClickedOnKeepOpen(Input.mousePosition))
                 CloseHint();
         }
+    }
+
+    private bool ClickedOnKeepOpen(Vector2 screenPoint)
+    {
+        if (keepOpenWhenClicked == null) return false;
+
+        foreach (var keep in keepOpenWhenClicked)
+        {
+            if (keep != null && keep.gameObject.activeInHierarchy &&
+                RectTransformUtility.RectangleContainsScreenPoint(keep, screenPoint, null))
+                return true;
+        }
+        return false;
     }
 
     public void CloseHint()

@@ -602,7 +602,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         if (TextBoxTheme.Enabled)
         {
             var brain = FindFirstObjectByType<BrainBehavior>();
-            if (brain != null) brain.SpeakDefinition();
+            if (brain != null) brain.StepUpToBubble();
         }
     }
 

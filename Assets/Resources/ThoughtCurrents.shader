@@ -22,10 +22,10 @@ Shader "PsychGame/ThoughtCurrents"
         [PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
         _Color ("Tint", Color) = (1, 1, 1, 1)
 
-        _ColorDeep ("Deep Colour", Color) = (0.10, 0.11, 0.21, 1)
-        _ColorMid ("Mid Colour", Color) = (0.25, 0.29, 0.50, 1)
-        _ColorLight ("Light Colour", Color) = (0.38, 0.55, 0.54, 1)
-        _LineColor ("Contour Colour", Color) = (0.93, 0.87, 0.78, 1)
+        _ColorDeep ("Deep Colour", Color) = (0.2784, 0.2980, 0.3569, 1)   // #474C5B
+        _ColorMid ("Mid Colour", Color) = (0.0941, 0.1059, 0.1294, 1)     // #181B21
+        _ColorLight ("Light Colour", Color) = (0.0941, 0.1059, 0.1294, 1) // #181B21
+        _LineColor ("Contour Colour", Color) = (0.3569, 0.3843, 0.5098, 1) // #5B6282
 
         _Scale ("Pattern Scale", Float) = 1.3
         _FlowSpeed ("Flow Speed", Float) = 0.02

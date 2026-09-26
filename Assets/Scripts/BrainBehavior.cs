@@ -103,10 +103,11 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         Invoke(nameof(ShowHint), 0.5f);
     }
 
-    // Group 2 (Feature.ThemedTextBoxes): a card's definition opens in Brainy's
-    // bubble, so Brainy steps forward to it the same way it does for a hint
-    // (without asking for one), and steps back when it closes.
-    public void SpeakDefinition()
+    // Group 2 (Feature.ThemedTextBoxes): whenever Brainy's bubble is showing
+    // (a hint, or a card's definition), Brainy steps forward to its tail the
+    // same way it does when clicked for a hint, without asking for one, and
+    // steps back when it closes.
+    public void StepUpToBubble()
     {
         if (isActive) return;
 
@@ -164,6 +165,11 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
     void Update()
     {
+        // However the bubble opened (this script, BrainHint, or a card's
+        // definition), Brainy goes to it.
+        if (TextBoxTheme.Enabled && !isActive && hintText != null && hintText.activeInHierarchy)
+            StepUpToBubble();
+
         if (TextBoxTheme.Enabled && isActive && !awaitingBubble && hintText != null)
         {
             // However the bubble was closed (a click outside it, Esc), Brainy
