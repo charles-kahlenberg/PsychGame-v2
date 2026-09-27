@@ -19,6 +19,8 @@ using UnityEngine.UI;
 //    and typed in, so a hint can be read against the answer.
 //  - ResponseInput: the same paper look, and a scrollbar once an answer is
 //    longer than the box (the mouse wheel scrolls it too).
+// IntroductionScene's SpeechBubble gets the same panel as the scenario, sized
+// to the NPC's line with its tail pointing at them.
 public static class TextBoxTheme
 {
     // Colors, in sRGB. The panels are warm paper with a deep indigo edge, like
@@ -31,6 +33,7 @@ public static class TextBoxTheme
     private static readonly Color OverlayTint = new Color(0.05f, 0.06f, 0.12f, 0.6f);
 
     private const string SceneName = "GameScene";
+    private const string IntroSceneName = "IntroductionScene";
 
     // Sizes in canvas units (the canvas is 450 tall).
     private const float ScenarioFontSize = 14f;
@@ -55,7 +58,7 @@ public static class TextBoxTheme
         if (!Enabled) return;
         SceneManager.sceneLoaded += (scene, mode) =>
         {
-            if (scene.name == SceneName) Apply(scene);
+            if (scene.name == SceneName || scene.name == IntroSceneName) Apply(scene);
         };
     }
 
@@ -73,6 +76,12 @@ public static class TextBoxTheme
             if (canvas == null) continue;
 
             var canvasRect = (RectTransform)canvas.transform;
+            if (scene.name == IntroSceneName)
+            {
+                StyleIntro(canvasRect);
+                continue;
+            }
+
             var response = canvas.transform.Find("ResponseInput") as RectTransform;
 
             var overlay = canvas.transform.Find("HintOverlay")?.GetComponent<Image>();
@@ -117,6 +126,36 @@ public static class TextBoxTheme
         StyleBodyText(text, Regular, ScenarioFontSize);
         var panel = TextPanel.Build(box, text, minHeight: 48f, maxHeight: maxHeight, nameTag: null);
         panel.AddTail(TextPanel.TailSide.Bottom, 0.92f);
+    }
+
+    // -------------------- INTRO --------------------
+
+    private static void StyleIntro(RectTransform canvas)
+    {
+        var bubble = canvas.Find("SpeechBubble") as RectTransform;
+        var text = bubble != null ? bubble.Find("DialogueText")?.GetComponent<TextMeshProUGUI>() : null;
+        if (text == null) return;
+
+        // From the bubble's old left edge to just short of the NPC's middle, so
+        // the tail reaches over their head; never tall enough to cover their face.
+        var npc = canvas.Find("NPC") as RectTransform;
+        float rightAnchor = 0.8f, rightOffset = -40f, maxHeight = 120f;
+        if (npc != null && npc.anchorMin == npc.anchorMax)
+        {
+            rightAnchor = npc.anchorMin.x;
+            rightOffset = npc.anchoredPosition.x - npc.rect.width * 0.3f;
+            float npcTopFromTop = canvas.rect.height / 2f - EdgeY(canvas, npc, top: true);
+            maxHeight = Mathf.Max(60f, npcTopFromTop - ScreenMargin - 8f);
+        }
+        bubble.anchorMin = new Vector2(bubble.anchorMin.x, 1f);
+        bubble.anchorMax = new Vector2(rightAnchor, 1f);
+        bubble.pivot = new Vector2(0.5f, 1f);
+        bubble.offsetMin = new Vector2(0f, -ScreenMargin - 60f);
+        bubble.offsetMax = new Vector2(rightOffset, -ScreenMargin); // TextPanel sets the height
+
+        StyleBodyText(text, Regular, ScenarioFontSize);
+        var panel = TextPanel.Build(bubble, text, minHeight: 48f, maxHeight: maxHeight, nameTag: null);
+        panel.AddTail(TextPanel.TailSide.Bottom, 0.9f);
     }
 
     // -------------------- BRAINY'S BUBBLE --------------------
@@ -222,9 +261,6 @@ public static class TextBoxTheme
         input.caretWidth = 2;
         input.selectionColor = new Color(Accent.r, Accent.g, Accent.b, 0.3f);
         input.scrollSensitivity = 3f;
-        // Clicking back into an answer puts the caret where you click. It used
-        // to select the whole answer, so the next key typed replaced all of it.
-        input.onFocusSelectAll = false;
 
         var scrollbar = TextPanel.MakeScrollbar(box, topInset: 9f, bottomInset: 9f);
         input.verticalScrollbar = scrollbar;

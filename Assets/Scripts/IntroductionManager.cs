@@ -195,6 +195,13 @@ public class IntroductionManager : MonoBehaviour
 
     IEnumerator TypeText(string text, Action onComplete = null)
     {
+        if (TextBoxTheme.Enabled)
+        {
+            yield return RevealText(text);
+            onComplete?.Invoke();
+            yield break;
+        }
+
         dialogueText.text = "";
         skipTyping = false;
 
@@ -211,6 +218,29 @@ public class IntroductionManager : MonoBehaviour
         }
 
         onComplete?.Invoke();
+    }
+
+    // Group 2 (Feature.ThemedTextBoxes): the same letter-by-letter reveal and
+    // click-to-finish, but the whole line is laid out up front and uncovered,
+    // so words don't jump lines and the bubble is its final size at once.
+    IEnumerator RevealText(string text)
+    {
+        skipTyping = false;
+        dialogueText.text = text;
+        dialogueText.maxVisibleCharacters = 0;
+        dialogueText.ForceMeshUpdate();
+        int total = dialogueText.textInfo.characterCount;
+
+        float start = Time.time;
+        while (!skipTyping)
+        {
+            int shown = Mathf.FloorToInt((Time.time - start) / 0.03f) + 1;
+            if (shown >= total) break;
+            dialogueText.maxVisibleCharacters = shown;
+            yield return null;
+        }
+
+        dialogueText.maxVisibleCharacters = 99999; // TMP's default: no limit
     }
 
     public void OnContinueClicked()

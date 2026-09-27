@@ -38,6 +38,10 @@ public class GameManager : MonoBehaviour
 
     void Awake()
     {
+        // Clicking back into an answer puts the caret where you click. With
+        // select-all on focus, the next key typed replaced the whole answer.
+        if (responseInput != null) responseInput.onFocusSelectAll = false;
+
         if (TestGroups.IsEnabled(Feature.RaisedHand))
             RaiseHand();
     }
