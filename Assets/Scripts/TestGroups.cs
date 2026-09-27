@@ -18,6 +18,7 @@ public enum Feature
     ShaderBackground,         // the response screen's (GameScene) room image becomes a slow animated shader, Resources/ThoughtCurrents (ShaderBackground)
     ImprovedMenuTransitions,  // screens fade out and in between scenes (SceneTransition)
     ThemedTextBoxes,          // the response screen's scenario, Brainy/definition and response boxes are restyled paper panels in Inter that fit their text and scroll when long; Brainy steps forward for definitions too; the scenario reveals without reflowing; the intro screen's speech bubble gets the same panel and reveal (TextBoxTheme, TextPanel, GameManager, BrainBehavior, CardBehavior, IntroductionManager)
+    PixelButtons,             // the response screen's Submit, Refresh and Back to Menu buttons are pixel-art plates like the card backs, from Resources/PixelButtons; Refresh shows its uses left as diamonds (PixelButton, GameManager)
 }
 
 // The study's conditions, all in one place: which features each test group
@@ -52,6 +53,7 @@ public static class TestGroups
                 Feature.ShaderBackground,
                 Feature.ImprovedMenuTransitions,
                 Feature.ThemedTextBoxes,
+                Feature.PixelButtons,
             }
         },
     };

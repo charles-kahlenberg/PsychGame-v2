@@ -371,6 +371,9 @@ public class GameManager : MonoBehaviour
 
         if (refreshCounterText)
             refreshCounterText.text = $"Refreshes Left: {refreshUsesRemaining}";
+
+        if (refreshButton && refreshButton.TryGetComponent(out PixelButton pixel))
+            pixel.ShowRefreshesLeft(refreshUsesRemaining);
     }
 
     // -------------------- SUBMIT (BURN HAPPENS HERE) --------------------

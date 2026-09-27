@@ -39,6 +39,7 @@ public class ButtonHoverPop : MonoBehaviour, IPointerEnterHandler, IPointerExitH
         if (button.GetComponent<ButtonHoverPop>() != null) return true;
         if (button.GetComponent<CardBehavior>() != null || button.GetComponent<BrainBehavior>() != null) return true;
         if (button.GetComponent<Canvas>() != null) return true; // a whole-screen click catcher, not a real button
+        if (button.GetComponent<PixelButton>() != null) return true; // its art lifts on hover instead
         return HasAnimatorHover(button);
     }
 
