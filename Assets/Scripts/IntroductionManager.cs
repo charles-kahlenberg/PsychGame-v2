@@ -23,8 +23,8 @@ public class IntroductionManager : MonoBehaviour
     public int timeoutSeconds = 20;
 
     private string currentScenario;
-    private Coroutine typingCoroutine;
     private bool skipTyping = false;
+    private string introText; // null until the saved intro or the worker's reply is in
 
     void Start()
     {
@@ -34,6 +34,9 @@ public class IntroductionManager : MonoBehaviour
         speechBubble.SetActive(false);
         continueButton.gameObject.SetActive(false);
 
+        // Asked for now, while the NPC walks in, rather than once they've
+        // arrived: waiting until then left an empty bubble for seconds.
+        StartCoroutine(LoadIntro());
         StartCoroutine(StartIntroSequence());
     }
 
@@ -45,53 +48,60 @@ public class IntroductionManager : MonoBehaviour
 
     IEnumerator StartIntroSequence()
     {
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(0.3f);
 
         npcImage.SetActive(true);
         Vector3 startPos = npcImage.transform.localPosition;
         npcImage.transform.localPosition = new Vector3(800f, startPos.y, startPos.z);
         LeanTween.moveLocalX(npcImage, startPos.x, 0.8f).setEaseOutBack();
 
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(0.6f);
 
         speechBubble.SetActive(true);
 
-        // Try cached intro first
-        if (!TryLoadSavedIntro())
-            yield return StartCoroutine(RequestWorkerIntro());
+        // Still waiting on the worker: "..." so the NPC is clearly about to speak.
+        for (float t = 0f; introText == null; t += Time.deltaTime)
+        {
+            dialogueText.text = new string('.', 1 + (int)(t / 0.35f) % 3);
+            yield return null;
+        }
+
+        yield return TypeText(introText, () => continueButton.gameObject.SetActive(true));
     }
 
-    bool TryLoadSavedIntro()
+    IEnumerator LoadIntro()
+    {
+        string saved = SavedIntro();
+        if (saved != null)
+        {
+            introText = saved;
+            yield break;
+        }
+        yield return RequestWorkerIntro();
+    }
+
+    string SavedIntro()
     {
         int slot = PlayerPrefs.GetInt("SelectedSaveSlot", -1);
-        if (slot == -1) return false;
+        if (slot == -1 || !SaveManager.HasSave(slot)) return null;
 
-        if (SaveManager.HasSave(slot))
+        SaveData data = SaveManager.Load(slot);
+        if (data != null && data.npcIntroductions != null &&
+            data.npcIntroductions.TryGetValue(currentScenario, out string savedIntro))
         {
-            SaveData data = SaveManager.Load(slot);
-
-            if (data != null && data.npcIntroductions != null &&
-                data.npcIntroductions.ContainsKey(currentScenario))
-            {
-                string savedIntro = data.npcIntroductions[currentScenario];
-                typingCoroutine = StartCoroutine(TypeText(savedIntro, () =>
-                {
-                    continueButton.gameObject.SetActive(true);
-                }));
-                return true;
-            }
+            return savedIntro;
         }
-        return false;
+        return null;
     }
 
     IEnumerator RequestWorkerIntro()
     {
         // Fallback if something fails
-        string finalText = "Hi, I’m Alex! I really need your help with something important.";
+        string finalText = "Hi, Iâ€™m Alex! I really need your help with something important.";
 
         if (string.IsNullOrWhiteSpace(introductionWorkerUrl))
         {
-            typingCoroutine = StartCoroutine(TypeText(finalText, () => continueButton.gameObject.SetActive(true)));
+            introText = finalText;
             yield break;
         }
 
@@ -123,7 +133,12 @@ public class IntroductionManager : MonoBehaviour
                 string intro = TryParseIntro(jsonResponse);
 
                 if (!string.IsNullOrWhiteSpace(intro))
+                {
                     finalText = intro.Trim();
+                    // Only a real intro is kept: saving the fallback stuck the
+                    // save with it even once the worker was back.
+                    SaveNPCIntro(finalText);
+                }
                 else
                     Debug.LogWarning("[IntroductionManager] Worker response did not contain 'intro'. Raw: " + jsonResponse);
             }
@@ -133,8 +148,7 @@ public class IntroductionManager : MonoBehaviour
             }
         }
 
-        typingCoroutine = StartCoroutine(TypeText(finalText, () => continueButton.gameObject.SetActive(true)));
-        SaveNPCIntro(finalText);
+        introText = finalText;
     }
 
     private static string TryParseIntro(string json)
@@ -195,9 +209,13 @@ public class IntroductionManager : MonoBehaviour
 
     IEnumerator TypeText(string text, Action onComplete = null)
     {
+        // Group 2 (Feature.ThemedTextBoxes): the same letter-by-letter reveal and
+        // click-to-finish, but the whole line is laid out up front and uncovered,
+        // so words don't jump lines and the bubble is its final size at once.
         if (TextBoxTheme.Enabled)
         {
-            yield return RevealText(text);
+            skipTyping = false;
+            yield return TextPanel.Reveal(dialogueText, text, 0.03f, () => skipTyping);
             onComplete?.Invoke();
             yield break;
         }
@@ -218,29 +236,6 @@ public class IntroductionManager : MonoBehaviour
         }
 
         onComplete?.Invoke();
-    }
-
-    // Group 2 (Feature.ThemedTextBoxes): the same letter-by-letter reveal and
-    // click-to-finish, but the whole line is laid out up front and uncovered,
-    // so words don't jump lines and the bubble is its final size at once.
-    IEnumerator RevealText(string text)
-    {
-        skipTyping = false;
-        dialogueText.text = text;
-        dialogueText.maxVisibleCharacters = 0;
-        dialogueText.ForceMeshUpdate();
-        int total = dialogueText.textInfo.characterCount;
-
-        float start = Time.time;
-        while (!skipTyping)
-        {
-            int shown = Mathf.FloorToInt((Time.time - start) / 0.03f) + 1;
-            if (shown >= total) break;
-            dialogueText.maxVisibleCharacters = shown;
-            yield return null;
-        }
-
-        dialogueText.maxVisibleCharacters = 99999; // TMP's default: no limit
     }
 
     public void OnContinueClicked()

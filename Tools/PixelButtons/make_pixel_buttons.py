@@ -5,7 +5,9 @@ Submit and Refresh are drawn like the card backs: a black outline with
 stepped corners, a grainy frame, a black inner line with little drips, and a
 noisy fill that darkens toward the bottom. Refresh carries its uses left as
 diamonds in a tab on top, where the cards have their numerals. The menu button
-is the same plate with a back arrow and "MENU".
+is the same plate with a back arrow and "MENU". The other screens' buttons
+(Continue, Example, Next, Save, Skip) are the same plates with their own
+labels, and the save slots are wide blank plates the slot's name is set on.
 
 Each button is drawn at 1 pixel = 1 unit of the game's 800x450 canvas, then
 saved 4x larger (nearest neighbour) so the pixels stay even when the canvas is
@@ -38,20 +40,29 @@ def seed_of(name):
 # ------------------------------------------------------------ pixel font (5x7, bolded)
 FONT = {
     'B': ["####.", "#...#", "#...#", "####.", "#...#", "#...#", "####."],
+    'A': [".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
+    'C': [".###.", "#...#", "#....", "#....", "#....", "#...#", ".###."],
     'E': ["#####", "#....", "#....", "####.", "#....", "#....", "#####"],
     'F': ["#####", "#....", "#....", "####.", "#....", "#....", "#...."],
     'H': ["#...#", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
     'I': ["###", ".#.", ".#.", ".#.", ".#.", ".#.", "###"],
+    'L': ["#....", "#....", "#....", "#....", "#....", "#....", "#####"],
     'M': ["#...#", "##.##", "#.#.#", "#.#.#", "#...#", "#...#", "#...#"],
     'N': ["#...#", "##..#", "#.#.#", "#..##", "#...#", "#...#", "#...#"],
+    'O': [".###.", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."],
+    'P': ["####.", "#...#", "#...#", "####.", "#....", "#....", "#...."],
     'R': ["####.", "#...#", "#...#", "####.", "#.#..", "#..#.", "#...#"],
     'S': [".###.", "#...#", "#....", ".###.", "....#", "#...#", ".###."],
     'T': ["#####", "..#..", "..#..", "..#..", "..#..", "..#..", "..#.."],
     'U': ["#...#", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."],
 }
-# Bolding by thickening every stroke closes up M's middle, so it's drawn bold.
+# Bolding by thickening every stroke closes up M's middle and the diagonals
+# of K, V and X, so those are drawn bold.
 BOLD = {
+    'K': ["##...##", "##..##.", "##.##..", "####...", "##.##..", "##..##.", "##...##"],
     'M': ["##...##", "###.###", "##.#.##", "##.#.##", "##...##", "##...##", "##...##"],
+    'V': ["##...##", "##...##", "##...##", "##...##", ".##.##.", "..###..", "...#..."],
+    'X': ["##...##", "##...##", ".##.##.", "..###..", ".##.##.", "##...##", "##...##"],
 }
 
 
@@ -188,17 +199,18 @@ def with_shadow(plate, state):
     return out
 
 
-def put_label(img, s, col, shadow, icon=None, gap=4):
-    tm = text_mask(s)
+def put_label(img, s, col, shadow, icon=None, gap=4, size=1):
+    """`size` draws the letters that many pixels per font pixel (for bigger buttons)."""
+    tm = np.kron(text_mask(s), np.ones((size, size), dtype=bool))
     h, w = img.shape[:2]
     total = tm.shape[1] + ((icon.shape[1] + gap) if icon is not None else 0)
-    x, y = (w - total) // 2, (h - 7) // 2
+    x, y = (w - total) // 2, (h - tm.shape[0]) // 2
     if icon is not None:
         iy = y + (7 - icon.shape[0]) // 2
         stamp(img, icon, x, iy + 1, shadow)
         stamp(img, icon, x, iy, col)
         x += icon.shape[1] + gap
-    stamp(img, tm, x, y + 1, shadow)
+    stamp(img, tm, x, y + size, shadow)
     stamp(img, tm, x, y, col)
 
 
@@ -248,6 +260,29 @@ def menu(state):
     return with_shadow(plate, state)
 
 
+def labelled(state, label, colour, w, h=22, size=1):
+    """A plate with a label, like Submit: Continue, Example, Next, Save, Skip."""
+    pal = styled(CARD[colour], state)
+    plate = card_plate(w, h, pal, seed_of(label))
+    put_label(plate, label, *label_colours(pal, state), size=size)
+    return with_shadow(plate, state)
+
+
+LABELLED = {  # sprite name: (label, palette, width[, height, letter size])
+    'continue': ('CONTINUE', 'green', 74),
+    'next': ('NEXT', 'green', 80, 28, 2),  # the grading screen's one button, so bigger
+    'save': ('SAVE', 'green', 66),
+    'example': ('EXAMPLE', 'teal', 66),
+    'skip': ('SKIP', 'slate', 66),
+}
+
+
+def slot(state):
+    """A save slot: a wide blank plate; PixelButton sets the slot's name on it."""
+    pal = styled(CARD['slate'], state)
+    return with_shadow(card_plate(170, 30, pal, seed_of('slot')), state)
+
+
 def save(img, name):
     big = np.kron(img, np.ones((SCALE, SCALE, 1), dtype=np.uint8))
     Image.fromarray(big, 'RGBA').save(os.path.join(OUT, name + '.png'))
@@ -258,6 +293,10 @@ if __name__ == '__main__':
     for state in ('normal', 'hover', 'pressed'):
         save(submit(state), f'submit_{state}')
         save(menu(state), f'menu_{state}')
+        for name, spec in LABELLED.items():
+            save(labelled(state, *spec), f'{name}_{state}')
+    for state in ('normal', 'hover', 'pressed', 'disabled'):  # disabled: an empty slot
+        save(slot(state), f'slot_{state}')
     for left in (1, 2):
         for state in ('normal', 'hover', 'pressed', 'disabled'):  # disabled while the new hand deals in
             save(refresh(state, left), f'refresh{left}_{state}')

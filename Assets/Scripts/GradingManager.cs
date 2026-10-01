@@ -30,6 +30,11 @@ public class GradingManager : MonoBehaviour
 
     private const int MAX_WORDS = 110;
 
+    // Text colours. Group 2's text sits on paper panels (TextBoxTheme), so
+    // headings are the panels' indigo and the rest ink instead of black and white.
+    private static string Head => TextBoxTheme.Enabled ? "#4A5494" : "#000000";
+    private static string Body => TextBoxTheme.Enabled ? "#1F2233" : "#FFFFFF";
+
     void Start()
     {
         string scenario = PlayerPrefs.GetString("LastScenario", "Missing scenario");
@@ -48,13 +53,13 @@ public class GradingManager : MonoBehaviour
         }
 
         scenarioText.text =
-            $"<b><color=#000000>Scenario:\n</color></b><color=#FFFFFF>{scenario}</color>";
+            $"<b><color={Head}>Scenario:\n</color></b><color={Body}>{scenario}</color>";
 
         userResponseText.text =
-            $"<b><color=#000000>Your Response:\n</color></b><color=#FFFFFF>{userResponse}</color>";
+            $"<b><color={Head}>Your Response:\n</color></b><color={Body}>{userResponse}</color>";
 
         aiResponseText.text =
-            "<b><color=#000000>Brainy's Feedback:\n</color></b><color=#FFFFFF>Please Wait</color>";
+            $"<b><color={Head}>Brainy's Feedback:\n</color></b><color={Body}>Please Wait</color>";
 
         StartCoroutine(SendGradingPrompt(scenario, userResponse, cards));
     }
@@ -99,7 +104,7 @@ public class GradingManager : MonoBehaviour
         string trimmedFeedback = feedback.Trim();
 
         aiResponseText.text =
-            $"<b><color=#000000>Brainy's Feedback:</color></b><color=#FFFFFF>{trimmedFeedback}</color>";
+            $"<b><color={Head}>Brainy's Feedback:</color></b><color={Body}>{trimmedFeedback}</color>";
 
         int? score = ExtractScore(trimmedFeedback);
         ClickLogger.LogAiResponse("grading_feedback", scenario, trimmedFeedback, score ?? -1);
@@ -271,8 +276,8 @@ public class GradingManager : MonoBehaviour
     private IEnumerator AnimateLoadingDots()
     {
         string baseText =
-            "<b><color=#000000>Brainy's Feedback:</color></b> " +
-            "<color=#FFFFFF>Please Wait</color>";
+            $"<b><color={Head}>Brainy's Feedback:</color></b> " +
+            $"<color={Body}>Please Wait</color>";
 
         int dotCount = 0;
 

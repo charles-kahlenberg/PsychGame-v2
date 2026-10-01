@@ -5,19 +5,26 @@ using UnityEngine.UI;
 // Feature.BackgroundTweening (Group 2): each scene's background image slowly
 // drifts and zooms. It's found at runtime, so no scene needs editing:
 //  - the first child of a Canvas, when it's a full-screen Image with a sprite
-//    (Splash, SaveSelect, Loading, Rules, GameEnd), or
+//    (Splash, Loading, Rules), or
 //  - the Canvas's own Image (GameScene). That one is copied onto a new
 //    bottom child first, so the rest of the UI doesn't drift with it.
 //    With Feature.ShaderBackground, GameScene's background is an animated
-//    shader instead, which moves on its own, so it's skipped.
-// Scenes whose background is just the camera color (Grading, Review) and
-// plain color panels (Introduction) have nothing to drift.
+//    shader instead, which moves on its own, so it's skipped (as are Grading
+//    and Review, which get the shader too).
+// SaveSelect and GameEnd have their titles painted into the background, so
+// they stay still (see TitledBackgrounds). Plain color panels
+// (Introduction) have nothing to drift.
 public class BackgroundDrift : MonoBehaviour
 {
     private const float Zoom = 1.08f;            // enlarged so drifting never shows an edge
     private const float Breathe = 0.01f;         // extra zoom in and out on top of that
     private const float DriftFraction = 0.025f;  // of the image size, each way
     private const float Period = 24f;            // seconds per full drift cycle
+
+    // Backgrounds with the screen's title painted in ("Save File",
+    // "Congratulations!"): drifting them slid the title around under the
+    // buttons, so they stay still.
+    private static readonly string[] TitledBackgrounds = { "SaveSelectScene", "GameEndScene" };
 
     private RectTransform _rt;
     private Vector2 _restPosition;
@@ -32,6 +39,7 @@ public class BackgroundDrift : MonoBehaviour
     private static void AddToBackgroundsIn(Scene scene)
     {
         if (ShaderBackground.Replaces(scene)) return;
+        if (System.Array.IndexOf(TitledBackgrounds, scene.name) >= 0) return;
 
         foreach (GameObject root in scene.GetRootGameObjects())
         {

@@ -19,8 +19,18 @@ using UnityEngine.UI;
 //    and typed in, so a hint can be read against the answer.
 //  - ResponseInput: the same paper look, and a scrollbar once an answer is
 //    longer than the box (the mouse wheel scrolls it too).
+//  - SavePromptPanel ("Do you want to save?"): a paper card on the dimmed
+//    screen holding the question, the name box and the buttons.
 // IntroductionScene's SpeechBubble gets the same panel as the scenario, sized
-// to the NPC's line with its tail pointing at them.
+// to the NPC's line with its tail pointing at them. The other screens:
+//  - RulesScene: Brainy's bubble is the panel with a "Brainy" name tag, its
+//    tail toward Brainy; it holds the example too (RulesManager).
+//  - GradingScene: the scenario, response and feedback scroll views become
+//    fixed-size panels that scroll, and Brainy's score bubble is a small
+//    panel with a name tag and a tail toward Brainy.
+//  - ReviewScene: the saved responses are one tall panel that scrolls, under
+//    a light title.
+// GradingManager and ResponseReview colour their text for paper.
 public static class TextBoxTheme
 {
     // Colors, in sRGB. The panels are warm paper with a deep indigo edge, like
@@ -32,14 +42,14 @@ public static class TextBoxTheme
     private static readonly Color PlaceholderInk = new Color32(0x6B, 0x6F, 0x85, 0xFF);
     private static readonly Color OverlayTint = new Color(0.05f, 0.06f, 0.12f, 0.6f);
 
-    private const string SceneName = "GameScene";
-    private const string IntroSceneName = "IntroductionScene";
+    private static readonly string[] SceneNames =
+        { "GameScene", "IntroductionScene", "RulesScene", "GradingScene", "ReviewScene" };
 
     // Sizes in canvas units (the canvas is 450 tall).
     private const float ScenarioFontSize = 14f;
     private const float BubbleFontSize = 13f;
     private const float ResponseFontSize = 13f;
-    private const float ScreenMargin = 12f;
+    public const float ScreenMargin = 12f;
     private const float AvatarGap = 10f;
     private const float HintBubbleWidth = 460f;
     private const float HintBubbleGap = 16f;       // below the response box (the name tag sits in it)
@@ -58,7 +68,7 @@ public static class TextBoxTheme
         if (!Enabled) return;
         SceneManager.sceneLoaded += (scene, mode) =>
         {
-            if (scene.name == SceneName || scene.name == IntroSceneName) Apply(scene);
+            if (System.Array.IndexOf(SceneNames, scene.name) >= 0) Apply(scene);
         };
     }
 
@@ -76,20 +86,24 @@ public static class TextBoxTheme
             if (canvas == null) continue;
 
             var canvasRect = (RectTransform)canvas.transform;
-            if (scene.name == IntroSceneName)
+            switch (scene.name)
             {
-                StyleIntro(canvasRect);
-                continue;
+                case "IntroductionScene": StyleIntro(canvasRect); break;
+                case "RulesScene": StyleRules(canvasRect); break;
+                case "GradingScene": StyleGrading(canvasRect); break;
+                case "ReviewScene": StyleReview(canvasRect); break;
+                case "GameScene":
+                    var response = canvas.transform.Find("ResponseInput") as RectTransform;
+
+                    var overlay = canvas.transform.Find("HintOverlay")?.GetComponent<Image>();
+                    if (overlay != null) overlay.color = OverlayTint;
+
+                    StyleScenario(canvasRect, response);
+                    StyleHintBubble(canvasRect, response, overlay);
+                    if (response != null) StyleResponse(response);
+                    StyleSavePrompt(canvasRect);
+                    break;
             }
-
-            var response = canvas.transform.Find("ResponseInput") as RectTransform;
-
-            var overlay = canvas.transform.Find("HintOverlay")?.GetComponent<Image>();
-            if (overlay != null) overlay.color = OverlayTint;
-
-            StyleScenario(canvasRect, response);
-            StyleHintBubble(canvasRect, response, overlay);
-            if (response != null) StyleResponse(response);
         }
     }
 
@@ -156,6 +170,185 @@ public static class TextBoxTheme
         StyleBodyText(text, Regular, ScenarioFontSize);
         var panel = TextPanel.Build(bubble, text, minHeight: 48f, maxHeight: maxHeight, nameTag: null);
         panel.AddTail(TextPanel.TailSide.Bottom, 0.9f);
+    }
+
+    // -------------------- RULES --------------------
+
+    private static void StyleRules(RectTransform canvas)
+    {
+        var bubble = canvas.Find("BubbleBox") as RectTransform;
+        var text = bubble != null ? bubble.Find("Text (TMP)")?.GetComponent<TextMeshProUGUI>() : null;
+        if (text == null) return;
+
+        // Like the intro: from the left margin to just short of Brainy's
+        // middle, so the tail reaches toward them; never tall enough to cover them.
+        var brainy = canvas.Find("Brainy") as RectTransform;
+        float rightAnchor = 0.8f, rightOffset = -40f, maxHeight = 200f;
+        if (brainy != null && brainy.anchorMin == brainy.anchorMax)
+        {
+            rightAnchor = brainy.anchorMin.x;
+            rightOffset = brainy.anchoredPosition.x - brainy.rect.width * 0.3f;
+            float brainyTopFromTop = canvas.rect.height / 2f - EdgeY(canvas, brainy, top: true);
+            maxHeight = Mathf.Max(60f, brainyTopFromTop - ScreenMargin - 8f);
+        }
+        bubble.anchorMin = new Vector2(0f, 1f);
+        bubble.anchorMax = new Vector2(rightAnchor, 1f);
+        bubble.pivot = new Vector2(0.5f, 1f);
+        bubble.offsetMin = new Vector2(2f * ScreenMargin, -ScreenMargin - 60f);
+        bubble.offsetMax = new Vector2(rightOffset, -ScreenMargin); // TextPanel sets the height
+
+        StyleBodyText(text, Regular, ScenarioFontSize);
+        var panel = TextPanel.Build(bubble, text, minHeight: 52f, maxHeight: maxHeight, nameTag: "Brainy");
+        panel.AddTail(TextPanel.TailSide.Bottom, 0.92f);
+    }
+
+    // -------------------- GRADING AND REVIEW --------------------
+
+    private const float PanelGap = 12f; // between panels stacked down the screen
+
+    private static void StyleGrading(RectTransform canvas)
+    {
+        var grading = Object.FindFirstObjectByType<GradingManager>();
+        if (grading == null) return;
+
+        FixedPanel(canvas, grading.scenarioText, top: ScreenMargin, bottom: PanelGap / 2f);
+        FixedPanel(canvas, grading.userResponseText, top: PanelGap / 2f, bottom: PanelGap / 2f);
+        FixedPanel(canvas, grading.aiResponseText, top: PanelGap / 2f, bottom: ScreenMargin);
+        StyleScoreBubble(canvas, grading.scoreText);
+    }
+
+    private static void StyleReview(RectTransform canvas)
+    {
+        var review = Object.FindFirstObjectByType<ResponseReview>();
+        if (review != null) FixedPanel(canvas, review.reviewText, top: PanelGap / 2f, bottom: ScreenMargin);
+
+        // The "Review" title sits on the dark background, in the paper's colour.
+        var title = canvas.Find("Text (TMP)")?.GetComponent<TMP_Text>();
+        if (title != null)
+        {
+            title.font = SemiBold;
+            title.fontSharedMaterial = SemiBold.material;
+            title.fontStyle = FontStyles.Normal;
+            title.fontSize = 26f;
+            title.color = Paper;
+        }
+    }
+
+    // Replaces the scroll view holding `text` with a paper panel of the same
+    // width (less the margins) and height (less `top` and `bottom`), which
+    // scrolls once the text is longer. Height is fixed in canvas units, which
+    // never change (the canvas matches the screen's height); width follows
+    // the old view's anchors.
+    private static void FixedPanel(RectTransform canvas, TMP_Text text, float top, float bottom)
+    {
+        var old = text != null ? text.GetComponentInParent<ScrollRect>(true)?.transform as RectTransform : null;
+        if (old == null) return;
+
+        Rect r = PixelButton.LocalRect(canvas, old);
+        float height = r.height - top - bottom;
+        float anchorY = canvas.rect.yMin + old.anchorMax.y * canvas.rect.height;
+
+        var panel = (RectTransform)new GameObject(old.name + "Panel", typeof(RectTransform)).transform;
+        panel.gameObject.layer = old.gameObject.layer;
+        panel.SetParent(canvas, false);
+        panel.SetSiblingIndex(old.GetSiblingIndex());
+        panel.anchorMin = new Vector2(old.anchorMin.x, old.anchorMax.y);
+        panel.anchorMax = new Vector2(old.anchorMax.x, old.anchorMax.y);
+        panel.pivot = new Vector2(0.5f, 1f);
+        panel.sizeDelta = new Vector2(-2f * ScreenMargin, height);
+        panel.anchoredPosition = new Vector2(0f, r.yMax - top - anchorY);
+
+        StyleBodyText(text, Regular, BubbleFontSize);
+        TextPanel.Build(panel, text, minHeight: height, maxHeight: height, nameTag: null);
+        old.gameObject.SetActive(false);
+    }
+
+    // Brainy's score, beside Brainy: a small panel with their name tag, its
+    // tail toward them, growing up from where the old bubble's bottom was.
+    private static void StyleScoreBubble(RectTransform canvas, TMP_Text text)
+    {
+        var bubble = text != null ? text.transform.parent as RectTransform : null;
+        if (bubble == null || bubble == canvas) return;
+
+        float width = Mathf.Max(110f, PixelButton.LocalRect(canvas, bubble).width);
+        float x = (bubble.anchorMin.x + bubble.anchorMax.x) / 2f;
+        bubble.anchorMin = bubble.anchorMax = new Vector2(x, bubble.anchorMin.y);
+        bubble.pivot = new Vector2(0.5f, 0f);
+        bubble.anchoredPosition = Vector2.zero;
+        bubble.sizeDelta = new Vector2(width, 40f);
+
+        StyleBodyText(text, SemiBold, BubbleFontSize);
+        text.alignment = TextAlignmentOptions.Top;
+        var panel = TextPanel.Build(bubble, text, minHeight: 40f, maxHeight: 90f, nameTag: "Brainy");
+        panel.AddTail(TextPanel.TailSide.Bottom, 0.85f);
+    }
+
+    // -------------------- SAVE PROMPT --------------------
+
+    // A paper card in the middle of the dimmed screen, holding the question,
+    // the name box and the Save / Skip buttons (PixelButton draws those).
+    private static void StyleSavePrompt(RectTransform canvas)
+    {
+        var prompt = canvas.Find("SavePromptPanel") as RectTransform;
+        if (prompt == null) return;
+
+        var dim = prompt.GetComponent<Image>();
+        if (dim != null)
+        {
+            dim.sprite = null;
+            dim.color = OverlayTint;
+        }
+
+        var card = (RectTransform)new GameObject("Card", typeof(RectTransform)).transform;
+        card.gameObject.layer = prompt.gameObject.layer;
+        card.SetParent(prompt, false);
+        card.SetAsFirstSibling();
+        Center(card, new Vector2(0f, 52f), new Vector2(420f, 150f));
+        TextPanel.AddPaper(card);
+
+        var question = prompt.Find("Question")?.GetComponent<TMP_Text>();
+        if (question != null)
+        {
+            Center(question.rectTransform, new Vector2(0f, 100f), new Vector2(380f, 30f));
+            StyleBodyText(question, SemiBold, 18f);
+            question.alignment = TextAlignmentOptions.Center;
+        }
+
+        var nameBox = prompt.Find("SaveNameInput") as RectTransform;
+        var input = nameBox != null ? nameBox.GetComponent<TMP_InputField>() : null;
+        if (input != null)
+        {
+            Center(nameBox, new Vector2(0f, 55f), new Vector2(340f, 36f));
+            TextPanel.AddPaper(nameBox);
+            if (input.textComponent != null) StyleBodyText(input.textComponent, Regular, ResponseFontSize);
+            if (input.placeholder is TMP_Text placeholder)
+            {
+                StyleBodyText(placeholder, Regular, ResponseFontSize);
+                placeholder.fontStyle = FontStyles.Italic;
+                placeholder.color = PlaceholderInk;
+            }
+            foreach (var t in new[] { input.textComponent, input.placeholder as TMP_Text })
+                if (t != null) t.alignment = TextAlignmentOptions.Left; // vertically centered in the box
+            input.customCaretColor = true;
+            input.caretColor = Ink;
+            input.caretWidth = 2;
+            input.selectionColor = new Color(Accent.r, Accent.g, Accent.b, 0.3f);
+        }
+
+        foreach (var name in new[] { "Yes", "No" })
+        {
+            var button = prompt.Find(name) as RectTransform;
+            if (button != null)
+                Center(button, new Vector2(name == "Yes" ? -60f : 60f, 0f), button.sizeDelta);
+        }
+    }
+
+    // Places a box by its middle, relative to its parent's middle.
+    private static void Center(RectTransform rt, Vector2 position, Vector2 size)
+    {
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = size;
+        rt.anchoredPosition = position;
     }
 
     // -------------------- BRAINY'S BUBBLE --------------------

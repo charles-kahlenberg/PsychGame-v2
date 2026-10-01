@@ -444,21 +444,7 @@ public class GameManager : MonoBehaviour
     {
         isTyping = true;
         skipTyping = false;
-        textObj.text = fullText;
-        textObj.maxVisibleCharacters = 0;
-        textObj.ForceMeshUpdate();
-        int total = textObj.textInfo.characterCount;
-
-        float start = Time.time;
-        while (!skipTyping)
-        {
-            int shown = Mathf.FloorToInt((Time.time - start) / delay) + 1;
-            if (shown >= total) break;
-            textObj.maxVisibleCharacters = shown;
-            yield return null;
-        }
-
-        textObj.maxVisibleCharacters = 99999; // TMP's default: no limit
+        yield return TextPanel.Reveal(textObj, fullText, delay, () => skipTyping);
         isTyping = false;
     }
 
@@ -505,7 +491,13 @@ public class GameManager : MonoBehaviour
 
     public void ContinueGame() => SceneTransition.Load("SaveSelectScene");
 
-    public void PromptSave() => savePromptPanel.SetActive(true);
+    public void PromptSave()
+    {
+        // On top of everything, Brainy included (beside the response box, it
+        // covered the Save button).
+        savePromptPanel.transform.SetAsLastSibling();
+        savePromptPanel.SetActive(true);
+    }
 
     public void CancelAndExit()
     {

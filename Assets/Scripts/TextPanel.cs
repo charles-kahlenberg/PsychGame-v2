@@ -77,6 +77,28 @@ public class TextPanel : MonoBehaviour
         return p;
     }
 
+    // A letter-by-letter reveal that lays the whole text out first and only
+    // uncovers it, so words don't jump lines mid-type and a panel is its
+    // final size from the first letter. `skip` finishes it at once (a click).
+    public static System.Collections.IEnumerator Reveal(TMP_Text text, string s, float delay, System.Func<bool> skip)
+    {
+        text.text = s;
+        text.maxVisibleCharacters = 0;
+        text.ForceMeshUpdate();
+        int total = text.textInfo.characterCount;
+
+        float start = Time.time;
+        while (!skip())
+        {
+            int shown = Mathf.FloorToInt((Time.time - start) / delay) + 1;
+            if (shown >= total) break;
+            text.maxVisibleCharacters = shown;
+            yield return null;
+        }
+
+        text.maxVisibleCharacters = 99999; // TMP's default: no limit
+    }
+
     // `along` is how far along the edge (0-1) the tail sits; `offset` nudges
     // it from there in canvas units, e.g. a fixed distance below the top.
     public void AddTail(TailSide side, float along, float offset = 0f)

@@ -3999,7 +3999,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dc307d363352e844f9307d86ea145e81, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  openAIKey: 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
   hintText: {fileID: 1211065673}
   hintOverlay: {fileID: 1789710095}
   hintScrollView: {fileID: 1481337831}

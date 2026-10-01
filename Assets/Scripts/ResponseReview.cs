@@ -6,6 +6,11 @@ public class ResponseReview : MonoBehaviour
 {
     public TextMeshProUGUI reviewText;
 
+    // Text colours. Group 2's text sits on a paper panel (TextBoxTheme), so
+    // headings are the panel's indigo and the rest ink instead of black and white.
+    private static string Head => TextBoxTheme.Enabled ? "#4A5494" : "#000000";
+    private static string Body => TextBoxTheme.Enabled ? "#1F2233" : "#FFFFFF";
+
     void Start()
     {
         int slot = PlayerPrefs.GetInt("SelectedSaveSlot", 0);
@@ -13,7 +18,7 @@ public class ResponseReview : MonoBehaviour
 
         if (!SaveManager.HasSave(slot))
         {
-            reviewText.text = "<b><color=#000000>No saved responses found.</color></b>";
+            reviewText.text = $"<b><color={Head}>No saved responses found.</color></b>";
             return;
         }
 
@@ -21,7 +26,7 @@ public class ResponseReview : MonoBehaviour
 
         if (data.responses == null || data.responses.Count == 0)
         {
-            reviewText.text = "<b><color=#000000>No responses submitted in this save.</color></b>";
+            reviewText.text = $"<b><color={Head}>No responses submitted in this save.</color></b>";
             Debug.Log("[ResponseReview] No responses found in this save.");
             return;
         }
@@ -31,9 +36,9 @@ public class ResponseReview : MonoBehaviour
         {
             var r = data.responses[i];
             reviewText.text +=
-                $"<b><color=#000000>Scenario {i + 1}:</color></b> <color=#FFFFFF>{r.scenario}</color>\n\n" +
-                $"<b><color=#000000>Response:</color></b> <color=#FFFFFF>{r.response}</color>\n\n" +
-                $"<b><color=#000000>AI Feedback:</color></b> <color=#FFFFFF>{r.aiFeedback}</color>\n\n\n";
+                $"<b><color={Head}>Scenario {i + 1}:</color></b> <color={Body}>{r.scenario}</color>\n\n" +
+                $"<b><color={Head}>Response:</color></b> <color={Body}>{r.response}</color>\n\n" +
+                $"<b><color={Head}>AI Feedback:</color></b> <color={Body}>{r.aiFeedback}</color>\n\n\n";
         }
 
         Debug.Log($"[ResponseReview] Displayed {data.responses.Count} responses.");

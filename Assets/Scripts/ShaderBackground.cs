@@ -4,8 +4,9 @@ using UnityEngine.UI;
 
 // Feature.ShaderBackground (Group 2): the response screen (GameScene) swaps
 // the therapy-room image for Resources/ThoughtCurrents.shader, a slow flowing
-// layered pattern. It animates on its own, so BackgroundDrift leaves this
-// scene alone (see Replaces).
+// layered pattern. The grading and review screens, which were a flat camera
+// colour, get it too. It animates on its own, so BackgroundDrift leaves these
+// scenes alone (see Replaces).
 //
 // The noise behind the pattern is expensive, so it isn't run per screen
 // pixel: every frame this renders it into a small texture with
@@ -13,11 +14,12 @@ using UnityEngine.UI;
 // full resolution to draw the crisp layers and contours on top.
 //
 // Like BackgroundDrift, the shader is drawn on a new bottom child of the
-// Canvas. The Canvas's own Image stays as an invisible click target so clicks
-// on empty space still hit (and are logged as) the same object as in Group 1.
+// Canvas. Where the Canvas has its own Image (GameScene), that stays as an
+// invisible click target so clicks on empty space still hit (and are logged
+// as) the same object as in Group 1.
 public class ShaderBackground : MonoBehaviour
 {
-    private const string SceneName = "GameScene";
+    private static readonly string[] SceneNames = { "GameScene", "GradingScene", "ReviewScene" };
     private const string ShaderResource = "ThoughtCurrents";
     private const string FieldShaderResource = "ThoughtCurrentsField";
 
@@ -40,7 +42,7 @@ public class ShaderBackground : MonoBehaviour
 
     public static bool Replaces(Scene scene)
     {
-        return scene.name == SceneName && TestGroups.IsEnabled(Feature.ShaderBackground);
+        return System.Array.IndexOf(SceneNames, scene.name) >= 0 && TestGroups.IsEnabled(Feature.ShaderBackground);
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -69,17 +71,14 @@ public class ShaderBackground : MonoBehaviour
             var canvas = root.GetComponent<Canvas>();
             if (canvas == null) continue;
 
-            var canvasImage = canvas.GetComponent<Image>();
-            if (canvasImage == null || canvasImage.sprite == null) continue;
-
-            CreateUnder(canvasImage, shader, fieldShader);
+            CreateUnder(canvas, shader, fieldShader);
         }
     }
 
-    private static void CreateUnder(Image source, Shader shader, Shader fieldShader)
+    private static void CreateUnder(Canvas canvas, Shader shader, Shader fieldShader)
     {
         var go = new GameObject("ShaderBackground", typeof(RectTransform), typeof(Image));
-        go.transform.SetParent(source.transform, false);
+        go.transform.SetParent(canvas.transform, false);
         go.transform.SetAsFirstSibling();
 
         var rt = (RectTransform)go.transform;
@@ -93,9 +92,13 @@ public class ShaderBackground : MonoBehaviour
         image.material = material;
         image.raycastTarget = false;
 
-        Color c = source.color;
-        c.a = 0f;
-        source.color = c;
+        var source = canvas.GetComponent<Image>();
+        if (source != null)
+        {
+            Color c = source.color;
+            c.a = 0f;
+            source.color = c;
+        }
 
         var background = go.AddComponent<ShaderBackground>();
         background._material = material;

@@ -892,7 +892,6 @@ MonoBehaviour:
   speechBubble: {fileID: 777657195}
   dialogueText: {fileID: 220083870}
   continueButton: {fileID: 1272007810}
-  openAIKey: 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
   disableTokenLimit: 1
 --- !u!4 &1530346059
 Transform:

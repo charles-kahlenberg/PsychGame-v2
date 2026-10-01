@@ -103,6 +103,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         originalScale = transform.localScale;
         originalRot = transform.localRotation;
         cardIndex = int.TryParse(name.Replace("Card", ""), out int n) ? n - 1 : 0;
+        FitTermInsideCard();
 
         if (FaceDownCards)
         {
@@ -130,6 +131,24 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         if (hintManager == null) hintManager = FindObjectOfType<HintManager>();
         if (hintManager == null) Debug.LogWarning("[CardBehavior] HintManager not found in scene.");
     }
+
+    // The term's box spanned the whole card with no padding and never shrank,
+    // so a long word (e.g. "Temperament") ran past the card's edges, where the
+    // next card in the hand covered it. It now keeps clear of the edges, and
+    // terms too long for that shrink until they fit.
+    void FitTermInsideCard()
+    {
+        if (frontText == null) return;
+        var rt = frontText.rectTransform;
+        rt.offsetMin = new Vector2(TermSidePadding, rt.offsetMin.y);
+        rt.offsetMax = new Vector2(-TermSidePadding, rt.offsetMax.y);
+        frontText.fontSizeMax = frontText.fontSize;
+        frontText.fontSizeMin = TermMinFontSize;
+        frontText.enableAutoSizing = true;
+    }
+
+    private const float TermSidePadding = 10f;
+    private const float TermMinFontSize = 8f;
 
     void Update()
     {

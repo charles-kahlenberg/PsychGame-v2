@@ -14,11 +14,11 @@ public enum Feature
     HoverAnimations,          // buttons pop on hover (ButtonHoverPop)
     RaisedHand,               // the hand is a bit smaller, flatter and higher so no card hangs off the bottom; the response box makes room (GameManager)
     NewCardArt,              // layered card back/front art per area of psychology from Resources/CardArt; placeholders for areas still being drawn (CardBehavior, CardArt, TermAreas, GameManager)
-    BackgroundTweening,       // scene backgrounds slowly drift and zoom, except where ShaderBackground replaces them (BackgroundDrift)
-    ShaderBackground,         // the response screen's (GameScene) room image becomes a slow animated shader, Resources/ThoughtCurrents (ShaderBackground)
+    BackgroundTweening,       // scene backgrounds slowly drift and zoom, except where ShaderBackground replaces them and where the title is painted into the background (BackgroundDrift)
+    ShaderBackground,         // the response screen's (GameScene) room image becomes a slow animated shader, Resources/ThoughtCurrents; the grading and review screens get it too (ShaderBackground)
     ImprovedMenuTransitions,  // screens fade out and in between scenes (SceneTransition)
-    ThemedTextBoxes,          // the response screen's scenario, Brainy/definition and response boxes are restyled paper panels in Inter that fit their text and scroll when long; Brainy steps forward for definitions too; the scenario reveals without reflowing; the intro screen's speech bubble gets the same panel and reveal (TextBoxTheme, TextPanel, GameManager, BrainBehavior, CardBehavior, IntroductionManager)
-    PixelButtons,             // the response screen's Submit, Refresh and Back to Menu buttons are pixel-art plates like the card backs, from Resources/PixelButtons; Refresh shows its uses left as diamonds (PixelButton, GameManager)
+    ThemedTextBoxes,          // the response screen's scenario, Brainy/definition and response boxes are restyled paper panels in Inter that fit their text and scroll when long; Brainy steps forward for definitions too; the scenario reveals without reflowing; the intro screen's speech bubble, the rules screen's Brainy bubble (which holds the example too), the grading and review screens' text and the save prompt get the same panels (TextBoxTheme, TextPanel, GameManager, BrainBehavior, CardBehavior, IntroductionManager, RulesManager, GradingManager, ResponseReview)
+    PixelButtons,             // every screen's buttons but the title screen's are pixel-art plates like the card backs, from Resources/PixelButtons; Refresh shows its uses left as diamonds, and the save slots keep their names on blank plates (PixelButton, GameManager)
 }
 
 // The study's conditions, all in one place: which features each test group

@@ -1,11 +1,7 @@
-using Newtonsoft.Json.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.Networking;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class RulesManager : MonoBehaviour
@@ -22,10 +18,6 @@ public class RulesManager : MonoBehaviour
 
     private bool skipTyping = false;
 
-
-    [Header("AI Settings")]
-    public string openAIKey = "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";
-
     private List<string> rulesSections = new List<string>
     {
         "This game will have you use psychology terms in everyday situations. On each turn, the game will give you a scenario and 5 psychology terms to use.",
@@ -40,7 +32,7 @@ public class RulesManager : MonoBehaviour
         "Thomas wonders how exercise affects his brain and why he feels better after a run.\n\n" +
         "Psychology Terms: NEURONS, CLASSICALLY CONDITIONED, REM SLEEP, DEPTH PERCEPTION, ATTACHMENT\n\n" +
         "Your Description: When you run, your NEURONS start to output endorphins. Neurons are the way the brain communicates quickly to itself and the body. " +
-        "Also, assuming you’ve ran before, you have probably made a CLASSICALLY CONDITIONED connection between running and how good you feel. " +
+        "Also, assuming youâ€™ve ran before, you have probably made a CLASSICALLY CONDITIONED connection between running and how good you feel. " +
         "So, even as you begin to lace up your sneakers, you start to feel good. Exercise helps you sleep better, so you will get more REM SLEEP, which helps your body.";
 
     private int currentRuleIndex = 0;
@@ -67,62 +59,20 @@ public class RulesManager : MonoBehaviour
         StartCoroutine(StartIntroSequence());
     }
 
+    // Brainy's greeting used to come from OpenAI, called straight from the game
+    // with a key built into it. That key was public, and the call held the
+    // bubble empty for up to 10 seconds, so Brainy now always says this.
+    private const string Greeting = "Hi! Iâ€™m Brainy. Iâ€™ll guide you in this psychology game!";
+
     IEnumerator StartIntroSequence()
     {
-        yield return new WaitForSeconds(1.5f);
+        yield return new WaitForSeconds(0.6f);
         brainyImage.SetActive(true);
 
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(0.4f);
         speechBubble.SetActive(true);
 
-        yield return StartCoroutine(RequestAIIntro());
-    }
-
-    IEnumerator RequestAIIntro()
-    {
-
-        string prompt =
-            "Introduce yourself as Brainy, the friendly psychology helper trapped in a jar. " +
-            "Speak in first person, like 'Hi! I’m Brainy…'. Be cheerful and helpful, and say that you’ll guide the player in this psychology game.";
-
-        string finalText = "Hi! I’m Brainy. I’ll guide you in this psychology game!";
-
-        var requestData = new
-        {
-            model = "gpt-5",
-            messages = new[]
-            {
-                new { role = "user", content = prompt }
-            },
-            max_completion_tokens = 100
-        };
-
-
-        string jsonBody = Newtonsoft.Json.JsonConvert.SerializeObject(requestData);
-
-        using (UnityWebRequest request = new UnityWebRequest("https://api.openai.com/v1/chat/completions", "POST"))
-        {
-            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonBody);
-            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-            request.downloadHandler = new DownloadHandlerBuffer();
-            request.SetRequestHeader("Content-Type", "application/json");
-            request.SetRequestHeader("Authorization", "Bearer " + openAIKey);
-
-            request.timeout = 10;
-            yield return request.SendWebRequest();
-
-            if (request.result == UnityWebRequest.Result.Success)
-            {
-                string jsonResponse = request.downloadHandler.text;
-                JObject result = JObject.Parse(jsonResponse);
-                string content = result["choices"]?[0]?["message"]?["content"]?.ToString().Trim();
-
-                if (!string.IsNullOrEmpty(content))
-                    finalText = content;
-            }
-        }
-
-        yield return StartCoroutine(TypeText(finalText, () =>
+        yield return StartCoroutine(TypeText(Greeting, () =>
         {
             StartCoroutine(ShowContinueButtonAfterDelay());
         }));
@@ -141,7 +91,9 @@ public class RulesManager : MonoBehaviour
         if (currentRuleIndex < rulesSections.Count)
         {
             // Make the rules font slightly bigger than normal dialogue
-            dialogueText.fontSize = 24; // Adjust as needed (e.g., 32-40)
+            // (Group 2's panel already sets a readable size).
+            if (!TextBoxTheme.Enabled)
+                dialogueText.fontSize = 24; // Adjust as needed (e.g., 32-40)
 
             typingCoroutine = StartCoroutine(TypeText(rulesSections[currentRuleIndex], () =>
             {
@@ -164,6 +116,13 @@ public class RulesManager : MonoBehaviour
     {
         showExampleButton.gameObject.SetActive(false);
 
+        // Group 2: Brainy's panel holds the example itself and scrolls it.
+        if (TextBoxTheme.Enabled)
+        {
+            dialogueText.text = exampleText;
+            return;
+        }
+
         // Clear the bubble text
         dialogueText.text = "";
 
@@ -184,6 +143,18 @@ public class RulesManager : MonoBehaviour
     {
         isTyping = true;
         skipTyping = false;
+
+        // Group 2: laid out up front and uncovered, so words don't jump lines
+        // and Brainy's panel is its final size from the first letter.
+        if (TextBoxTheme.Enabled)
+        {
+            yield return TextPanel.Reveal(dialogueText, text, 0.03f, () => skipTyping);
+            isTyping = false;
+            skipTyping = false;
+            onComplete?.Invoke();
+            yield break;
+        }
+
         dialogueText.text = "";
         dialogueText.ForceMeshUpdate();
 
