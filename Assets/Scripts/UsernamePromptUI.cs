@@ -34,7 +34,7 @@ internal static class UsernamePromptUI
         panelRect.sizeDelta = new Vector2(460, 240);
         panelRect.anchoredPosition = Vector2.zero;
 
-        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        Font font = TextBoxTheme.Regular.sourceFontFile;
 
         var label = CreateUIObject("Label", panel.transform);
         var labelText = label.AddComponent<Text>();

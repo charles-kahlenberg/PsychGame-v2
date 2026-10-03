@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 // Feature.ThemedTextBoxes (Group 2): restyles the response screen's text
-// boxes to match the paper-layer background, set in Inter (Resources/Fonts)
+// boxes to match the paper-layer background, set in Atkinson Hyperlegible Next (Resources/Fonts)
 // for legibility. Built at runtime on GameScene's existing objects, so every
 // script that already points at them keeps working:
 //  - Bubble Box (the scenario): sized to its text, beside the avatar, with a
@@ -59,8 +59,8 @@ public static class TextBoxTheme
     public static bool Enabled => TestGroups.IsEnabled(Feature.ThemedTextBoxes);
 
     private static TMP_FontAsset _regular, _semiBold;
-    public static TMP_FontAsset Regular => _regular != null ? _regular : _regular = Resources.Load<TMP_FontAsset>("Fonts/Inter-Regular SDF");
-    public static TMP_FontAsset SemiBold => _semiBold != null ? _semiBold : _semiBold = Resources.Load<TMP_FontAsset>("Fonts/Inter-SemiBold SDF");
+    public static TMP_FontAsset Regular => _regular != null ? _regular : _regular = Resources.Load<TMP_FontAsset>("Fonts/AtkinsonHyperlegibleNext-Regular SDF");
+    public static TMP_FontAsset SemiBold => _semiBold != null ? _semiBold : _semiBold = Resources.Load<TMP_FontAsset>("Fonts/AtkinsonHyperlegibleNext-SemiBold SDF");
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Bootstrap()
@@ -76,7 +76,7 @@ public static class TextBoxTheme
     {
         if (Regular == null || SemiBold == null)
         {
-            Debug.LogWarning("[TextBoxTheme] Inter font assets missing from Resources/Fonts; leaving the text boxes as they are.");
+            Debug.LogWarning("[TextBoxTheme] Atkinson Hyperlegible Next font assets missing from Resources/Fonts; leaving the text boxes as they are.");
             return;
         }
 

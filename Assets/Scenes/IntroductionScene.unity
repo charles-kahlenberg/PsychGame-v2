@@ -265,8 +265,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: d78421e19ec09bd43a49470578dbb217, type: 2}
-  m_sharedMaterial: {fileID: 7050097170710422384, guid: d78421e19ec09bd43a49470578dbb217, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: bc7268c6d50ea84478a2ad280d2b92ff, type: 2}
+  m_sharedMaterial: {fileID: -8346762075249162076, guid: bc7268c6d50ea84478a2ad280d2b92ff, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -782,8 +782,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Continue
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: d78421e19ec09bd43a49470578dbb217, type: 2}
-  m_sharedMaterial: {fileID: 7050097170710422384, guid: d78421e19ec09bd43a49470578dbb217, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: bc7268c6d50ea84478a2ad280d2b92ff, type: 2}
+  m_sharedMaterial: {fileID: -8346762075249162076, guid: bc7268c6d50ea84478a2ad280d2b92ff, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -892,7 +892,8 @@ MonoBehaviour:
   speechBubble: {fileID: 777657195}
   dialogueText: {fileID: 220083870}
   continueButton: {fileID: 1272007810}
-  disableTokenLimit: 1
+  introductionWorkerUrl: https://psych-introduction.dauriagoalie31.workers.dev
+  timeoutSeconds: 20
 --- !u!4 &1530346059
 Transform:
   m_ObjectHideFlags: 0
