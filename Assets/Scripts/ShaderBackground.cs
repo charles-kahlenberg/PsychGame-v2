@@ -57,6 +57,7 @@ public class ShaderBackground : MonoBehaviour
 
     private RectTransform _rt;
     private Material _material;
+    private bool _paused;
     private Material _fieldMaterial;
     private RenderTexture _field;
 
@@ -153,7 +154,23 @@ public class ShaderBackground : MonoBehaviour
         _rt = (RectTransform)transform;
     }
 
+    // While something opaque covers it (SynopsisTransition's intro over
+    // GameScene) it's neither drawn nor rendered: the two backgrounds
+    // together dropped frames. Unpausing renders straight away, so it's
+    // up to date on the very frame it's shown.
+    public void SetPaused(bool paused)
+    {
+        _paused = paused;
+        GetComponent<Image>().enabled = !paused;
+        if (!paused) Render();
+    }
+
     private void Update()
+    {
+        if (!_paused) Render();
+    }
+
+    private void Render()
     {
         Rect rect = _rt.rect;
         if (_material == null || _fieldMaterial == null || rect.height <= 0f) return;

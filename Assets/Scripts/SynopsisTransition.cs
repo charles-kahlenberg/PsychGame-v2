@@ -113,9 +113,12 @@ public class SynopsisTransition : MonoBehaviour
     }
 
     // The intro, drawn over the response screen. Its own camera and event
-    // system stand down; the response screen's do the work.
+    // system stand down; the response screen's do the work, and the response
+    // screen's background, hidden beneath, pauses until the reveal.
     private static void LayOver(Scene intro)
     {
+        if (_game != null) SetBackgroundPaused(_game.gameObject.scene, true);
+
         foreach (GameObject root in intro.GetRootGameObjects())
         {
             if (root.TryGetComponent(out Canvas canvas))
@@ -123,6 +126,13 @@ public class SynopsisTransition : MonoBehaviour
             else if (root.GetComponent<Camera>() != null || root.GetComponent<EventSystem>() != null)
                 root.SetActive(false);
         }
+    }
+
+    private static void SetBackgroundPaused(Scene scene, bool paused)
+    {
+        foreach (GameObject root in scene.GetRootGameObjects())
+            foreach (ShaderBackground background in root.GetComponentsInChildren<ShaderBackground>())
+                background.SetPaused(paused);
     }
 
     private void Awake()
@@ -256,9 +266,14 @@ public class SynopsisTransition : MonoBehaviour
     // jumps off screen, so the first frame without the intro looks like its last.
     private void Reveal(Scene intro)
     {
+        // The response screen's background takes over from the intro's on
+        // this very frame. The intro goes idle now and is unloaded once the
+        // slide-ins are done, so unloading it doesn't compete with them.
+        SetBackgroundPaused(gameObject.scene, false);
+        SetBackgroundPaused(intro, true);
         foreach (GameObject root in intro.GetRootGameObjects())
             if (root.TryGetComponent(out Canvas canvas)) canvas.enabled = false;
-        SceneManager.UnloadSceneAsync(intro);
+        LeanTween.delayedCall(InTime, () => SceneManager.UnloadSceneAsync(intro));
 
         _game = null;
         CardsBeforeDeal = null;
