@@ -19,6 +19,7 @@ public enum Feature
     ImprovedMenuTransitions,  // screens fade out and in between scenes (SceneTransition)
     ThemedTextBoxes,          // the response screen's scenario, Brainy/definition and response boxes are restyled paper panels that fit their text and scroll when long; Brainy steps forward for definitions too; the scenario reveals without reflowing; the intro screen's speech bubble, the rules screen's Brainy bubble (which holds the example too), the grading and review screens' text and the save prompt get the same panels (TextBoxTheme, TextPanel, GameManager, BrainBehavior, CardBehavior, IntroductionManager, RulesManager, GradingManager, ResponseReview)
     PixelButtons,             // every screen's buttons but the title screen's are pixel-art plates like the card backs, from Resources/PixelButtons; Refresh shows its uses left as diamonds, and the save slots keep their names on blank plates (PixelButton, GameManager)
+    SynopsisTransition,       // the intro screen gets a livelier version of the shader background, and Continue turns it into the response screen with no fade: the background calms, the NPC moves to the avatar's spot, then the rest slides in (SynopsisTransition, ShaderBackground)
     GoodFitCards,             // hands (and refreshes) deal only terms that score 2.5 or better for the current scenario in Resources/scenario_fit.txt (ScenarioFit, GameManager)
 }
 
@@ -51,6 +52,7 @@ public static class TestGroups
         Feature.ImprovedMenuTransitions,
         Feature.ThemedTextBoxes,
         Feature.PixelButtons,
+        Feature.SynopsisTransition,
     };
 
     private static readonly Dictionary<int, HashSet<Feature>> Groups = new Dictionary<int, HashSet<Feature>>

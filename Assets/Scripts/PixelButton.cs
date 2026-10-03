@@ -19,7 +19,7 @@ using UnityEngine.UI;
 // The title screen's buttons are hand-drawn to match its art, so they stay.
 public class PixelButton : MonoBehaviour
 {
-    private const string Folder = "PixelButtons/";
+    public const string Folder = "PixelButtons/";
     private const float TexelsPerUnit = 4f;  // the art is saved at 4x so its pixels stay even once scaled
     private const float ShadowDepth = 2f;    // the drop shadow below each plate, in canvas units
     private const float ScreenMargin = 14f;

@@ -19,6 +19,7 @@ public class SceneTransition : MonoBehaviour
     private CanvasGroup _canvasGroup;
     private Coroutine _fade;
     private bool _loading;
+    private bool _skipNextFade;
 
     public static void Load(string sceneName)
     {
@@ -28,6 +29,17 @@ public class SceneTransition : MonoBehaviour
             return;
         }
         _instance.FadeOutAndLoad(sceneName);
+    }
+
+    // For a screen that animates its own way in (SynopsisTransition): loads
+    // in the background, then switches with no fade out or in as soon as the
+    // caller sets allowSceneActivation.
+    public static AsyncOperation PreloadWithoutFade(string sceneName)
+    {
+        if (_instance != null) _instance._skipNextFade = true;
+        AsyncOperation load = SceneManager.LoadSceneAsync(sceneName);
+        load.allowSceneActivation = false;
+        return load;
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -77,6 +89,11 @@ public class SceneTransition : MonoBehaviour
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         _loading = false;
+        if (_skipNextFade)
+        {
+            _skipNextFade = false;
+            return;
+        }
         SetAlpha(1f);
         StartFade(0f, FadeInTime, null);
     }

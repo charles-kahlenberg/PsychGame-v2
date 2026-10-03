@@ -240,6 +240,12 @@ public class IntroductionManager : MonoBehaviour
 
     public void OnContinueClicked()
     {
+        // Group 2: the screen turns into the response screen instead of fading.
+        if (SynopsisTransition.Enabled)
+        {
+            StartCoroutine(SynopsisTransition.Leave((RectTransform)npcImage.transform, speechBubble, continueButton.gameObject));
+            return;
+        }
         SceneTransition.Load("GameScene");
     }
 

@@ -116,7 +116,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         }
 
         if (TestGroups.IsEnabled(Feature.CardTweening))
-            DealIn(cardIndex * DealStagger);
+            DealIn(SynopsisTransition.DealDelay + cardIndex * DealStagger);
 
         // Hide Help on start; wire click through UnityEvent OR here. Group 2's
         // Definition button stays active and shows and hides with the front face.
