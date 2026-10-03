@@ -17,8 +17,9 @@ public enum Feature
     BackgroundTweening,       // scene backgrounds slowly drift and zoom, except where ShaderBackground replaces them and where the title is painted into the background (BackgroundDrift)
     ShaderBackground,         // the response screen's (GameScene) room image becomes a slow animated shader, Resources/ThoughtCurrents; the grading and review screens get it too (ShaderBackground)
     ImprovedMenuTransitions,  // screens fade out and in between scenes (SceneTransition)
-    ThemedTextBoxes,          // the response screen's scenario, Brainy/definition and response boxes are restyled paper panels in Inter that fit their text and scroll when long; Brainy steps forward for definitions too; the scenario reveals without reflowing; the intro screen's speech bubble, the rules screen's Brainy bubble (which holds the example too), the grading and review screens' text and the save prompt get the same panels (TextBoxTheme, TextPanel, GameManager, BrainBehavior, CardBehavior, IntroductionManager, RulesManager, GradingManager, ResponseReview)
+    ThemedTextBoxes,          // the response screen's scenario, Brainy/definition and response boxes are restyled paper panels that fit their text and scroll when long; Brainy steps forward for definitions too; the scenario reveals without reflowing; the intro screen's speech bubble, the rules screen's Brainy bubble (which holds the example too), the grading and review screens' text and the save prompt get the same panels (TextBoxTheme, TextPanel, GameManager, BrainBehavior, CardBehavior, IntroductionManager, RulesManager, GradingManager, ResponseReview)
     PixelButtons,             // every screen's buttons but the title screen's are pixel-art plates like the card backs, from Resources/PixelButtons; Refresh shows its uses left as diamonds, and the save slots keep their names on blank plates (PixelButton, GameManager)
+    GoodFitCards,             // hands (and refreshes) deal only terms that score 2.5 or better for the current scenario in Resources/scenario_fit.txt (ScenarioFit, GameManager)
 }
 
 // The study's conditions, all in one place: which features each test group
@@ -34,28 +35,34 @@ public static class TestGroups
 {
     public const int DefaultGroup = 1;
 
+    // Group 2's visual polish pass. Group 3 gets all of it too, so UI
+    // features added here reach both groups.
+    private static readonly Feature[] PolishedUI =
+    {
+        Feature.BrainyAttentionCue,
+        Feature.BrainyBesideResponseBox,
+        Feature.CardTweening,
+        Feature.FaceDownCards,
+        Feature.RaisedHand,
+        Feature.NewCardArt,
+        Feature.HoverAnimations,
+        Feature.BackgroundTweening,
+        Feature.ShaderBackground,
+        Feature.ImprovedMenuTransitions,
+        Feature.ThemedTextBoxes,
+        Feature.PixelButtons,
+    };
+
     private static readonly Dictionary<int, HashSet<Feature>> Groups = new Dictionary<int, HashSet<Feature>>
     {
         // Group 1: the original game (control).
         { 1, new HashSet<Feature>() },
 
         // Group 2: visual polish pass.
-        { 2, new HashSet<Feature>
-            {
-                Feature.BrainyAttentionCue,
-                Feature.BrainyBesideResponseBox,
-                Feature.CardTweening,
-                Feature.FaceDownCards,
-                Feature.RaisedHand,
-                Feature.NewCardArt,
-                Feature.HoverAnimations,
-                Feature.BackgroundTweening,
-                Feature.ShaderBackground,
-                Feature.ImprovedMenuTransitions,
-                Feature.ThemedTextBoxes,
-                Feature.PixelButtons,
-            }
-        },
+        { 2, new HashSet<Feature>(PolishedUI) },
+
+        // Group 3: group 2, but only dealt cards that fit the scenario well.
+        { 3, new HashSet<Feature>(PolishedUI) { Feature.GoodFitCards } },
     };
 
     public static IEnumerable<int> DefinedGroups => Groups.Keys;

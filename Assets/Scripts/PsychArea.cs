@@ -70,6 +70,6 @@ public static class TermAreas
 
     // Ignores case, spacing and punctuation, so "Long-term Memory" and
     // "Long Term Memory" (or curly vs straight apostrophes) still match.
-    private static string Key(string term) =>
+    public static string Key(string term) =>
         Regex.Replace((term ?? "").ToLowerInvariant(), "[^a-z0-9]", "");
 }

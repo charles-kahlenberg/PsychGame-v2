@@ -154,9 +154,12 @@ public class GameManager : MonoBehaviour
     {
         currentCards.Clear();
 
+        // Group 3 (Feature.GoodFitCards): only terms that fit this scenario well.
+        bool goodFitOnly = TestGroups.IsEnabled(Feature.GoodFitCards);
+
         List<string> pool = new List<string>();
         foreach (string v in allVocab)
-            if (!usedVocab.Contains(v))
+            if (!usedVocab.Contains(v) && (!goodFitOnly || ScenarioFit.Fits(v, currentScenario)))
                 pool.Add(v);
 
         while (currentCards.Count < 5 && pool.Count > 0)
