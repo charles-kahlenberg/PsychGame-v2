@@ -110,7 +110,7 @@ public class ClickLogger : MonoBehaviour
         }
         else
         {
-            EnterMenu(SceneManager.GetActiveScene().name);
+            EnterMenu(ScreenSceneName(SceneManager.GetActiveScene()));
         }
     }
 
@@ -169,8 +169,30 @@ public class ClickLogger : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        // An added scene (the synopsis laid over GameScene) is part of the
+        // screen that loaded it.
+        if (mode == LoadSceneMode.Additive) return;
+        SwitchMenu(ScreenSceneName(scene));
+    }
+
+    // GameScene counts as "introduction" while its synopsis shows, as the
+    // separate intro screen did (SynopsisTransition).
+    private static string ScreenSceneName(Scene scene)
+    {
+        return SynopsisTransition.ShowsSynopsis(scene) ? "IntroductionScene" : scene.name;
+    }
+
+    // For a screen that changes without a scene load: the synopsis giving
+    // way to the response screen.
+    public static void SwitchScreen(string sceneName)
+    {
+        if (_instance != null) _instance.SwitchMenu(sceneName);
+    }
+
+    private void SwitchMenu(string sceneName)
+    {
         ExitMenu();
-        EnterMenu(scene.name);
+        EnterMenu(sceneName);
 
         // Every menu load is the flush point: whatever was cached during the
         // menu that just ended (clicks, responses, card events, and the

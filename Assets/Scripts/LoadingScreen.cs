@@ -32,11 +32,11 @@ public class LoadingScreen : MonoBehaviour
         if (PlayerPrefs.GetInt("FromGrading", 0) == 1 ||
             PlayerPrefs.GetInt("SelectedSaveSlot", -1) != -1)
         {
-            nextScene = "IntroductionScene";
+            nextScene = SynopsisTransition.SynopsisScene();
         }
         else
         {
-            nextScene = "IntroductionScene"; // New games also go to intro first
+            nextScene = SynopsisTransition.SynopsisScene(); // New games also go to intro first
         }
 
         AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(nextScene);

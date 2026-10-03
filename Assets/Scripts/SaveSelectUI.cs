@@ -53,7 +53,7 @@ public class SaveSelectUI : MonoBehaviour
                 PlayerPrefs.Save();
             }
 
-            SceneTransition.Load("IntroductionScene");
+            SceneTransition.Load(SynopsisTransition.SynopsisScene());
         }
     }
 }

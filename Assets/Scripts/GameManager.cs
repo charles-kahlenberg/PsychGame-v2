@@ -104,11 +104,6 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        if (TextBoxTheme.Enabled)
-            StartCoroutine(RevealText(scenarioText, currentScenario, 0.03f));
-        else
-            StartCoroutine(TypeText(scenarioText, currentScenario, 0.03f));
-
         for (int i = 0; i < cardTexts.Length; i++)
             cardTexts[i].text = i < currentCards.Count ? currentCards[i] : "[Empty]";
 
@@ -117,6 +112,21 @@ public class GameManager : MonoBehaviour
 
         refreshUsesRemaining = 2;
         UpdateRefreshUI();
+
+        // Group 2: under the synopsis, the round (and its timing) starts
+        // once the screen is revealed, not when it loads.
+        if (SynopsisTransition.Holding)
+            SynopsisTransition.Revealed += BeginRound;
+        else
+            BeginRound();
+    }
+
+    void BeginRound()
+    {
+        if (TextBoxTheme.Enabled)
+            StartCoroutine(RevealText(scenarioText, currentScenario, 0.03f));
+        else
+            StartCoroutine(TypeText(scenarioText, currentScenario, 0.03f));
 
         ClickLogger.SetActiveScenario(currentScenario);
         ClickLogger.LogCardEvent(currentScenario, "initial", currentCards, -1);

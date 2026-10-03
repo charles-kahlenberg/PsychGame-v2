@@ -239,7 +239,7 @@ public class GradingManager : MonoBehaviour
         PlayerPrefs.SetInt("FromGrading", 1);
         PlayerPrefs.Save();
 
-        SceneTransition.Load("IntroductionScene");
+        SceneTransition.Load(SynopsisTransition.SynopsisScene());
     }
 
     // Returns the parsed score so callers can log it, independent of

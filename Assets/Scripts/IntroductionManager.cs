@@ -175,7 +175,9 @@ public class IntroductionManager : MonoBehaviour
 
     private string[] GetCardsFromPrefsSanitized()
     {
-        string cardsRaw = PlayerPrefs.GetString("LastCards", "");
+        // Group 2: the response screen has already dealt underneath, so ask
+        // with the cards from before, as the intro always has.
+        string cardsRaw = SynopsisTransition.CardsBeforeDeal ?? PlayerPrefs.GetString("LastCards", "");
         if (string.IsNullOrEmpty(cardsRaw))
             return Array.Empty<string>();
 

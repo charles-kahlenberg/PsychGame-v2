@@ -115,8 +115,9 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
             ShowFront();
         }
 
-        if (TestGroups.IsEnabled(Feature.CardTweening))
-            DealIn(SynopsisTransition.DealDelay + cardIndex * DealStagger);
+        // Under the synopsis the hand waits; SynopsisTransition deals it.
+        if (TestGroups.IsEnabled(Feature.CardTweening) && !SynopsisTransition.Holding)
+            DealIn(cardIndex * DealStagger);
 
         // Hide Help on start; wire click through UnityEvent OR here. Group 2's
         // Definition button stays active and shows and hides with the front face.
