@@ -46,6 +46,10 @@
       companyName: "DefaultCompany",
       productName: "PsychGame",
       productVersion: "1.0",
+      // Render at CSS-pixel resolution and let the browser upscale. At 125-150%
+      // Windows scaling the native ratio means 2x+ the pixels for the full-screen
+      // background shader, which is what made the live site drop frames.
+      devicePixelRatio: 1,
     };
 
     const canvas = document.querySelector("#unity-canvas");
@@ -57,7 +61,7 @@
     // resize event, which is what causes the blurry/scaled look on monitors
     // with resolutions different from the one the game was last tested on.
     function resizeCanvas() {
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = config.devicePixelRatio;
       canvas.width = Math.round(window.innerWidth * dpr);
       canvas.height = Math.round(window.innerHeight * dpr);
     }
