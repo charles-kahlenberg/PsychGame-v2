@@ -10,11 +10,8 @@ using UnityEngine.UI;
 //
 // The noise behind the pattern is expensive, so it isn't run per screen
 // pixel: every frame this renders it into a small texture with
-// ThoughtCurrentsField.shader, and ThoughtCurrents.shader samples that to
-// draw the layers and contours on top. That second pass is drawn into its
-// own texture too, at most FrameMaxHeight pixels tall, which the screen
-// shows stretched: on big or high-DPI screens, drawing it at full
-// resolution every frame was too much for the browser and dropped frames.
+// ThoughtCurrentsField.shader, and ThoughtCurrents.shader samples that at
+// full resolution to draw the crisp layers and contours on top.
 //
 // With Feature.SynopsisTransition the intro screen gets it too, turned up
 // (Excite = 1): SynopsisTransition dials that down to the response screen's
@@ -37,10 +34,6 @@ public class ShaderBackground : MonoBehaviour
     // the cost (1080p screens run the noise on ~1/9 of the pixels).
     private const int FieldHeight = 360;
 
-    // Height cap for the drawn background. Higher is crisper contours, lower
-    // is smoother frame rates on large screens.
-    private const int FrameMaxHeight = 720;
-
     private static readonly int FieldTexId = Shader.PropertyToID("_FieldTex");
     private static readonly int ScaleId = Shader.PropertyToID("_Scale");
     private static readonly int WarpId = Shader.PropertyToID("_Warp");
@@ -51,7 +44,6 @@ public class ShaderBackground : MonoBehaviour
     private static readonly int ExciteScaleId = Shader.PropertyToID("_ExciteScale");
     private static readonly int ExciteWarpId = Shader.PropertyToID("_ExciteWarp");
     private static readonly int ExciteFlowSpeedId = Shader.PropertyToID("_ExciteFlowSpeed");
-    private static readonly int IgnoreVertexColorId = Shader.PropertyToID("_IgnoreVertexColor");
 
     // 0 is the calm look, 1 the intro's lively one; 1 on the intro screen and
     // 0 everywhere else as each loads.
@@ -68,8 +60,6 @@ public class ShaderBackground : MonoBehaviour
     private bool _paused;
     private Material _fieldMaterial;
     private RenderTexture _field;
-    private RenderTexture _frame;
-    private RawImage _display;
 
     public static bool Replaces(Scene scene)
     {
@@ -117,7 +107,7 @@ public class ShaderBackground : MonoBehaviour
 
     private static void CreateUnder(Canvas canvas, Shader shader, Shader fieldShader)
     {
-        var go = new GameObject("ShaderBackground", typeof(RectTransform), typeof(RawImage));
+        var go = new GameObject("ShaderBackground", typeof(RectTransform), typeof(Image));
         go.transform.SetParent(canvas.transform, false);
         go.transform.SetAsFirstSibling();
 
@@ -128,10 +118,9 @@ public class ShaderBackground : MonoBehaviour
         rt.offsetMax = Vector2.zero;
 
         var material = new Material(shader) { name = "ThoughtCurrents (runtime)" };
-        material.SetFloat(IgnoreVertexColorId, 1f); // drawn with Blit, which has no vertex colours
-        var display = go.GetComponent<RawImage>();
-        display.raycastTarget = false;
-        display.enabled = false; // until its first frame is drawn: without a texture it shows white
+        var image = go.GetComponent<Image>();
+        image.material = material;
+        image.raycastTarget = false;
 
         // The old background (the Canvas's own Image, or the intro's plain
         // "Background" panel) stays as an invisible click target.
@@ -140,7 +129,6 @@ public class ShaderBackground : MonoBehaviour
 
         var background = go.AddComponent<ShaderBackground>();
         background._material = material;
-        background._display = display;
         background._fieldMaterial = new Material(fieldShader) { name = "ThoughtCurrentsField (runtime)" };
     }
 
@@ -174,8 +162,8 @@ public class ShaderBackground : MonoBehaviour
     public void SetPaused(bool paused)
     {
         _paused = paused;
-        if (paused) _display.enabled = false;
-        else Render();
+        GetComponent<Image>().enabled = !paused;
+        if (!paused) Render();
     }
 
     private void Update()
@@ -214,41 +202,9 @@ public class ShaderBackground : MonoBehaviour
         }
         _fieldMaterial.SetFloat(FlowTimeId, _flowTime);
 
-        EnsureFrame(aspect);
-
         RenderTexture previous = RenderTexture.active;
         Graphics.Blit(Texture2D.blackTexture, _field, _fieldMaterial);
-        Graphics.Blit(Texture2D.blackTexture, _frame, _material);
         RenderTexture.active = previous;
-        _display.enabled = true;
-    }
-
-    // (Re)makes the drawn background's texture for the screen's shape: as
-    // tall as the screen, up to FrameMaxHeight.
-    private void EnsureFrame(float aspect)
-    {
-        int height = Mathf.Clamp(Screen.height, 1, FrameMaxHeight);
-        int width = Mathf.Max(1, Mathf.RoundToInt(height * aspect));
-        if (_frame != null && _frame.width == width && _frame.height == height && _frame.IsCreated()) return;
-
-        ReleaseFrame();
-        _frame = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default)
-        {
-            name = "ThoughtCurrentsFrame",
-            filterMode = FilterMode.Bilinear,
-            wrapMode = TextureWrapMode.Clamp,
-            useMipMap = false,
-        };
-        _frame.Create();
-        _display.texture = _frame;
-    }
-
-    private void ReleaseFrame()
-    {
-        if (_frame == null) return;
-        _frame.Release();
-        Destroy(_frame);
-        _frame = null;
     }
 
     // (Re)makes the field texture when the window's shape changes, or if
@@ -280,7 +236,6 @@ public class ShaderBackground : MonoBehaviour
     private void OnDestroy()
     {
         ReleaseField();
-        ReleaseFrame();
         if (_material != null) Destroy(_material);
         if (_fieldMaterial != null) Destroy(_fieldMaterial);
     }

@@ -62,9 +62,6 @@ Shader "PsychGame/ThoughtCurrents"
         // The noise field, rendered each frame by ShaderBackground.cs.
         [HideInInspector] _FieldTex ("Field", 2D) = "gray" {}
         [HideInInspector] _Aspect ("Aspect", Float) = 1.7778
-        // 1 when drawn with Graphics.Blit (ShaderBackground), whose quad has
-        // no vertex colours.
-        [HideInInspector] _IgnoreVertexColor ("Ignore Vertex Colour", Float) = 0
 
         // Standard UI boilerplate, so masks and RectMask2D still work.
         _StencilComp ("Stencil Comparison", Float) = 8
@@ -158,7 +155,6 @@ Shader "PsychGame/ThoughtCurrents"
             float _PulseStrength;
             float _SparkStrength;
             float _Aspect;
-            float _IgnoreVertexColor;
 
             v2f vert(appdata_t v)
             {
@@ -168,7 +164,7 @@ Shader "PsychGame/ThoughtCurrents"
                 OUT.worldPosition = v.vertex;
                 OUT.vertex = UnityObjectToClipPos(v.vertex);
                 OUT.uv = v.texcoord;
-                OUT.color = lerp(v.color, fixed4(1, 1, 1, 1), _IgnoreVertexColor) * _Color;
+                OUT.color = v.color * _Color;
                 return OUT;
             }
 
