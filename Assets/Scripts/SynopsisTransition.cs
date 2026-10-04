@@ -286,6 +286,7 @@ public class SynopsisTransition : MonoBehaviour
         rt.anchorMax = Vector2.one;
         rt.offsetMin = rt.offsetMax = Vector2.zero;
         blocker.GetComponent<Image>().color = Color.clear;
+        blocker.GetComponent<CanvasRenderer>().cullTransparentMesh = true; // blocks clicks without being drawn
         Destroy(blocker, InTime);
 
         Vector2 canvasSize = ((RectTransform)transform).rect.size;

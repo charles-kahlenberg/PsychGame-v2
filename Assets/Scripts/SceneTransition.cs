@@ -17,6 +17,7 @@ public class SceneTransition : MonoBehaviour
     private static SceneTransition _instance;
 
     private CanvasGroup _canvasGroup;
+    private Canvas _canvas;
     private Coroutine _fade;
     private bool _loading;
 
@@ -42,7 +43,7 @@ public class SceneTransition : MonoBehaviour
 
     private void Awake()
     {
-        var canvas = gameObject.AddComponent<Canvas>();
+        var canvas = _canvas = gameObject.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 1000; // above every scene's UI
         gameObject.AddComponent<GraphicRaycaster>();
@@ -106,5 +107,8 @@ public class SceneTransition : MonoBehaviour
     {
         _canvasGroup.alpha = alpha;
         _canvasGroup.blocksRaycasts = alpha > 0.01f;
+        // Fully clear, it isn't drawn at all: a see-through full-screen
+        // layer still cost a pass over every pixel, every frame.
+        _canvas.enabled = alpha > 0f;
     }
 }

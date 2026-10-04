@@ -138,6 +138,7 @@ public class ShaderBackground : MonoBehaviour
         Color c = image.color;
         c.a = 0f;
         image.color = c;
+        image.canvasRenderer.cullTransparentMesh = true; // still clickable, no longer drawn
     }
 
     // A one-channel half-float texture keeps the field smooth; 8 bits per
