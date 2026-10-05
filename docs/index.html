@@ -37,20 +37,25 @@
 
   <script>
     const buildUrl = "Build";
-    const loaderUrl = buildUrl + "/5ee0d130572b26ce121a1cb70881eaee.loader.js";
+    const loaderUrl = buildUrl + "/b51b059b1e52df3104692cbe4a6e03e1.loader.js";
     const config = {
-      dataUrl: buildUrl + "/eec13451e967bf9bd27b1f1854d99ef1.data",
-      frameworkUrl: buildUrl + "/e09840b761d843a8cb48744cc3a65ed9.framework.js",
-      codeUrl: buildUrl + "/aaf56ccb6521920da3f0eb3a3a8ab489.wasm",
+      dataUrl: buildUrl + "/ea4cff4c4f021fb3002e3374a95ee8cc.data",
+      frameworkUrl: buildUrl + "/68d06eb94f14c48d1cea3d3a9cf5b213.framework.js",
+      codeUrl: buildUrl + "/3f0c9f3115ada3683fd0fb15e2475abb.wasm",
       streamingAssetsUrl: "StreamingAssets",
       companyName: "DefaultCompany",
       productName: "PsychGame",
       productVersion: "1.0",
-      // Render at CSS-pixel resolution and let the browser upscale. At 125-150%
-      // Windows scaling the native ratio means 2x+ the pixels for the full-screen
-      // background shader, which is what made the live site drop frames.
-      devicePixelRatio: 1,
     };
+
+    // Browsers refuse a context with this flag when they would draw in
+    // software (no graphics card: acceleration off, a missing driver, a
+    // blocklisted GPU). There, render at half resolution, a quarter of the
+    // pixels, so the game stays playable; the game reads the flag through
+    // GraphicsCheck.jslib to tell the player how to fix it.
+    window.psychSoftwareRendering = !document.createElement("canvas")
+      .getContext("webgl2", { failIfMajorPerformanceCaveat: true });
+    if (window.psychSoftwareRendering) config.devicePixelRatio = 0.5;
 
     const canvas = document.querySelector("#unity-canvas");
 
@@ -61,7 +66,7 @@
     // resize event, which is what causes the blurry/scaled look on monitors
     // with resolutions different from the one the game was last tested on.
     function resizeCanvas() {
-      const dpr = config.devicePixelRatio;
+      const dpr = config.devicePixelRatio || window.devicePixelRatio || 1;
       canvas.width = Math.round(window.innerWidth * dpr);
       canvas.height = Math.round(window.innerHeight * dpr);
     }
