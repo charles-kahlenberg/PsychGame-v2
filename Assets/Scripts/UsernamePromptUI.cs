@@ -132,14 +132,14 @@ internal static class UsernamePromptUI
         inputField.ActivateInputField();
     }
 
-    private static GameObject CreateUIObject(string name, Transform parent)
+    internal static GameObject CreateUIObject(string name, Transform parent)
     {
         var go = new GameObject(name, typeof(RectTransform));
         go.transform.SetParent(parent, false);
         return go;
     }
 
-    private static void StretchToFill(RectTransform rect)
+    internal static void StretchToFill(RectTransform rect)
     {
         rect.anchorMin = Vector2.zero;
         rect.anchorMax = Vector2.one;
@@ -147,7 +147,7 @@ internal static class UsernamePromptUI
         rect.offsetMax = Vector2.zero;
     }
 
-    private static void EnsureEventSystem()
+    internal static void EnsureEventSystem()
     {
         if (EventSystem.current != null) return;
 

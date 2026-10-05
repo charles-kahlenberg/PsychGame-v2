@@ -134,6 +134,9 @@ public class ClickLogger : MonoBehaviour
                 PlayerPrefs.Save();
             }
             StartCoroutine(StartSession());
+
+            if (TestGroups.IsEnabled(Feature.SlowGraphicsNotice) && GraphicsNotice.SoftwareRendering)
+                GraphicsNotice.Show();
         });
     }
 

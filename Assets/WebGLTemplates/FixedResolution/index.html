@@ -48,6 +48,15 @@
       productVersion: "{{{ PRODUCT_VERSION }}}",
     };
 
+    // Browsers refuse a context with this flag when they would draw in
+    // software (no graphics card: acceleration off, a missing driver, a
+    // blocklisted GPU). There, render at half resolution, a quarter of the
+    // pixels, so the game stays playable; the game reads the flag through
+    // GraphicsCheck.jslib to tell the player how to fix it.
+    window.psychSoftwareRendering = !document.createElement("canvas")
+      .getContext("webgl2", { failIfMajorPerformanceCaveat: true });
+    if (window.psychSoftwareRendering) config.devicePixelRatio = 0.5;
+
     const canvas = document.querySelector("#unity-canvas");
 
     // Size the canvas' internal render resolution to match the actual
@@ -57,7 +66,7 @@
     // resize event, which is what causes the blurry/scaled look on monitors
     // with resolutions different from the one the game was last tested on.
     function resizeCanvas() {
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = config.devicePixelRatio || window.devicePixelRatio || 1;
       canvas.width = Math.round(window.innerWidth * dpr);
       canvas.height = Math.round(window.innerHeight * dpr);
     }
