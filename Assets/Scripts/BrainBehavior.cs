@@ -30,6 +30,29 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     private const float MoustacheTilt = 7f;    // degrees each flick lifts one side
     private const float MoustacheFlick = 0.12f; // seconds per flick
 
+    // The jar Brainy is drawn a little bigger than the old one, and a touch
+    // wider than the art, and gently bobs and sways like the cards' idle
+    // float whenever nothing else is moving it.
+    private static readonly Vector2 JarSize = new Vector2(1.3f, 1.15f); // x and y scale of the scene's size
+    private const float IdleBob = 1.5f;   // px up/down
+    private const float IdleSway = 1.2f;  // degrees of rotation
+    private const float IdleSpeed = 1.3f;
+    private bool jarArt;
+    private float idleWeight; // eases the float in and out so it never jumps
+
+    // Before TextBoxTheme measures Brainy (on scene load) to place the hint
+    // bubble, and before Start rests it beside the response box.
+    void Awake()
+    {
+        if (!TestGroups.IsEnabled(Feature.JarBrainy) || !UseJarArt(gameObject, "brainyjar")) return;
+
+        jarArt = true;
+        GetComponent<Image>().preserveAspect = false; // stretched a touch wider than the art
+        var rt = (RectTransform)transform;
+        rt.sizeDelta = Vector2.Scale(rt.sizeDelta, JarSize);
+        AddMoustache();
+    }
+
     public Vector3 focusPosition = new Vector3(500f, 0f, 0f);
     public GameObject hintOverlay;
     public GameObject hintText;
@@ -49,9 +72,6 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
         if (TestGroups.IsEnabled(Feature.BrainyAttentionCue))
             StartCoroutine(AttentionCueLoop());
-
-        if (TestGroups.IsEnabled(Feature.JarBrainy) && UseJarArt(gameObject, "brainyjar"))
-            AddMoustache();
     }
 
     // Swaps a Brainy image's sprite for the jar art in Resources. Shared with
@@ -140,6 +160,22 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         rt.anchoredPosition = new Vector2(
             boxLeft - ResponseBoxGap - rt.rect.width * (1f - rt.pivot.x),
             boxMiddle - (0.5f - rt.pivot.y) * rt.rect.height);
+    }
+
+    // Off while a tween has Brainy (a hop, hover, the click to the bubble,
+    // the synopsis slide-in) or the bubble is open; it eases back from
+    // wherever that left Brainy.
+    void ApplyIdleFloat()
+    {
+        bool idle = !isActive && !isHovered && !LeanTween.isTweening(gameObject);
+        idleWeight = Mathf.MoveTowards(idleWeight, idle ? 1f : 0f, Time.deltaTime / 0.6f);
+
+        float t = Time.time * IdleSpeed;
+        transform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * 0.8f + 1.1f) * IdleSway * idleWeight);
+        if (!idle) return;
+
+        Vector3 target = originalPos + new Vector3(0f, Mathf.Sin(t) * IdleBob * idleWeight, 0f);
+        transform.localPosition = Vector3.Lerp(transform.localPosition, target, 1f - Mathf.Exp(-10f * Time.deltaTime));
     }
 
     IEnumerator AttentionCueLoop()
@@ -243,6 +279,8 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
     void Update()
     {
+        if (jarArt) ApplyIdleFloat();
+
         // However the bubble opened (this script, BrainHint, or a card's
         // definition), Brainy goes to it.
         if (TextBoxTheme.Enabled && !isActive && hintText != null && hintText.activeInHierarchy)
