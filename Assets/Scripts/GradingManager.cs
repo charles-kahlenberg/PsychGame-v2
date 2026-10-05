@@ -38,7 +38,7 @@ public class GradingManager : MonoBehaviour
     void Start()
     {
         if (TestGroups.IsEnabled(Feature.JarBrainy))
-            BrainBehavior.UseJarArt(GameObject.Find("Brainy"), "brainym");
+            BrainBehavior.UseJarArt(GameObject.Find("Brainy"), "poirotm");
 
         string scenario = PlayerPrefs.GetString("LastScenario", "Missing scenario");
         string userResponse = PlayerPrefs.GetString("LastResponse", "Missing response");

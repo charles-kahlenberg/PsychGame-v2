@@ -23,8 +23,8 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
     // Group 2 (Feature.JarBrainy): here Brainy is the plain jar with the
     // moustache (Resources/moustache.png) laid on separately so it can twitch;
-    // the other screens use brainym.png with it drawn on. These anchors are
-    // where it sits in brainyjar.png.
+    // the other screens use poirotm.png with it drawn on. These anchors are
+    // where it sits in poirot.png.
     private static readonly Vector2 MoustacheMin = new Vector2(0.3436f, 0.3640f);
     private static readonly Vector2 MoustacheMax = new Vector2(0.8249f, 0.4866f);
     private const float MoustacheTilt = 7f;    // degrees each flick lifts one side
@@ -44,7 +44,7 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     // bubble, and before Start rests it beside the response box.
     void Awake()
     {
-        if (!TestGroups.IsEnabled(Feature.JarBrainy) || !UseJarArt(gameObject, "brainyjar")) return;
+        if (!TestGroups.IsEnabled(Feature.JarBrainy) || !UseJarArt(gameObject, "poirot")) return;
 
         jarArt = true;
         GetComponent<Image>().preserveAspect = false; // stretched a touch wider than the art
