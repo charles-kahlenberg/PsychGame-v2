@@ -21,6 +21,7 @@ public enum Feature
     PixelButtons,             // every screen's buttons but the title screen's are pixel-art plates like the card backs, from Resources/PixelButtons; Refresh shows its uses left as diamonds, and the save slots keep their names on blank plates (PixelButton, GameManager)
     SynopsisTransition,       // the intro screen gets a livelier version of the shader background and is laid over the response screen, which waits beneath it (the round, its scenario reveal and its logged start are held); Continue turns one into the other with no fade or scene change: the background calms, the NPC moves to the avatar's spot, then the rest slides in. The click log still counts the synopsis as "introduction" (SynopsisTransition, ShaderBackground, GameManager, CardBehavior, ClickLogger)
     GoodFitCards,             // hands (and refreshes) deal only terms that score 2.5 or better for the current scenario in Resources/scenario_fit.txt (ScenarioFit, GameManager)
+    JarBrainy,                // Brainy is the jar art from Resources: brainym (moustache drawn on) on the rules and grading screens; on the response screen brainyjar with a separate moustache that twitches now and then (BrainBehavior, RulesManager, GradingManager)
 }
 
 // The study's conditions, all in one place: which features each test group
@@ -53,6 +54,7 @@ public static class TestGroups
         Feature.ThemedTextBoxes,
         Feature.PixelButtons,
         Feature.SynopsisTransition,
+        Feature.JarBrainy,
     };
 
     private static readonly Dictionary<int, HashSet<Feature>> Groups = new Dictionary<int, HashSet<Feature>>
