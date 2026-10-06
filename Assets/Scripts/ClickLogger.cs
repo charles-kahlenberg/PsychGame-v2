@@ -180,6 +180,7 @@ public class ClickLogger : MonoBehaviour
     // separate intro screen did (SynopsisTransition).
     private static string ScreenSceneName(Scene scene)
     {
+        if (GradingTransition.ShowsGrading(scene)) return "GradingScene";
         return SynopsisTransition.ShowsSynopsis(scene) ? "IntroductionScene" : scene.name;
     }
 

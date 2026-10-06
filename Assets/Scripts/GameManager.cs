@@ -414,6 +414,12 @@ public class GameManager : MonoBehaviour
         PlayerPrefs.SetInt("FromGrading", 1);
         PlayerPrefs.Save();
 
+        // Group 2: the screen slides away, with the response still in its box.
+        if (GradingTransition.Enabled)
+        {
+            StartCoroutine(GradingTransition.ToGrading());
+            return;
+        }
         field.text = "";
         SceneTransition.Load("GradingScene");
     }

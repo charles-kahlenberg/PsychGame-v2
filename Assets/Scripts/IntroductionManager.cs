@@ -45,6 +45,9 @@ public class IntroductionManager : MonoBehaviour
 
     IEnumerator StartIntroSequence()
     {
+        // Group 2: the last grading screen may still be on its way out over this one.
+        while (GradingTransition.Covering) yield return null;
+
         yield return new WaitForSeconds(0.3f);
 
         npcImage.SetActive(true);
@@ -55,6 +58,7 @@ public class IntroductionManager : MonoBehaviour
         yield return new WaitForSeconds(0.6f);
 
         speechBubble.SetActive(true);
+        if (GradingTransition.Enabled) GradingTransition.SlideIn(speechBubble.transform, Vector2.up, 0f);
 
         // Still waiting on the worker: "..." so the NPC is clearly about to speak.
         for (float t = 0f; introText == null; t += Time.deltaTime)

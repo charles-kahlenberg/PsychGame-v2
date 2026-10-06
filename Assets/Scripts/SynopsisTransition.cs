@@ -67,7 +67,8 @@ public class SynopsisTransition : MonoBehaviour
     }
 
     // Elements that slide in, the side they come from, and when they set off.
-    private static readonly (string name, Vector2 from, float delay)[] SlideIns =
+    // GradingTransition slides them back out the same way.
+    internal static readonly (string name, Vector2 from, float delay)[] SlideIns =
     {
         ("Bubble Box", Vector2.up, 0f),
         ("ResponseInput", Vector2.left, 0.1f),
@@ -102,6 +103,10 @@ public class SynopsisTransition : MonoBehaviour
                 if (_game == null) return;
 
                 Revealed = null; // anything left from a screen that never got revealed
+                // The intro is laid over next frame. Until then only the
+                // background shows (ShaderBackground keeps it), as on the
+                // intro's own first frames, for GradingTransition's cut in.
+                _game.gameObject.AddComponent<CanvasGroup>().alpha = 0f;
                 CardsBeforeDeal = PlayerPrefs.GetString("LastCards", "");
                 SceneManager.LoadScene("IntroductionScene", LoadSceneMode.Additive);
             }
@@ -117,7 +122,11 @@ public class SynopsisTransition : MonoBehaviour
     // screen's background, hidden beneath, pauses until the reveal.
     private static void LayOver(Scene intro)
     {
-        if (_game != null) SetBackgroundPaused(_game.gameObject.scene, true);
+        if (_game != null)
+        {
+            SetBackgroundPaused(_game.gameObject.scene, true);
+            Destroy(_game.GetComponent<CanvasGroup>());
+        }
 
         foreach (GameObject root in intro.GetRootGameObjects())
         {
@@ -128,7 +137,7 @@ public class SynopsisTransition : MonoBehaviour
         }
     }
 
-    private static void SetBackgroundPaused(Scene scene, bool paused)
+    internal static void SetBackgroundPaused(Scene scene, bool paused)
     {
         foreach (GameObject root in scene.GetRootGameObjects())
             foreach (ShaderBackground background in root.GetComponentsInChildren<ShaderBackground>())
@@ -279,15 +288,7 @@ public class SynopsisTransition : MonoBehaviour
         CardsBeforeDeal = null;
         ClickLogger.SwitchScreen("GameScene");
 
-        var blocker = new GameObject("TransitionClickBlocker", typeof(RectTransform), typeof(Image));
-        var rt = (RectTransform)blocker.transform;
-        rt.SetParent(transform, false);
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = rt.offsetMax = Vector2.zero;
-        blocker.GetComponent<Image>().color = Color.clear;
-        blocker.GetComponent<CanvasRenderer>().cullTransparentMesh = true; // blocks clicks without being drawn
-        Destroy(blocker, InTime);
+        Destroy(GradingTransition.BlockClicks(transform), InTime);
 
         Vector2 canvasSize = ((RectTransform)transform).rect.size;
         for (int i = 0; i < _slides.Length; i++)

@@ -34,8 +34,18 @@ public class GradingManager : MonoBehaviour
     void Start()
     {
         if (TestGroups.IsEnabled(Feature.JarBrainy))
-            JarBrainy.Apply(GameObject.Find("Brainy"));
+            // This screen's own: the last grading screen can still be up (GradingTransition).
+            JarBrainy.Apply(scenarioText.transform.root.Find("Brainy")?.gameObject);
 
+        // Group 2: tucked in under the response screen, this waits to be shown.
+        if (GradingTransition.Holding)
+            GradingTransition.Shown += Begin;
+        else
+            Begin();
+    }
+
+    void Begin()
+    {
         string scenario = PlayerPrefs.GetString("LastScenario", "Missing scenario");
         string userResponse = PlayerPrefs.GetString("LastResponse", "Missing response");
 
@@ -177,7 +187,10 @@ public class GradingManager : MonoBehaviour
         PlayerPrefs.SetInt("FromGrading", 1);
         PlayerPrefs.Save();
 
-        SceneTransition.Load(SynopsisTransition.SynopsisScene());
+        if (GradingTransition.Enabled)
+            GradingTransition.ToSynopsis(gameObject.scene, SynopsisTransition.SynopsisScene());
+        else
+            SceneTransition.Load(SynopsisTransition.SynopsisScene());
     }
 
     // Returns the parsed score so callers can log it, independent of

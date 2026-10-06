@@ -7,7 +7,8 @@ using UnityEngine.UI;
 // Feature.ImprovedMenuTransitions (Group 1) it switches instantly, exactly as
 // before. With it (Group 2) the screen fades out, the scene loads, and the
 // new one fades in. Scenes loaded some other way (LoadingScreen's async load)
-// still get the fade-in.
+// still get the fade-in. Cut skips the fade both ways, for screens that make
+// their own way in (GradingTransition).
 public class SceneTransition : MonoBehaviour
 {
     private const float FadeOutTime = 0.25f;
@@ -20,6 +21,7 @@ public class SceneTransition : MonoBehaviour
     private Canvas _canvas;
     private Coroutine _fade;
     private bool _loading;
+    private bool _cut;
 
     public static void Load(string sceneName)
     {
@@ -29,6 +31,12 @@ public class SceneTransition : MonoBehaviour
             return;
         }
         _instance.FadeOutAndLoad(sceneName);
+    }
+
+    public static void Cut(string sceneName)
+    {
+        if (_instance != null) _instance._cut = true;
+        SceneManager.LoadScene(sceneName);
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -77,7 +85,16 @@ public class SceneTransition : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        if (mode == LoadSceneMode.Additive) return; // laid over a screen that already came in (SynopsisTransition)
         _loading = false;
+        if (_cut)
+        {
+            _cut = false;
+            if (_fade != null) StopCoroutine(_fade);
+            _fade = null;
+            SetAlpha(0f);
+            return;
+        }
         SetAlpha(1f);
         StartFade(0f, FadeInTime, null);
     }

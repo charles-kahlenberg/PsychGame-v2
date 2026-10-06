@@ -18,6 +18,10 @@ using UnityEngine.UI;
 // calm look when the player moves on. The flow is one clock shared by every
 // screen, so the pattern carries on where the last screen left it.
 //
+// With Feature.GradingTransition the grading screen is excited too, in red
+// (Heat): GradingTransition heats the response screen's background up into
+// it, and cools it to the intro's blue on the way to the next synopsis.
+//
 // Like BackgroundDrift, the shader is drawn on a new bottom child of the
 // Canvas. Where the Canvas has its own Image (GameScene), that stays as an
 // invisible click target so clicks on empty space still hit (and are logged
@@ -44,10 +48,15 @@ public class ShaderBackground : MonoBehaviour
     private static readonly int ExciteScaleId = Shader.PropertyToID("_ExciteScale");
     private static readonly int ExciteWarpId = Shader.PropertyToID("_ExciteWarp");
     private static readonly int ExciteFlowSpeedId = Shader.PropertyToID("_ExciteFlowSpeed");
+    private static readonly int HeatId = Shader.PropertyToID("_Heat");
 
     // 0 is the calm look, 1 the intro's lively one; 1 on the intro screen and
     // 0 everywhere else as each loads.
     public static float Excite;
+
+    // The excited look's colour: 0 the intro's blue, 1 the grading screen's
+    // red. 0 as each screen loads, like Excite; GradingTransition turns it up.
+    public static float Heat;
 
     private static Shader _shader, _fieldShader;
     private static float _flowTime;
@@ -56,6 +65,7 @@ public class ShaderBackground : MonoBehaviour
     private const float FlowSpeedLag = 0.8f; // seconds
 
     private RectTransform _rt;
+    private Canvas _canvas;
     private Material _material;
     private bool _paused;
     private Material _fieldMaterial;
@@ -74,11 +84,11 @@ public class ShaderBackground : MonoBehaviour
         if (!TestGroups.IsEnabled(Feature.ShaderBackground)) return;
         SceneManager.sceneLoaded += (scene, mode) =>
         {
-            if (Replaces(scene)) AddTo(scene);
+            if (Replaces(scene)) AddTo(scene, mode);
         };
     }
 
-    private static void AddTo(Scene scene)
+    private static void AddTo(Scene scene, LoadSceneMode mode)
     {
         // Kept for the whole session. Left to unload between scenes, they
         // had to be compiled again on the next screen's first frame, which
@@ -94,7 +104,15 @@ public class ShaderBackground : MonoBehaviour
             return;
         }
 
-        Excite = scene.name == IntroSceneName ? 1f : 0f;
+        // GameScene opening under a synopsis shows only this until the intro
+        // is laid over it (SynopsisTransition), so it starts out the same.
+        // The grading screen tucked in for later (GradingTransition) leaves
+        // the look alone.
+        if (mode == LoadSceneMode.Single || scene.name == IntroSceneName)
+        {
+            Excite = scene.name == IntroSceneName || SynopsisTransition.ShowsSynopsis(scene) ? 1f : 0f;
+            Heat = 0f;
+        }
 
         foreach (GameObject root in scene.GetRootGameObjects())
         {
@@ -121,6 +139,8 @@ public class ShaderBackground : MonoBehaviour
         var image = go.GetComponent<Image>();
         image.material = material;
         image.raycastTarget = false;
+        // Still drawn while SynopsisTransition hides the rest of the canvas.
+        go.AddComponent<CanvasGroup>().ignoreParentGroups = true;
 
         // The old background (the Canvas's own Image, or the intro's plain
         // "Background" panel) stays as an invisible click target.
@@ -153,6 +173,7 @@ public class ShaderBackground : MonoBehaviour
     private void Awake()
     {
         _rt = (RectTransform)transform;
+        _canvas = GetComponentInParent<Canvas>();
     }
 
     // While something opaque covers it (SynopsisTransition's intro over
@@ -166,9 +187,10 @@ public class ShaderBackground : MonoBehaviour
         if (!paused) Render();
     }
 
+    // Nor while its canvas is hidden (GradingTransition's tucked-away grading screen).
     private void Update()
     {
-        if (!_paused) Render();
+        if (!_paused && _canvas.enabled) Render();
     }
 
     private void Render()
@@ -183,6 +205,7 @@ public class ShaderBackground : MonoBehaviour
         // between the calm and excited values.
         float e = Mathf.Clamp01(Excite);
         _material.SetFloat(ExciteId, e);
+        _material.SetFloat(HeatId, Mathf.Clamp01(Heat));
         _material.SetFloat(AspectId, aspect);
         _fieldMaterial.SetFloat(ScaleId, Mathf.Lerp(_material.GetFloat(ScaleId), _material.GetFloat(ExciteScaleId), e));
         _fieldMaterial.SetFloat(WarpId, Mathf.Lerp(_material.GetFloat(WarpId), _material.GetFloat(ExciteWarpId), e));
