@@ -7,7 +7,6 @@ public class SaveData
     public string title;
     public string scenario;
     public List<string> cards;
-    public List<string> usedScenarios;
     public List<string> usedVocab;
     public List<ScenarioResponse> responses;
 
@@ -47,7 +46,6 @@ public static class SaveManager
         string json = JsonUtility.ToJson(data);
         PlayerPrefs.SetString(GetSaveKey(index), json);
         PlayerPrefs.SetString(GetTitleKey(index), data.title);
-        PlayerPrefs.SetInt("HasSave", 1);
         PlayerPrefs.Save();
 
         // DEBUG LINE
@@ -64,17 +62,6 @@ public static class SaveManager
     public static string GetTitle(int index) =>
         PlayerPrefs.GetString(GetTitleKey(index), "Empty");
 
-    private static int tempSaveSlot = -1;
-
-    public static void SetTempSaveSlot(int slot)
-    {
-        tempSaveSlot = slot;
-    }
-
-    public static int GetTempSaveSlot()
-    {
-        return tempSaveSlot;
-    }
     public static int GetFirstAvailableSlot()
     {
         for (int i = 0; i < 3; i++)

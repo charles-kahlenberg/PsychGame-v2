@@ -36,7 +36,6 @@ public class RulesManager : MonoBehaviour
         "So, even as you begin to lace up your sneakers, you start to feel good. Exercise helps you sleep better, so you will get more REM SLEEP, which helps your body.";
 
     private int currentRuleIndex = 0;
-    private Coroutine typingCoroutine;
     private bool isTyping = false;
 
     void Update()
@@ -97,7 +96,7 @@ public class RulesManager : MonoBehaviour
             if (!TextBoxTheme.Enabled)
                 dialogueText.fontSize = 24; // Adjust as needed (e.g., 32-40)
 
-            typingCoroutine = StartCoroutine(TypeText(rulesSections[currentRuleIndex], () =>
+            StartCoroutine(TypeText(rulesSections[currentRuleIndex], () =>
             {
                 currentRuleIndex++;
 
@@ -145,34 +144,7 @@ public class RulesManager : MonoBehaviour
     {
         isTyping = true;
         skipTyping = false;
-
-        // Group 2: laid out up front and uncovered, so words don't jump lines
-        // and Brainy's panel is its final size from the first letter.
-        if (TextBoxTheme.Enabled)
-        {
-            yield return TextPanel.Reveal(dialogueText, text, 0.03f, () => skipTyping);
-            isTyping = false;
-            skipTyping = false;
-            onComplete?.Invoke();
-            yield break;
-        }
-
-        dialogueText.text = "";
-        dialogueText.ForceMeshUpdate();
-
-        foreach (char c in text)
-        {
-            dialogueText.text += c;
-
-            if (skipTyping)
-            {
-                dialogueText.text = text;
-                break;
-            }
-
-            yield return new WaitForSeconds(0.03f);
-        }
-
+        yield return TextPanel.Type(dialogueText, text, 0.03f, () => skipTyping);
         isTyping = false;
         skipTyping = false;
         onComplete?.Invoke();

@@ -163,86 +163,6 @@ export default {
         return jsonResponse({ ok: true });
       }
 
-      if (url.pathname === "/log") {
-        const { sessionId, timestamp, objectName } = body;
-        if (!sessionId || !timestamp) {
-          return jsonResponse({ error: "Missing sessionId or timestamp" }, 400);
-        }
-
-        await env.DB.prepare(
-          `INSERT INTO click_events (session_id, timestamp, timestamp_et, object_name) VALUES (?, ?, ?, ?)`
-        )
-          .bind(sessionId, timestamp, toEasternString(timestamp), objectName || null)
-          .run();
-
-        triggerDropboxSync(ctx, env);
-        return jsonResponse({ ok: true });
-      }
-
-      if (url.pathname === "/log/ai-response") {
-        const { sessionId, timestamp, kind, scenario, content, score } = body;
-        if (!sessionId || !timestamp || !kind) {
-          return jsonResponse({ error: "Missing sessionId, timestamp, or kind" }, 400);
-        }
-
-        await env.DB.prepare(
-          `INSERT INTO ai_responses (session_id, timestamp, timestamp_et, kind, scenario, content, score) VALUES (?, ?, ?, ?, ?, ?, ?)`
-        )
-          .bind(
-            sessionId,
-            timestamp,
-            toEasternString(timestamp),
-            kind,
-            scenario || null,
-            content || null,
-            typeof score === "number" && score >= 0 ? score : null
-          )
-          .run();
-
-        triggerDropboxSync(ctx, env);
-        return jsonResponse({ ok: true });
-      }
-
-      if (url.pathname === "/log/user-response") {
-        const { sessionId, timestamp, scenario, response } = body;
-        if (!sessionId || !timestamp) {
-          return jsonResponse({ error: "Missing sessionId or timestamp" }, 400);
-        }
-
-        await env.DB.prepare(
-          `INSERT INTO user_responses (session_id, timestamp, timestamp_et, scenario, response) VALUES (?, ?, ?, ?, ?)`
-        )
-          .bind(sessionId, timestamp, toEasternString(timestamp), scenario || null, response || null)
-          .run();
-
-        triggerDropboxSync(ctx, env);
-        return jsonResponse({ ok: true });
-      }
-
-      if (url.pathname === "/log/card-event") {
-        const { sessionId, timestamp, scenario, eventType, cards, elapsedMs } = body;
-        if (!sessionId || !timestamp || !eventType) {
-          return jsonResponse({ error: "Missing sessionId, timestamp, or eventType" }, 400);
-        }
-
-        await env.DB.prepare(
-          `INSERT INTO card_events (session_id, timestamp, timestamp_et, scenario, event_type, cards, elapsed_ms) VALUES (?, ?, ?, ?, ?, ?, ?)`
-        )
-          .bind(
-            sessionId,
-            timestamp,
-            toEasternString(timestamp),
-            scenario || null,
-            eventType,
-            cards || null,
-            typeof elapsedMs === "number" && elapsedMs >= 0 ? elapsedMs : null
-          )
-          .run();
-
-        triggerDropboxSync(ctx, env);
-        return jsonResponse({ ok: true });
-      }
-
       if (url.pathname === "/log/batch") {
         const statements = buildBatchStatements(env, body);
         if (statements.length > 0) {
@@ -251,22 +171,6 @@ export default {
 
         triggerDropboxSync(ctx, env);
         return jsonResponse({ ok: true, count: statements.length });
-      }
-
-      if (url.pathname === "/log/menu-duration") {
-        const { sessionId, timestamp, menuName, durationMs, scenario } = body;
-        if (!sessionId || !timestamp || !menuName || typeof durationMs !== "number") {
-          return jsonResponse({ error: "Missing sessionId, timestamp, menuName, or durationMs" }, 400);
-        }
-
-        await env.DB.prepare(
-          `INSERT INTO menu_durations (session_id, timestamp, timestamp_et, menu_name, duration_ms, scenario) VALUES (?, ?, ?, ?, ?, ?)`
-        )
-          .bind(sessionId, timestamp, toEasternString(timestamp), menuName, durationMs, scenario || null)
-          .run();
-
-        triggerDropboxSync(ctx, env);
-        return jsonResponse({ ok: true });
       }
 
       return jsonResponse({ error: "Not found" }, 404);

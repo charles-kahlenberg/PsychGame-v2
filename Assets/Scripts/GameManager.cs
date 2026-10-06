@@ -104,11 +104,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        for (int i = 0; i < cardTexts.Length; i++)
-            cardTexts[i].text = i < currentCards.Count ? currentCards[i] : "[Empty]";
-
-        SetCardBacks();
-        DealCardArt();
+        ShowCurrentCards();
 
         refreshUsesRemaining = 2;
         UpdateRefreshUI();
@@ -123,10 +119,7 @@ public class GameManager : MonoBehaviour
 
     void BeginRound()
     {
-        if (TextBoxTheme.Enabled)
-            StartCoroutine(RevealText(scenarioText, currentScenario, 0.03f));
-        else
-            StartCoroutine(TypeText(scenarioText, currentScenario, 0.03f));
+        StartCoroutine(TypeScenario());
 
         ClickLogger.SetActiveScenario(currentScenario);
         ClickLogger.LogCardEvent(currentScenario, "initial", currentCards, -1);
@@ -414,7 +407,7 @@ public class GameManager : MonoBehaviour
         // THIS WAS MISSING
         PlayerPrefs.SetString("LastResponse", userResponse);
 
-        SaveProgress();
+        SaveProgress(SaveManager.GetTitle(currentSaveSlot));
 
         PlayerPrefs.SetString("LastScenario", currentScenario);
         PlayerPrefs.SetString("LastCards", string.Join("|", currentCards));
@@ -428,81 +421,27 @@ public class GameManager : MonoBehaviour
 
     // -------------------- TYPING --------------------
 
-    IEnumerator TypeText(TextMeshProUGUI textObj, string fullText, float delay)
+    IEnumerator TypeScenario()
     {
         isTyping = true;
         skipTyping = false;
-        textObj.text = "";
-
-        foreach (char c in fullText)
-        {
-            if (skipTyping)
-            {
-                textObj.text = fullText;
-                break;
-            }
-
-            textObj.text += c;
-            yield return new WaitForSeconds(delay);
-        }
-
-        isTyping = false;
-    }
-
-    // Group 2 (Feature.ThemedTextBoxes): the same letter-by-letter reveal and
-    // click-to-finish, but the whole text is laid out up front and only
-    // uncovered. Words no longer jump to the next line mid-type, and the
-    // scenario box is its final size from the first letter.
-    IEnumerator RevealText(TextMeshProUGUI textObj, string fullText, float delay)
-    {
-        isTyping = true;
-        skipTyping = false;
-        yield return TextPanel.Reveal(textObj, fullText, delay, () => skipTyping);
+        yield return TextPanel.Type(scenarioText, currentScenario, 0.03f, () => skipTyping);
         isTyping = false;
     }
 
     // -------------------- SAVE / LOAD --------------------
 
-    void SaveProgress()
+    void SaveProgress(string title)
     {
         SaveManager.Save(currentSaveSlot, new SaveData
         {
-            title = SaveManager.GetTitle(currentSaveSlot),
+            title = title,
             scenario = currentScenario,
             cards = new List<string>(currentCards),
             usedVocab = new List<string>(usedVocab),
             responses = new List<ScenarioResponse>(responseHistory)
         });
     }
-
-    public void StartNewGame()
-    {
-        PlayerPrefs.DeleteKey("LastScenario");
-        PlayerPrefs.DeleteKey("LastCards");
-        PlayerPrefs.DeleteKey("LastResponse");
-        PlayerPrefs.DeleteKey("RemainingScenarios");
-
-        PlayerPrefs.SetInt("SelectedSaveSlot", -1);
-        PlayerPrefs.SetInt("FromGrading", 0);
-        PlayerPrefs.Save();
-
-        usedVocab.Clear();
-        responseHistory.Clear();
-
-        SceneTransition.Load("LoadingScene");
-    }
-
-    public void SetNewGameSlot(int idx)
-    {
-        SaveManager.SetTempSaveSlot(idx);
-        PlayerPrefs.SetInt("SelectedSaveSlot", idx);
-        PlayerPrefs.DeleteKey("RemainingScenarios");
-        PlayerPrefs.Save();
-
-        SceneTransition.Load("LoadingScene");
-    }
-
-    public void ContinueGame() => SceneTransition.Load("SaveSelectScene");
 
     public void PromptSave()
     {
@@ -531,18 +470,7 @@ public class GameManager : MonoBehaviour
             ? $"Save {currentSaveSlot + 1}"
             : saveNameInput.text;
 
-        SaveData data = new SaveData
-        {
-            title = name,
-            scenario = currentScenario,
-            cards = new List<string>(currentCards),
-            usedVocab = new List<string>(usedVocab),
-            responses = new List<ScenarioResponse>(responseHistory)
-        };
-
-        SaveManager.Save(currentSaveSlot, data);
-
-        PlayerPrefs.Save();
+        SaveProgress(name);
 
         savePromptPanel.SetActive(false);
         SceneTransition.Load("SplashScene");

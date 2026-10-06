@@ -25,21 +25,8 @@ public class LoadingScreen : MonoBehaviour
             yield return null;
         }
 
-        // Decide which scene to load after loading
-        string nextScene;
-
-        // If we're coming from Grading OR starting a new game/continue, show intro first
-        if (PlayerPrefs.GetInt("FromGrading", 0) == 1 ||
-            PlayerPrefs.GetInt("SelectedSaveSlot", -1) != -1)
-        {
-            nextScene = SynopsisTransition.SynopsisScene();
-        }
-        else
-        {
-            nextScene = SynopsisTransition.SynopsisScene(); // New games also go to intro first
-        }
-
-        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(nextScene);
+        // New games, continues and the next round all show the intro first.
+        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(SynopsisTransition.SynopsisScene());
 
         while (!asyncLoad.isDone)
         {

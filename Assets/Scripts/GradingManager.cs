@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -21,9 +20,6 @@ public class GradingManager : MonoBehaviour
     [Header("Cloudflare Worker")]
     [Tooltip("Example: https://psych-grading.dauriagoalie31.workers.dev")]
     public string gradingWorkerUrl = "https://psych-grading.dauriagoalie31.workers.dev";
-
-    [Tooltip("Request timeout in seconds")]
-    public int timeoutSeconds = 20;
 
     private Coroutine loadingDotsCoroutine;
     private bool isLoading = false;
@@ -43,17 +39,7 @@ public class GradingManager : MonoBehaviour
         string scenario = PlayerPrefs.GetString("LastScenario", "Missing scenario");
         string userResponse = PlayerPrefs.GetString("LastResponse", "Missing response");
 
-        // Sanitize cards from prefs
-        string cardsRaw = PlayerPrefs.GetString("LastCards", "");
-        List<string> cards = new List<string>();
-        if (!string.IsNullOrEmpty(cardsRaw))
-        {
-            foreach (var c in cardsRaw.Split('|'))
-            {
-                if (!string.IsNullOrWhiteSpace(c))
-                    cards.Add(c.Trim());
-            }
-        }
+        List<string> cards = Worker.Cards(PlayerPrefs.GetString("LastCards", ""));
 
         scenarioText.text =
             $"<b><color={Head}>Scenario:\n</color></b><color={Body}>{scenario}</color>";
@@ -137,7 +123,6 @@ public class GradingManager : MonoBehaviour
                     title = "Temp Save",
                     scenario = scenario,
                     cards = cards,
-                    usedScenarios = new List<string>(),
                     usedVocab = new List<string>(),
                     responses = new List<ScenarioResponse>()
                 };
@@ -164,12 +149,6 @@ public class GradingManager : MonoBehaviour
 
     private IEnumerator PostToGradingWorker(string scenario, string userResponse, List<string> usedCards, Action<string> onDone)
     {
-        if (string.IsNullOrWhiteSpace(gradingWorkerUrl))
-        {
-            onDone?.Invoke("");
-            yield break;
-        }
-
         WorkerGradeRequest payload = new WorkerGradeRequest
         {
             scenario = scenario ?? "",
@@ -177,53 +156,9 @@ public class GradingManager : MonoBehaviour
             usedCards = usedCards != null ? usedCards.ToArray() : Array.Empty<string>()
         };
 
-        string json = JsonUtility.ToJson(payload);
-
-        using (UnityWebRequest req = new UnityWebRequest(gradingWorkerUrl, "POST"))
-        {
-            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
-            req.uploadHandler = new UploadHandlerRaw(bodyRaw);
-            req.downloadHandler = new DownloadHandlerBuffer();
-            req.SetRequestHeader("Content-Type", "application/json");
-            req.SetRequestHeader("Accept", "application/json");
-            req.timeout = timeoutSeconds;
-
-            yield return req.SendWebRequest();
-
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogError($"[GradingManager] Worker failed: {req.error}\n{req.downloadHandler.text}");
-                onDone?.Invoke("");
-                yield break;
-            }
-
-            string resp = req.downloadHandler.text;
-            string feedback = TryParseFeedback(resp);
-
-            onDone?.Invoke(feedback ?? "");
-        }
-    }
-
-    private static string TryParseFeedback(string json)
-    {
-        if (string.IsNullOrWhiteSpace(json)) return null;
-
-        try
-        {
-            WorkerGradeResponse ok = JsonUtility.FromJson<WorkerGradeResponse>(json);
-            if (ok != null && !string.IsNullOrWhiteSpace(ok.feedback))
-                return ok.feedback;
-
-            WorkerError err = JsonUtility.FromJson<WorkerError>(json);
-            if (err != null && !string.IsNullOrWhiteSpace(err.error))
-                return err.error;
-
-            return null;
-        }
-        catch
-        {
-            return null;
-        }
+        string resp = null;
+        yield return Worker.Post(gradingWorkerUrl, JsonUtility.ToJson(payload), r => resp = r);
+        onDone?.Invoke(Worker.Read(resp, r => r.feedback) ?? "");
     }
 
     public void OnNextPressed()
@@ -308,18 +243,5 @@ public class GradingManager : MonoBehaviour
         public string scenario;
         public string userResponse;
         public string[] usedCards;
-    }
-
-    [Serializable]
-    private class WorkerGradeResponse
-    {
-        public string feedback;
-    }
-
-    [Serializable]
-    private class WorkerError
-    {
-        public string error;
-        public string details;
     }
 }

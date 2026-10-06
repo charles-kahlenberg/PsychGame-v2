@@ -1,10 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Networking;
 using UnityEngine.UI;
 
 public class HintManager : MonoBehaviour
@@ -21,21 +19,16 @@ public class HintManager : MonoBehaviour
     // BrainHint subscribes to this
     public Action<string> OnHintReady;
 
-    [Header("Network")]
-    public int timeoutSeconds = 20;
-
     // ---------------- Public API ----------------
 
     // Brain hint (scenario + cards)
     public void RequestHint(string scenarioText, List<string> cards)
     {
-        List<string> cleanCards = SanitizeCards(cards);
-
         var payload = new WorkerRequest
         {
             mode = "hint",
             scenario = (scenarioText ?? "").Trim(),
-            cards = cleanCards.ToArray(),
+            cards = Worker.Cards(cards).ToArray(),
             concept = "" // not used for hint
         };
 
@@ -62,14 +55,6 @@ public class HintManager : MonoBehaviour
     {
         SafeOpenOverlay("Please wait...");
 
-        if (string.IsNullOrWhiteSpace(workerUrl))
-        {
-            string msg = "Worker URL is missing.";
-            SafeOpenOverlay(msg);
-            OnHintReady?.Invoke(msg);
-            yield break;
-        }
-
         // Basic validation
         if (string.IsNullOrWhiteSpace(payload.scenario))
         {
@@ -95,81 +80,23 @@ public class HintManager : MonoBehaviour
             yield break;
         }
 
-        string jsonBody = JsonUtility.ToJson(payload);
+        string resp = null;
+        yield return Worker.Post(workerUrl, JsonUtility.ToJson(payload), r => resp = r);
 
-        using (UnityWebRequest req = new UnityWebRequest(workerUrl, "POST"))
+        string hint = Worker.Read(resp, r => r.hint);
+        if (string.IsNullOrWhiteSpace(hint))
         {
-            byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
-            req.uploadHandler = new UploadHandlerRaw(bodyRaw);
-            req.downloadHandler = new DownloadHandlerBuffer();
-            req.SetRequestHeader("Content-Type", "application/json");
-            req.SetRequestHeader("Accept", "application/json");
-            req.timeout = timeoutSeconds;
-
-            yield return req.SendWebRequest();
-
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogError($"[HintManager] Worker call failed: {req.error}\nResp: {req.downloadHandler.text}");
-                SafeOpenOverlay(fallbackMessage);
-                OnHintReady?.Invoke(fallbackMessage);
-                yield break;
-            }
-
-            string respText = req.downloadHandler.text;
-            string hint = TryParseHint(respText);
-
-            if (string.IsNullOrWhiteSpace(hint))
-            {
-                Debug.LogWarning("[HintManager] Could not parse worker response. Raw: " + respText);
-                SafeOpenOverlay(fallbackMessage);
-                OnHintReady?.Invoke(fallbackMessage);
-                yield break;
-            }
-
-            string trimmedHint = hint.Trim();
-            ClickLogger.LogAiResponse(payload.mode == "concept" ? "concept_help" : "hint", payload.scenario, trimmedHint);
-
-            SafeOpenOverlay(trimmedHint);
-            OnHintReady?.Invoke(trimmedHint);
-        }
-    }
-
-    private static List<string> SanitizeCards(List<string> cards)
-    {
-        var clean = new List<string>();
-        if (cards == null) return clean;
-
-        foreach (var c in cards)
-        {
-            if (string.IsNullOrWhiteSpace(c)) continue;
-            string trimmed = c.Trim();
-            if (!string.IsNullOrEmpty(trimmed)) clean.Add(trimmed);
+            if (resp != null) Debug.LogWarning("[HintManager] Could not parse worker response. Raw: " + resp);
+            SafeOpenOverlay(fallbackMessage);
+            OnHintReady?.Invoke(fallbackMessage);
+            yield break;
         }
 
-        return clean;
-    }
+        string trimmedHint = hint.Trim();
+        ClickLogger.LogAiResponse(payload.mode == "concept" ? "concept_help" : "hint", payload.scenario, trimmedHint);
 
-    private static string TryParseHint(string json)
-    {
-        if (string.IsNullOrWhiteSpace(json)) return null;
-
-        try
-        {
-            WorkerResponse r = JsonUtility.FromJson<WorkerResponse>(json);
-            if (r != null && !string.IsNullOrWhiteSpace(r.hint))
-                return r.hint;
-
-            WorkerError e = JsonUtility.FromJson<WorkerError>(json);
-            if (e != null && !string.IsNullOrWhiteSpace(e.error))
-                return e.error;
-
-            return null;
-        }
-        catch
-        {
-            return null;
-        }
+        SafeOpenOverlay(trimmedHint);
+        OnHintReady?.Invoke(trimmedHint);
     }
 
     private void SafeOpenOverlay(string text)
@@ -194,18 +121,5 @@ public class HintManager : MonoBehaviour
         public string scenario;
         public string[] cards;   // used for "hint"
         public string concept;   // used for "concept"
-    }
-
-    [Serializable]
-    private class WorkerResponse
-    {
-        public string hint;
-    }
-
-    [Serializable]
-    private class WorkerError
-    {
-        public string error;
-        public string details;
     }
 }

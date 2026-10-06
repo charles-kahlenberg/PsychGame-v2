@@ -119,15 +119,10 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         if (TestGroups.IsEnabled(Feature.CardTweening) && !SynopsisTransition.Holding)
             DealIn(cardIndex * DealStagger);
 
-        // Hide Help on start; wire click through UnityEvent OR here. Group 2's
+        // Hide Help on start (wired through its UnityEvent). Group 2's
         // Definition button stays active and shows and hides with the front face.
         if (helpButton != null && !FaceDownCards)
-        {
             helpButton.gameObject.SetActive(false);
-            // If you prefer auto-wiring (no UnityEvent), uncomment:
-            // helpButton.onClick.RemoveListener(OnHelpButtonPressed);
-            // helpButton.onClick.AddListener(OnHelpButtonPressed);
-        }
 
         if (hintManager == null) hintManager = FindObjectOfType<HintManager>();
         if (hintManager == null) Debug.LogWarning("[CardBehavior] HintManager not found in scene.");
@@ -214,23 +209,15 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
 
             if (helpButton != null) helpButton.gameObject.SetActive(true);
         }
-        else if (!isFlipped)
-        {
-            LeanTween.rotateY(gameObject, 90f, 0.15f).setOnComplete(() =>
-            {
-                ShowBack();
-                LeanTween.rotateY(gameObject, 0f, 0.15f);
-            });
-            isFlipped = true;
-        }
         else
         {
+            isFlipped = !isFlipped;
+            bool toBack = isFlipped;
             LeanTween.rotateY(gameObject, 90f, 0.15f).setOnComplete(() =>
             {
-                ShowFront();
+                if (toBack) ShowBack(); else ShowFront();
                 LeanTween.rotateY(gameObject, 0f, 0.15f);
             });
-            isFlipped = false;
         }
     }
 
@@ -628,30 +615,12 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
 
     void OpenHintBubble()
     {
-        // 1) Open overlay + bubble
         hintOverlay.SetActive(true);
         if (hintBubbleContainer != null) hintBubbleContainer.gameObject.SetActive(true);
 
-        // 2) Ensure bubble sits IN FRONT of overlay
-        //    Case 1: Same Canvas -> use sibling order
-        hintOverlay.transform.SetAsLastSibling();          // put overlay near top
-        if (hintBubbleContainer != null)
-            hintBubbleContainer.SetAsLastSibling();        // then bubble on very top
-
-        //    Case 2: Different canvases -> use sorting order
-        var overlayCanvas = hintOverlay.GetComponentInParent<Canvas>();
-        if (overlayCanvas != null)
-        {
-            overlayCanvas.overrideSorting = true;
-            if (overlayCanvas.sortingOrder < 50) overlayCanvas.sortingOrder = 50;
-        }
-        var bubbleCanvas = hintBubbleContainer != null ? hintBubbleContainer.GetComponentInParent<Canvas>() : null;
-        if (bubbleCanvas != null)
-        {
-            bubbleCanvas.overrideSorting = true;
-            if (bubbleCanvas.sortingOrder <= (overlayCanvas != null ? overlayCanvas.sortingOrder : 50))
-                bubbleCanvas.sortingOrder = (overlayCanvas != null ? overlayCanvas.sortingOrder + 1 : 51);
-        }
+        // Both sit on the scene's one canvas: the overlay on top, the bubble above it.
+        hintOverlay.transform.SetAsLastSibling();
+        if (hintBubbleContainer != null) hintBubbleContainer.SetAsLastSibling();
     }
 
     // Group 1: asks the AI how this card's concept applies to the current scenario.

@@ -130,14 +130,8 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     {
         if (isActive) return;
 
-        isActive = true;
+        StepUpToBubble();
         awaitingBubble = true;
-        activatedFrame = Time.frameCount;
-
-        CancelAttentionCue();
-        LeanTween.moveLocal(gameObject, focusPosition, 0.4f).setEaseOutExpo();
-        LeanTween.scale(gameObject, originalScale * 1.3f, 0.4f).setEaseOutBack();
-
         Invoke(nameof(ShowHint), 0.5f);
     }
 
@@ -162,40 +156,8 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         if (hintOverlay != null) hintOverlay.SetActive(true);
         if (hintText != null) hintText.SetActive(true);
 
-        string scenario = scenarioText.text;
-
-        List<string> currentCards = new List<string>();
-
-        // Loop through Card1–Card5 directly by name
-        for (int i = 1; i <= 5; i++)
-        {
-            string cardName = "Card" + i;
-            GameObject cardObj = GameObject.Find(cardName);
-
-            if (cardObj != null)
-            {
-                Transform cardTextTransform = cardObj.transform.Find("FrontFace/CardText" + i);
-                if (cardTextTransform != null)
-                {
-                    TMP_Text cardText = cardTextTransform.GetComponent<TMP_Text>();
-                    if (cardText != null && !string.IsNullOrWhiteSpace(cardText.text))
-                    {
-                        currentCards.Add(cardText.text.Trim());
-                    }
-                }
-                else
-                {
-                    Debug.LogWarning($"CardText{i} not found under {cardName}");
-                }
-            }
-            else
-            {
-                Debug.LogWarning($"Card object '{cardName}' not found in scene.");
-            }
-        }
-
-        Debug.Log("Sending cards to hint generator: " + string.Join(", ", currentCards));
-        hintManager.RequestHint(scenario, currentCards);
+        var game = FindFirstObjectByType<GameManager>();
+        hintManager.RequestHint(scenarioText.text, game != null ? game.currentCards : null);
     }
 
     private bool awaitingBubble; // clicked, but the bubble opens a moment later

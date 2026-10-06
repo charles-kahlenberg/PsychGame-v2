@@ -31,7 +31,6 @@ public class SaveSelectUI : MonoBehaviour
 
     public void SelectSlot(int index)
     {
-        SaveManager.SetTempSaveSlot(index);
         PlayerPrefs.SetInt("SelectedSaveSlot", index);
         PlayerPrefs.Save();
 

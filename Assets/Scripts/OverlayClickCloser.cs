@@ -15,13 +15,6 @@ public class OverlayClickCloser : MonoBehaviour
     [Tooltip("The TMP text inside the bubble (optional — used to clear text on close).")]
     public TMP_Text hintText;
 
-    [Header("Behavior")]
-    [Tooltip("Also close when right-clicking.")]
-    public bool closeOnRightClick = true;
-
-    [Tooltip("Also close when pressing Escape.")]
-    public bool closeOnEscape = true;
-
     [Tooltip("Clicks on these don't close the overlay either (group 2 keeps the response box usable).")]
     public RectTransform[] keepOpenWhenClicked;
 
@@ -48,14 +41,14 @@ public class OverlayClickCloser : MonoBehaviour
         if (Time.frameCount == _openedFrame) return;
 
         // Close on Esc
-        if (closeOnEscape && Input.GetKeyDown(KeyCode.Escape))
+        if (Input.GetKeyDown(KeyCode.Escape))
         {
             CloseHint();
             return;
         }
 
         // Close on click outside
-        if (Input.GetMouseButtonDown(0) || (closeOnRightClick && Input.GetMouseButtonDown(1)))
+        if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
         {
             if (_eventSystem == null)
             {

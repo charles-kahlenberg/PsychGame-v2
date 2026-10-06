@@ -1,10 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -366,24 +364,8 @@ public class ClickLogger : MonoBehaviour
         _pendingMenuDurations.Clear();
     }
 
-    private IEnumerator PostJson(string path, string json)
-    {
-        using (var req = new UnityWebRequest(WorkerUrl + path, "POST"))
-        {
-            byte[] body = Encoding.UTF8.GetBytes(json);
-            req.uploadHandler = new UploadHandlerRaw(body);
-            req.downloadHandler = new DownloadHandlerBuffer();
-            req.SetRequestHeader("Content-Type", "application/json");
-            req.timeout = 10;
-
-            yield return req.SendWebRequest();
-
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogWarning($"[ClickLogger] Failed to send log to {path}: {req.error}");
-            }
-        }
-    }
+    private IEnumerator PostJson(string path, string json) =>
+        Worker.Post(WorkerUrl + path, json, _ => { }, timeoutSeconds: 10);
 
     [Serializable]
     private class SessionStartPayload

@@ -99,6 +99,29 @@ public class TextPanel : MonoBehaviour
         text.maxVisibleCharacters = 99999; // TMP's default: no limit
     }
 
+    // Every screen's letter-by-letter typing. Group 2 (Feature.ThemedTextBoxes)
+    // reveals (above); group 1 types each letter in. `skip` finishes at once.
+    public static System.Collections.IEnumerator Type(TMP_Text text, string s, float delay, System.Func<bool> skip)
+    {
+        if (TextBoxTheme.Enabled)
+        {
+            yield return Reveal(text, s, delay, skip);
+            yield break;
+        }
+
+        text.text = "";
+        foreach (char c in s)
+        {
+            if (skip())
+            {
+                text.text = s;
+                yield break;
+            }
+            text.text += c;
+            yield return new WaitForSeconds(delay);
+        }
+    }
+
     // `along` is how far along the edge (0-1) the tail sits; `offset` nudges
     // it from there in canvas units, e.g. a fixed distance below the top.
     public void AddTail(TailSide side, float along, float offset = 0f)

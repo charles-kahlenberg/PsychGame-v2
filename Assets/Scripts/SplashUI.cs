@@ -1,23 +1,9 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class SplashUI : MonoBehaviour
 {
-    public Button newGameButton;
     public Button continueButton;
-    public Button viewResponsesButton;
-    public Button studyModeButton;
-
-    void Awake()
-    {
-        // Ensure SplashUI only exists in the SplashScene
-        if (SceneManager.GetActiveScene().name != "SplashScene")
-        {
-            Destroy(gameObject);
-            return;
-        }
-    }
 
     void Start()
     {
@@ -30,12 +16,6 @@ public class SplashUI : MonoBehaviour
     // NEW GAME BUTTON
     public void OnNewGameClicked()
     {
-        if (SceneManager.GetActiveScene().name != "SplashScene")
-        {
-            Debug.LogWarning("[SplashUI] NewGameClicked fired outside SplashScene — blocked.");
-            return;
-        }
-
         Debug.Log("[SplashUI] Starting a TRUE NEW GAME…");
 
         // Clear all previous PlayerPrefs state
@@ -72,11 +52,5 @@ public class SplashUI : MonoBehaviour
     public void OnRulesClicked()
     {
         SceneTransition.Load("RulesScene");
-    }
-
-    // STUDY MODE (future use)
-    public void OnStudyModeClicked()
-    {
-        Debug.Log("Study Mode not implemented yet.");
     }
 }

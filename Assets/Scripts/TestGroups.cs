@@ -71,8 +71,6 @@ public static class TestGroups
         { 3, new HashSet<Feature>(PolishedUI) { Feature.GoodFitCards } },
     };
 
-    public static IEnumerable<int> DefinedGroups => Groups.Keys;
-
     private static int? _currentGroup;
 
     // Resolved once, on first use, and fixed for the rest of the session.
