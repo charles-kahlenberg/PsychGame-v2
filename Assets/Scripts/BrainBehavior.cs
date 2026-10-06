@@ -1,7 +1,6 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -21,18 +20,10 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     // left of the response box, vertically centered on it.
     private const float ResponseBoxGap = 12f;
 
-    // Group 2 (Feature.JarBrainy): here Brainy is the plain jar with the
-    // moustache (Resources/moustache.png) laid on separately so it can twitch;
-    // the other screens use poirotm.png with it drawn on. These anchors are
-    // where it sits in poirot.png.
-    private static readonly Vector2 MoustacheMin = new Vector2(0.3436f, 0.3640f);
-    private static readonly Vector2 MoustacheMax = new Vector2(0.8249f, 0.4866f);
-    private const float MoustacheTilt = 7f;    // degrees each flick lifts one side
-    private const float MoustacheFlick = 0.12f; // seconds per flick
-
-    // The jar Brainy is drawn a little bigger than the old one, and a touch
-    // wider than the art, and gently bobs and sways like the cards' idle
-    // float whenever nothing else is moving it.
+    // Group 2 (Feature.JarBrainy): here the jar Brainy (JarBrainy) is drawn
+    // a little bigger than the old one, and a touch wider than the art, and
+    // gently bobs and sways like the cards' idle float whenever nothing else
+    // is moving it.
     private static readonly Vector2 JarSize = new Vector2(1.3f, 1.15f); // x and y scale of the scene's size
     private const float IdleBob = 1.5f;   // px up/down
     private const float IdleSway = 1.2f;  // degrees of rotation
@@ -44,13 +35,11 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     // bubble, and before Start rests it beside the response box.
     void Awake()
     {
-        if (!TestGroups.IsEnabled(Feature.JarBrainy) || !UseJarArt(gameObject, "poirot")) return;
+        if (!TestGroups.IsEnabled(Feature.JarBrainy) || !JarBrainy.Apply(gameObject, stretch: true)) return;
 
         jarArt = true;
-        GetComponent<Image>().preserveAspect = false; // stretched a touch wider than the art
         var rt = (RectTransform)transform;
         rt.sizeDelta = Vector2.Scale(rt.sizeDelta, JarSize);
-        AddMoustache();
     }
 
     public Vector3 focusPosition = new Vector3(500f, 0f, 0f);
@@ -72,71 +61,6 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
         if (TestGroups.IsEnabled(Feature.BrainyAttentionCue))
             StartCoroutine(AttentionCueLoop());
-    }
-
-    // Swaps a Brainy image's sprite for the jar art in Resources. Shared with
-    // the rules and grading screens.
-    public static bool UseJarArt(GameObject brainy, string spriteName)
-    {
-        var image = brainy != null ? brainy.GetComponent<Image>() : null;
-        var sprite = Resources.Load<Sprite>(spriteName);
-        if (image == null || sprite == null)
-        {
-            Debug.LogWarning($"[BrainBehavior] Brainy image or Resources/{spriteName} not found; keeping the old Brainy.");
-            return false;
-        }
-        image.sprite = sprite;
-        image.preserveAspect = true;
-        return true;
-    }
-
-    void AddMoustache()
-    {
-        var sprite = Resources.Load<Sprite>("moustache");
-        if (sprite == null)
-        {
-            Debug.LogWarning("[BrainBehavior] Resources/moustache not found; Brainy goes clean-shaven.");
-            return;
-        }
-
-        var go = new GameObject("Moustache", typeof(RectTransform), typeof(Image));
-        var rt = (RectTransform)go.transform;
-        rt.SetParent(transform, false);
-        rt.anchorMin = MoustacheMin;
-        rt.anchorMax = MoustacheMax;
-        rt.offsetMin = rt.offsetMax = Vector2.zero;
-        rt.pivot = new Vector2(0.5f, 0.7f); // hinged just under the nose
-        var image = go.GetComponent<Image>();
-        image.sprite = sprite;
-        image.raycastTarget = false;
-
-        StartCoroutine(MoustacheTwitchLoop(rt));
-    }
-
-    // The inquisitive cartoon twitch: every few seconds one side hitches up
-    // two or three times in quick succession, then it settles back in place.
-    IEnumerator MoustacheTwitchLoop(RectTransform moustache)
-    {
-        while (true)
-        {
-            yield return new WaitForSeconds(Random.Range(1.5f, 4f));
-            float tilt = Random.value < 0.5f ? -MoustacheTilt : MoustacheTilt;
-            int flicks = Random.Range(2, 4);
-            for (int i = 0; i < flicks; i++)
-            {
-                for (float t = 0f; t < MoustacheFlick; t += Time.deltaTime)
-                {
-                    float k = Mathf.Sin(t / MoustacheFlick * Mathf.PI); // 0 -> 1 -> 0
-                    moustache.localRotation = Quaternion.Euler(0f, 0f, tilt * k);
-                    moustache.localScale = new Vector3(1f, 1f + 0.12f * k, 1f);
-                    moustache.anchoredPosition = new Vector2(0f, moustache.rect.height * 0.08f * k);
-                    yield return null;
-                }
-            }
-            moustache.localRotation = Quaternion.identity;
-            moustache.localScale = Vector3.one;
-            moustache.anchoredPosition = Vector2.zero;
-        }
     }
 
     // Measured from the box itself, so Brainy follows it if the layout changes

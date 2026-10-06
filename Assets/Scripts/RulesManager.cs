@@ -50,7 +50,7 @@ public class RulesManager : MonoBehaviour
     void Start()
     {
         if (TestGroups.IsEnabled(Feature.JarBrainy))
-            BrainBehavior.UseJarArt(brainyImage, "poirotm");
+            JarBrainy.Apply(brainyImage);
         brainyImage.SetActive(false);
         speechBubble.SetActive(false);
         continueButton.gameObject.SetActive(false);
