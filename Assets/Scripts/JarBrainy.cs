@@ -11,6 +11,8 @@ public class JarBrainy : MonoBehaviour
     // Where the moustache sits in poirot.png.
     private static readonly Vector2 MoustacheMin = new Vector2(0.3543f, 0.3609f);
     private static readonly Vector2 MoustacheMax = new Vector2(0.8346f, 0.4887f);
+    private static readonly Vector2 MoustachePivot = new Vector2(0.5f, 0.7f); // hinged just under the nose
+    private const float MoustacheSize = 1.2f; // drawn this much bigger than in the art, around the pivot
     private const float Tilt = 7f;     // degrees each flick lifts one side
     private const float Flick = 0.12f; // seconds per flick
 
@@ -45,10 +47,11 @@ public class JarBrainy : MonoBehaviour
 
         var rt = (RectTransform)new GameObject("Moustache", typeof(RectTransform), typeof(Image), typeof(JarBrainy)).transform;
         rt.SetParent(frame, false);
-        rt.anchorMin = MoustacheMin;
-        rt.anchorMax = MoustacheMax;
+        Vector2 hinge = MoustacheMin + Vector2.Scale(MoustacheMax - MoustacheMin, MoustachePivot);
+        rt.anchorMin = hinge + (MoustacheMin - hinge) * MoustacheSize;
+        rt.anchorMax = hinge + (MoustacheMax - hinge) * MoustacheSize;
         rt.offsetMin = rt.offsetMax = Vector2.zero;
-        rt.pivot = new Vector2(0.5f, 0.7f); // hinged just under the nose
+        rt.pivot = MoustachePivot;
         var moustacheImage = rt.GetComponent<Image>();
         moustacheImage.sprite = moustache;
         moustacheImage.raycastTarget = false;
