@@ -23,6 +23,7 @@ public enum Feature
     GoodFitCards,             // hands (and refreshes) deal only terms that score 2.5 or better for the current scenario in Resources/scenario_fit.txt (ScenarioFit, GameManager)
     JarBrainy,                // every Brainy is the jar art from Resources (poirot) with a separate moustache that twitches now and then; on the response screen it is drawn a little bigger and wider, with a gentle idle bob and sway (JarBrainy, BrainBehavior, RulesManager, GradingManager)
     SlowGraphicsNotice,       // when the browser is drawing without the graphics card, a small popup after the username prompt says how to turn acceleration on (GraphicsNotice, ClickLogger)
+    ScenarioImage,            // the intro screen shows the scenario's picture in a paper frame under the speech bubble, from Resources/ScenarioImages/<scenario number>, else Placeholder (IntroductionManager)
 }
 
 // The study's conditions, all in one place: which features each test group
@@ -57,6 +58,7 @@ public static class TestGroups
         Feature.SynopsisTransition,
         Feature.JarBrainy,
         Feature.SlowGraphicsNotice,
+        Feature.ScenarioImage,
     };
 
     private static readonly Dictionary<int, HashSet<Feature>> Groups = new Dictionary<int, HashSet<Feature>>

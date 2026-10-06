@@ -28,6 +28,9 @@ public class IntroductionManager : MonoBehaviour
         speechBubble.SetActive(false);
         continueButton.gameObject.SetActive(false);
 
+        if (TestGroups.IsEnabled(Feature.ScenarioImage))
+            AddScenarioImage();
+
         // Asked for now, while the NPC walks in, rather than once they've
         // arrived: waiting until then left an empty bubble for seconds.
         StartCoroutine(RequestWorkerIntro());
@@ -85,6 +88,52 @@ public class IntroductionManager : MonoBehaviour
 
         // Fallback if something fails
         introText = intro != null ? intro.Trim() : "Hi, I’m Alex! I really need your help with something important.";
+    }
+
+    // Feature.ScenarioImage: the scenario's picture in a paper frame under the
+    // speech bubble, from Resources/ScenarioImages/<scenario number> (1 = the
+    // first in Scenarios.txt), else Placeholder. A child of the bubble, so it
+    // follows the bubble's height and fades out with it on Continue.
+    private void AddScenarioImage()
+    {
+        int number = ScenarioSequencer.LoadScenariosInOrder().IndexOf(currentScenario.Trim()) + 1;
+        Sprite sprite = Resources.Load<Sprite>("ScenarioImages/" + number) ?? Resources.Load<Sprite>("ScenarioImages/Placeholder");
+        if (sprite == null) return;
+
+        const float gap = 16f, maxHeight = 230f, mat = 6f;
+
+        // Under the bubble's left 80%, clear of its tail; the frame fits
+        // inside at the picture's aspect.
+        var area = new GameObject("ScenarioImage", typeof(RectTransform)).GetComponent<RectTransform>();
+        area.SetParent(speechBubble.transform, false);
+        area.anchorMin = Vector2.zero;
+        area.anchorMax = new Vector2(0.8f, 0f);
+        area.pivot = new Vector2(0.5f, 1f);
+        area.anchoredPosition = new Vector2(0f, -gap);
+        area.sizeDelta = new Vector2(0f, maxHeight);
+
+        var frame = new GameObject("Frame", typeof(RectTransform)).GetComponent<RectTransform>();
+        frame.SetParent(area, false);
+        var fit = frame.gameObject.AddComponent<AspectRatioFitter>();
+        fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+        fit.aspectRatio = (sprite.rect.width / sprite.rect.height * (maxHeight - 2f * mat) + 2f * mat) / maxHeight;
+        TextPanel.AddPaper(frame);
+        frame.GetComponent<Image>().raycastTarget = false; // don't drag-scroll the bubble
+        // Half the panels' corner radius (5 units, under the mat), so the
+        // corners keep the same margin around the picture as the sides.
+        frame.Find("Paper").GetComponent<Image>().pixelsPerUnitMultiplier = PanelSprites.Density * 2f;
+        frame.Find("Shadow").GetComponent<Image>().pixelsPerUnitMultiplier = PanelSprites.Density * 2f;
+
+        var picture = new GameObject("Picture", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+        picture.SetParent(frame, false);
+        picture.anchorMin = Vector2.zero;
+        picture.anchorMax = Vector2.one;
+        picture.offsetMin = new Vector2(mat, mat);
+        picture.offsetMax = new Vector2(-mat, -mat);
+        var image = picture.GetComponent<Image>();
+        image.sprite = sprite;
+        image.preserveAspect = true;
+        image.raycastTarget = false;
     }
 
     public void OnContinueClicked()
