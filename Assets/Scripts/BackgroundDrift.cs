@@ -11,6 +11,7 @@ using UnityEngine.UI;
 //    With Feature.ShaderBackground, GameScene's background is an animated
 //    shader instead, which moves on its own, so it's skipped (as are Grading
 //    and Review, which get the shader too).
+//    The title screen's wall is skipped too with Feature.MenuCardBackground.
 // SaveSelect and GameEnd have their titles painted into the background, so
 // they stay still (see TitledBackgrounds). Plain color panels
 // (Introduction) have nothing to drift.
@@ -38,7 +39,7 @@ public class BackgroundDrift : MonoBehaviour
 
     private static void AddToBackgroundsIn(Scene scene)
     {
-        if (ShaderBackground.Replaces(scene)) return;
+        if (ShaderBackground.Replaces(scene) || MenuCardBackground.Replaces(scene)) return;
         if (System.Array.IndexOf(TitledBackgrounds, scene.name) >= 0) return;
 
         foreach (GameObject root in scene.GetRootGameObjects())
