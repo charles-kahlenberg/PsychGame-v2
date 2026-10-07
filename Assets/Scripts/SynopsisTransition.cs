@@ -241,6 +241,7 @@ public class SynopsisTransition : MonoBehaviour
     private static Image AddPose(RectTransform npc, Image target)
     {
         if (target == null || target.sprite == null) return null;
+        if (target.sprite == npc.GetComponent<Image>().sprite) return null; // same art (JarAvatar): nothing to change into
 
         var go = new GameObject("ArrivingPose", typeof(RectTransform), typeof(Image));
         var rt = (RectTransform)go.transform;

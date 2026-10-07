@@ -44,6 +44,10 @@ public class GameManager : MonoBehaviour
 
         if (TestGroups.IsEnabled(Feature.RaisedHand))
             RaiseHand();
+
+        // Before TextBoxTheme and PixelButton lay out around the avatar (on scene load).
+        if (TestGroups.IsEnabled(Feature.JarAvatar))
+            JarBrainy.ApplyAvatar(GameObject.Find("Avatar"));
     }
 
     void Update()

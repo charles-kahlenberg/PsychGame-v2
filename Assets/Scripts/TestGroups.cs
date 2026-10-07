@@ -29,6 +29,7 @@ public enum Feature
     MenuIntro,                // opening on the title screen, card backs swirl in from every edge into a messy pile on the menu's blue, which bursts outwards as the screen flashes white and fades to the menu; the username prompt waits for it (MenuIntro, ClickLogger)
     MenuButtonPlates,         // the title screen's buttons become blank stone plates (Resources/MenuButton) with their labels written on in Righteous (Resources/Fonts/Righteous) (MenuButtonPlates, MenuCardBackground)
     MenuNewGameTransition,    // New Game skips the loading screen: the title and the other buttons slide off, then New Game, then the menu's card backs, and those above the screen, fall straight down with a little drift and turn each, leaving only the blue; the synopsis loads under it and the blue fades into the synopsis's background turning excited, then the synopsis begins (MenuNewGameTransition, MenuCards shader, MenuCardBackground, SplashUI, IntroductionManager)
+    JarAvatar,                // the player's avatar (the synopsis's NPC and the response screen's Avatar) is Brainette, the girl jar from Resources (girlbrainy), centred up the screen with a separate bow that twitches like Brainy's moustache; the synopsis's fallback line names her instead of Alex (JarBrainy, IntroductionManager, GameManager)
 }
 
 // The study's conditions, all in one place: which features each test group
@@ -69,6 +70,7 @@ public static class TestGroups
         Feature.MenuIntro,
         Feature.MenuButtonPlates,
         Feature.MenuNewGameTransition,
+        Feature.JarAvatar,
     };
 
     private static readonly Dictionary<int, HashSet<Feature>> Groups = new Dictionary<int, HashSet<Feature>>

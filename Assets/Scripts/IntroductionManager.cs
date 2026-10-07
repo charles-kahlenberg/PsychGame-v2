@@ -20,6 +20,13 @@ public class IntroductionManager : MonoBehaviour
     private bool skipTyping = false;
     private string introText; // null until the worker's reply is in
 
+    // Before TextBoxTheme fits the speech bubble around the NPC (on scene load).
+    void Awake()
+    {
+        if (TestGroups.IsEnabled(Feature.JarAvatar))
+            JarBrainy.ApplyAvatar(npcImage);
+    }
+
     void Start()
     {
         currentScenario = PlayerPrefs.GetString("LastScenario", "");
@@ -92,7 +99,8 @@ public class IntroductionManager : MonoBehaviour
             Debug.LogWarning("[IntroductionManager] Worker response did not contain 'intro'. Raw: " + resp);
 
         // Fallback if something fails
-        introText = intro != null ? intro.Trim() : "Hi, I’m Alex! I really need your help with something important.";
+        string speaker = TestGroups.IsEnabled(Feature.JarAvatar) ? "Brainette" : "Alex";
+        introText = intro != null ? intro.Trim() : $"Hi, I’m {speaker}! I really need your help with something important.";
     }
 
     // Feature.ScenarioImage: the scenario's picture in a paper frame under the
