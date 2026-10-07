@@ -122,6 +122,9 @@ public class ClickLogger : MonoBehaviour
             yield return null;
         }
 
+        // Not over the title screen's intro (Feature.MenuIntro).
+        while (MenuIntro.Playing) yield return null;
+
         string savedUsername = PlayerPrefs.GetString("LastUsername", "");
         UsernamePromptUI.Show(savedUsername, username =>
         {

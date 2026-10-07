@@ -26,6 +26,7 @@ public enum Feature
     ScenarioImage,            // the intro screen shows the scenario's picture in a paper frame under the speech bubble, from Resources/ScenarioImages/<scenario number>, else Placeholder (IntroductionManager)
     GradingTransition,        // submitting and leaving the grading screen no longer fade to black: the screen's elements slide out while the shader background turns the next screen's (excited red for grading, the synopsis's excited blue after it), then the next screen loads straight in and its elements slide in (GradingTransition, ShaderBackground, SceneTransition, GameManager, GradingManager, IntroductionManager)
     MenuCardBackground,       // the title screen's room wall becomes Resources/MenuCards, columns of card backs (Resources/MenuCardBacks) scrolling up and down, alternating by column; the rest of the title art (glow, jar, players, title) is hidden so only the cards and buttons show, with the new title (Resources/MenuTitle) on top above them (MenuCardBackground)
+    MenuIntro,                // opening on the title screen, card backs swirl in from every edge into a messy pile on the menu's blue, which bursts outwards as the screen flashes white and fades to the menu; the username prompt waits for it (MenuIntro, ClickLogger)
 }
 
 // The study's conditions, all in one place: which features each test group
@@ -63,6 +64,7 @@ public static class TestGroups
         Feature.ScenarioImage,
         Feature.GradingTransition,
         Feature.MenuCardBackground,
+        Feature.MenuIntro,
     };
 
     private static readonly Dictionary<int, HashSet<Feature>> Groups = new Dictionary<int, HashSet<Feature>>

@@ -8,7 +8,12 @@ using UnityEngine.UI;
 // the click target it was in Group 1. Everything else but the buttons is
 // hidden, and Resources/MenuTitle goes on top above them.
 // It moves on its own, so BackgroundDrift leaves this scene alone.
-public static class MenuCardBackground
+//
+// The shader also lights the middle of the screen, and the title and
+// buttons cast drop shadows onto the cards. This component, on the wall,
+// tells it where the buttons are every frame, so their shadows follow them
+// (e.g. as they pop on hover).
+public class MenuCardBackground : MonoBehaviour
 {
     private const string SceneName = "SplashScene";
     private const string ShaderResource = "MenuCards";
@@ -22,6 +27,17 @@ public static class MenuCardBackground
     private static readonly int CardTexId = Shader.PropertyToID("_CardTex");
     private static readonly int TitleTexId = Shader.PropertyToID("_TitleTex");
     private static readonly int TitleRectId = Shader.PropertyToID("_TitleRect");
+    private static readonly int ButtonsId = Shader.PropertyToID("_Buttons");
+    private static readonly int ButtonCountId = Shader.PropertyToID("_ButtonCount");
+
+    private const int MaxButtons = 8; // the shader's _Buttons array
+    // The visible button within each button image (424 x 112 of 445 x 133).
+    private const float VisibleWidth = 0.953f, VisibleHeight = 0.84f;
+    private static readonly Vector3[] Corners = new Vector3[4];
+
+    private Material _material;
+    private RectTransform[] _buttons;
+    private readonly Vector4[] _buttonRects = new Vector4[MaxButtons];
 
     public static bool Replaces(Scene scene)
     {
@@ -69,7 +85,33 @@ public static class MenuCardBackground
                 if (child != panel && child.name != "ButtonContainer") child.gameObject.SetActive(false);
 
             AddTitle(canvas, material);
+
+            var lighting = panel.gameObject.AddComponent<MenuCardBackground>();
+            lighting._material = material;
+            Transform container = canvas.transform.Find("ButtonContainer");
+            lighting._buttons = container == null ? new RectTransform[0] :
+                System.Array.ConvertAll(container.GetComponentsInChildren<Button>(true), b => (RectTransform)b.transform);
         }
+    }
+
+    // Each button's centre and half-size, in screen heights from the
+    // screen's centre (the shader's units). The canvas is screen-space
+    // overlay, so world space is screen pixels.
+    private void LateUpdate()
+    {
+        float width = Screen.width, height = Screen.height;
+        int count = 0;
+        foreach (RectTransform button in _buttons)
+        {
+            if (button == null || !button.gameObject.activeInHierarchy || count == MaxButtons) continue;
+            button.GetWorldCorners(Corners);
+            Vector2 min = Corners[0], max = Corners[2];
+            Vector2 centre = 0.5f * (min + max), half = 0.5f * (max - min);
+            _buttonRects[count++] = new Vector4((centre.x - 0.5f * width) / height, (centre.y - 0.5f * height) / height,
+                                                half.x * VisibleWidth / height, half.y * VisibleHeight / height);
+        }
+        _material.SetVectorArray(ButtonsId, _buttonRects);
+        _material.SetFloat(ButtonCountId, count);
     }
 
     // The new title art, drawn last so it's above everything, the vignette

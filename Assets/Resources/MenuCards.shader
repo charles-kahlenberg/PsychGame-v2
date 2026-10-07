@@ -2,10 +2,14 @@
 // card backs scrolling endlessly, every other column up and the rest down.
 //
 // It's one full-screen quad: each pixel works out which card it's on, so
-// there are no per-card objects and nothing to update from script. The card
-// backs come from one atlas, Resources/MenuCardBacks.png, the seven 284x380
-// flat backs side by side (set by MenuCardBackground.cs as _CardTex). A
-// vignette darkens the edges, and the title casts a shadow on the cards.
+// there are no per-card objects (only the buttons' places, for their
+// shadows, come from script each frame). The card
+// backs come from one atlas, Resources/MenuCardBacks.png, ten 284x380
+// flat backs side by side (set by MenuCardBackground.cs as _CardTex): the
+// seven areas plus the question card three times (at 1, 4 and 7), so it
+// turns up three times as often. MenuIntro.AreaCards lists the rest. A
+// vignette darkens the edges, a soft light brightens the middle, and the
+// title and buttons cast the same drop shadow onto the cards.
 //
 // Every look-and-feel knob is a property below; tweak the defaults here, or
 // live in Play mode on the runtime material (Canvas > Panel > Image).
@@ -17,25 +21,38 @@ Shader "PsychGame/MenuCards"
         _Color ("Tint", Color) = (1, 1, 1, 1)
 
         _CardTex ("Card Backs Atlas", 2D) = "white" {}
-        _CardCount ("Cards In Atlas", Float) = 7
+        _CardCount ("Cards In Atlas", Float) = 10
+        _CardSaturation ("Card Saturation (1 as drawn, 0 grey)", Range(0, 1)) = 0.7
         _BackColor ("Gap Colour", Color) = (0.0078, 0.0588, 0.1804, 1) // #020F2E
         _CardHeight ("Card Height (screen heights)", Float) = 0.3
         _Gap ("Gap (card heights)", Float) = 0.056
         _Speed ("Scroll Speed (card heights/s)", Float) = 0.15
         _Stagger ("Column Stagger (cards)", Float) = 0.25
 
-        // The title's drop shadow, cast onto the cards only (the gaps stay
-        // solid). Offset is in screen heights; softness is a mip level.
-        _ShadowColor ("Title Shadow Colour", Color) = (0, 0, 0, 1)
+        // A white light at the centre of the screen, brightening what's near it.
+        _LightColor ("Centre Light Colour", Color) = (1, 1, 1, 1)
+        _LightStrength ("Centre Light Strength", Range(0, 1)) = 0.06
+        _LightReach ("Centre Light Reach (screen heights)", Float) = 0.55
+
+        // The title's and buttons' drop shadows, cast onto the cards only
+        // (the gaps stay solid), all offset the same way, in screen heights.
+        _ShadowColor ("Shadow Colour", Color) = (0, 0, 0, 1)
+        _ShadowOffset ("Shadow Offset (x, y)", Vector) = (0.012, -0.018, 0, 0)
         _ShadowStrength ("Title Shadow Strength", Range(0, 1)) = 0.6
-        _ShadowOffset ("Title Shadow Offset (x, y)", Vector) = (0.012, -0.018, 0, 0)
-        _ShadowSoftness ("Title Shadow Softness", Range(0, 6)) = 2
+        _ShadowSoftness ("Title Shadow Softness (mip level)", Range(0, 6)) = 2
+        _ButtonShadowStrength ("Button Shadow Strength", Range(0, 1)) = 0.6
+        // Matches the title's blur at its default softness.
+        _ButtonShadowSoftness ("Button Shadow Softness (screen heights)", Range(0.0005, 0.1)) = 0.001
 
         // The title's art and where it sits (centre x, y from the screen's
         // centre and width, height, all in screen heights), set by
         // MenuCardBackground.cs. No title, no shadow.
         [HideInInspector] _TitleTex ("Title", 2D) = "black" {}
         [HideInInspector] _TitleRect ("Title Rect", Vector) = (0, 0, 0, 0)
+        // How many buttons, and each one's centre and half-size in screen
+        // heights from the screen's centre (_Buttons[8]), set every frame
+        // by MenuCardBackground.cs.
+        [HideInInspector] _ButtonCount ("Buttons", Float) = 0
 
         // Darkens toward the edges. Distance is 0 at the centre and 1 at
         // the middle of the top and bottom edges (the corners are further).
@@ -116,6 +133,7 @@ Shader "PsychGame/MenuCards"
             sampler2D _CardTex;
             float4 _CardTex_TexelSize;
             float _CardCount;
+            float _CardSaturation;
             float4 _BackColor;
             float _CardHeight;
             float _Gap;
@@ -123,10 +141,17 @@ Shader "PsychGame/MenuCards"
             float _Stagger;
             float4 _ShadowColor;
             float _ShadowStrength;
-            float4 _ShadowOffset;
             float _ShadowSoftness;
             sampler2D _TitleTex;
             float4 _TitleRect;
+            float4 _LightColor;
+            float _LightStrength;
+            float _LightReach;
+            float _ButtonShadowStrength;
+            float4 _ShadowOffset;
+            float _ButtonShadowSoftness;
+            float _ButtonCount;
+            float4 _Buttons[8];
             float4 _VignetteColor;
             float _VignetteStrength;
             float _VignetteStart;
@@ -163,11 +188,10 @@ Shader "PsychGame/MenuCards"
             // Which card a slot shows. Neighbouring columns slide past each
             // other, so to never show the same card side by side they share
             // no cards at all: each column draws from its own run of 3 of
-            // the cards, starting 3 after the last column's. That walks
-            // every other column through the whole deck fastest (any step
-            // that keeps neighbours apart leaves columns two apart sharing
-            // most of their cards); the sets repeat every 7 columns, about
-            // a screen's width, and the order down each column is random. Down a column the order is random, but never the
+            // the cards, starting 3 after the last column's; the sets repeat
+            // every 10 columns, about a screen's width. The question cards
+            // are 3 or more apart so no column holds two, but they can meet
+            // across a column. Down a column the order is random, but never the
             // same card twice in a row: even rows are free picks; odd rows
             // pick from the cards their two neighbours aren't showing.
             float CardAt(float column, float row)
@@ -191,7 +215,7 @@ Shader "PsychGame/MenuCards"
                 }
 
                 // Wrapped from the middle of a step (+0.5): GPU division
-                // rounds, and an exact 14 / 7 = 1.9999 would pick card 7.
+                // rounds, and an exact 20 / 10 = 1.9999 would pick card 10.
                 return floor(frac((first + slot + 0.5) / _CardCount) * _CardCount);
             }
 
@@ -231,15 +255,43 @@ Shader "PsychGame/MenuCards"
                 float2 gradScale = 1.0 / float2(cardWidth * _CardCount, 1.0);
                 fixed4 card = tex2Dgrad(_CardTex, uv, ddx(p) * gradScale, ddy(p) * gradScale);
                 card.a *= onCard;
+                card.rgb = lerp(dot(card.rgb, float3(0.2126, 0.7152, 0.0722)), card.rgb, _CardSaturation);
 
-                // The title's alpha, shifted by the offset and blurred, darkens the card.
-                float2 screen = (IN.uv - 0.5) * float2(aspect, 1.0) - _ShadowOffset.xy;
-                float2 titleUV = (screen - _TitleRect.xy) / max(_TitleRect.zw, 1e-5) + 0.5;
+                // In screen heights from the centre, where the light is.
+                float2 centred = (IN.uv - 0.5) * float2(aspect, 1.0);
+
+                // Shadows: this spot is in shadow if the title or a button
+                // covers the point the offset away.
+                float2 blocker = centred - _ShadowOffset.xy;
+
+                // The title's alpha there, blurred, darkens the card.
+                float2 titleUV = (blocker - _TitleRect.xy) / max(_TitleRect.zw, 1e-5) + 0.5;
                 float inTitle = all(titleUV >= 0.0) && all(titleUV <= 1.0);
                 float shadow = tex2Dlod(_TitleTex, float4(titleUV, 0.0, _ShadowSoftness)).a * inTitle;
                 card.rgb = lerp(card.rgb, _ShadowColor.rgb, shadow * _ShadowStrength);
 
+                // The buttons' too, as soft rounded boxes, their corners
+                // half their half-height.
+                float buttonShadow = 0.0;
+                for (int b = 0; b < 8; b++)
+                {
+                    if (b >= _ButtonCount) break;
+                    float4 button = _Buttons[b];
+                    float radius = 0.5 * button.w;
+                    float2 d = abs(blocker - button.xy) - (button.zw - radius);
+                    float boxDist = length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius;
+                    buttonShadow = max(buttonShadow, 1.0 - smoothstep(-_ButtonShadowSoftness, _ButtonShadowSoftness, boxDist));
+                }
+                buttonShadow *= _ButtonShadowStrength;
+                card.rgb = lerp(card.rgb, _ShadowColor.rgb, buttonShadow);
+
                 fixed4 color = fixed4(lerp(_BackColor.rgb, card.rgb, card.a), 1.0);
+
+                // The light, screened on (it brightens without washing out),
+                // except where a button's shadow on a card blocks it.
+                float reach = saturate(1.0 - length(centred) / _LightReach);
+                float light = _LightStrength * reach * reach * (1.0 - buttonShadow * card.a);
+                color.rgb = 1.0 - (1.0 - color.rgb) * (1.0 - light * _LightColor.rgb);
 
                 float2 fromCentre = (IN.uv - 0.5) * 2.0 * float2(lerp(1.0, aspect, _VignetteRoundness), 1.0);
                 float vignette = smoothstep(_VignetteStart, _VignetteStart + _VignetteSoftness, length(fromCentre));
