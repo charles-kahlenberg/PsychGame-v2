@@ -20,9 +20,7 @@ MonoBehaviour:
     - sprite: {fileID: 21300000, guid: 3d3522812e8b922479850d1d5d5c5ad7, type: 3}
       drift: 1
     frontLayers:
-    - sprite: {fileID: 21300000, guid: 8218018298fc45543b49b8674bbb48de, type: 3}
-      drift: 0
-    - sprite: {fileID: 21300000, guid: 533c9aff6dfbb4d48b4c5dc73b067d06, type: 3}
+    - sprite: {fileID: 21300000, guid: 7f7015a3fd5740a6bd141a3a20ac3640, type: 3}
       drift: 0
   - area: 2
     backLayers:
@@ -31,9 +29,7 @@ MonoBehaviour:
     - sprite: {fileID: 21300000, guid: 3cc5d599c07eb2149ab8cc503e63a561, type: 3}
       drift: 1
     frontLayers:
-    - sprite: {fileID: 21300000, guid: 8218018298fc45543b49b8674bbb48de, type: 3}
-      drift: 0
-    - sprite: {fileID: 21300000, guid: 533c9aff6dfbb4d48b4c5dc73b067d06, type: 3}
+    - sprite: {fileID: 21300000, guid: 7f7015a3fd5740a6bd141a3a20ac3640, type: 3}
       drift: 0
   - area: 3
     backLayers:
@@ -42,9 +38,7 @@ MonoBehaviour:
     - sprite: {fileID: 21300000, guid: 15741702ac4e9344db01f467e079b308, type: 3}
       drift: 1
     frontLayers:
-    - sprite: {fileID: 21300000, guid: 8218018298fc45543b49b8674bbb48de, type: 3}
-      drift: 0
-    - sprite: {fileID: 21300000, guid: 533c9aff6dfbb4d48b4c5dc73b067d06, type: 3}
+    - sprite: {fileID: 21300000, guid: 7f7015a3fd5740a6bd141a3a20ac3640, type: 3}
       drift: 0
   - area: 4
     backLayers:
@@ -53,9 +47,7 @@ MonoBehaviour:
     - sprite: {fileID: 21300000, guid: a3c0952f60c58224a8c1cf047c6d713f, type: 3}
       drift: 1
     frontLayers:
-    - sprite: {fileID: 21300000, guid: 8218018298fc45543b49b8674bbb48de, type: 3}
-      drift: 0
-    - sprite: {fileID: 21300000, guid: 533c9aff6dfbb4d48b4c5dc73b067d06, type: 3}
+    - sprite: {fileID: 21300000, guid: 7f7015a3fd5740a6bd141a3a20ac3640, type: 3}
       drift: 0
   - area: 5
     backLayers:
@@ -64,9 +56,7 @@ MonoBehaviour:
     - sprite: {fileID: 21300000, guid: 5ae05a42354bcf842881b965ac6f4326, type: 3}
       drift: 1
     frontLayers:
-    - sprite: {fileID: 21300000, guid: 8218018298fc45543b49b8674bbb48de, type: 3}
-      drift: 0
-    - sprite: {fileID: 21300000, guid: 533c9aff6dfbb4d48b4c5dc73b067d06, type: 3}
+    - sprite: {fileID: 21300000, guid: 7f7015a3fd5740a6bd141a3a20ac3640, type: 3}
       drift: 0
   - area: 6
     backLayers:
@@ -75,9 +65,7 @@ MonoBehaviour:
     - sprite: {fileID: 21300000, guid: 02e1b5171fa06df4b82bf62eb0e562fa, type: 3}
       drift: 1
     frontLayers:
-    - sprite: {fileID: 21300000, guid: 8218018298fc45543b49b8674bbb48de, type: 3}
-      drift: 0
-    - sprite: {fileID: 21300000, guid: 533c9aff6dfbb4d48b4c5dc73b067d06, type: 3}
+    - sprite: {fileID: 21300000, guid: 7f7015a3fd5740a6bd141a3a20ac3640, type: 3}
       drift: 0
   - area: 7
     backLayers:
@@ -86,7 +74,5 @@ MonoBehaviour:
     - sprite: {fileID: 21300000, guid: db6bf034dc0814f46aa37e8d7c4c877c, type: 3}
       drift: 1
     frontLayers:
-    - sprite: {fileID: 21300000, guid: 8218018298fc45543b49b8674bbb48de, type: 3}
-      drift: 0
-    - sprite: {fileID: 21300000, guid: 533c9aff6dfbb4d48b4c5dc73b067d06, type: 3}
+    - sprite: {fileID: 21300000, guid: 7f7015a3fd5740a6bd141a3a20ac3640, type: 3}
       drift: 0

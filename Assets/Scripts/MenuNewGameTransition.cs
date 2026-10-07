@@ -12,7 +12,8 @@ using UnityEngine.UI;
 //     the screen too, so the whole wall falls straight down through it. Each
 //     lets go a touch late or early, falls a little faster or slower, and
 //     drifts and turns slightly, so they slip over each other on the way
-//     out. Then only the blue is left.
+//     out. Each keeps the speed its column was scrolling at, up or down,
+//     and gravity takes it from there. Then only the blue is left.
 //  3. The synopsis loads under that still blue, so the load's stall shows
 //     nothing, with the menu kept over it (Covering). The menu fades away as
 //     the synopsis's background comes up from calm to its excited look, and
@@ -57,6 +58,7 @@ public class MenuNewGameTransition : MaskableGraphic
     {
         public Vector2 start;  // its centre on the grid, in screen heights from the screen's centre
         public int atlasIndex;
+        public float velocity; // up the screen, its column's scroll, in screen heights a second
         public float release, gravity, drift, spin;
     }
 
@@ -237,6 +239,8 @@ public class MenuNewGameTransition : MaskableGraphic
                     start = new Vector2((column + 0.5f) * cell.x * cardHeight - 0.5f * aspect,
                                         ((row + 0.5f) * cell.y - offset) * cardHeight - 0.5f),
                     atlasIndex = CardAt(column, row),
+                    // The shader moves a column's cards down as its offset grows.
+                    velocity = -direction * speed * cardHeight,
                     release = Random.Range(0f, ReleaseSpread),
                     gravity = Gravity * Random.Range(GravityMin, GravityMax),
                     drift = Random.Range(-Drift, Drift),
@@ -268,8 +272,9 @@ public class MenuNewGameTransition : MaskableGraphic
     // Where a card is, and its turn in degrees, at this point in the fall.
     private static void Place(Card c, float time, out Vector2 position, out float rotation)
     {
+        // Still scrolling until it lets go, and carrying that speed on after.
         float age = Mathf.Max(0f, time - c.release);
-        position = c.start + new Vector2(c.drift * age, -0.5f * c.gravity * age * age);
+        position = c.start + new Vector2(c.drift * age, c.velocity * time - 0.5f * c.gravity * age * age);
         rotation = c.spin * age;
     }
 

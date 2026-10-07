@@ -45,7 +45,7 @@ Shader "PsychGame/MenuCards"
         // (the gaps stay solid), all offset the same way, in screen heights.
         _ShadowColor ("Shadow Colour", Color) = (0, 0, 0, 1)
         _ShadowOffset ("Shadow Offset (x, y)", Vector) = (0.012, -0.018, 0, 0)
-        _ShadowStrength ("Title Shadow Strength", Range(0, 1)) = 0.6
+        _ShadowStrength ("Title Shadow Strength", Range(0, 1)) = 0.85
         _ShadowSoftness ("Title Shadow Softness (mip level)", Range(0, 6)) = 2
         _ButtonShadowStrength ("Button Shadow Strength", Range(0, 1)) = 0.6
         // Matches the title's blur at its default softness.

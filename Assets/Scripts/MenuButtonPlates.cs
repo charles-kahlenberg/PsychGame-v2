@@ -36,8 +36,9 @@ public class MenuButtonPlates : MonoBehaviour, IPointerEnterHandler, IPointerExi
     // dark stone lip below): its top and bottom as anchors, and an inset
     // from each end, so the label centres on the face.
     private const float FaceBottom = 0.25f, FaceTop = 0.94f, FaceInset = 10f;
-    private static readonly Color Ink = new Color32(0x3A, 0x30, 0x30, 0xFF);
-    private static readonly Color DimInk = new Color32(0x3A, 0x30, 0x30, 0x80); // Load Game with no save
+    // The title art's (Resources/MenuTitle) dark slate blue (#2D3539), a little bluer.
+    private static readonly Color Ink = new Color32(0x24, 0x3A, 0x4C, 0xFF);
+    private static readonly Color DimInk = new Color32(0x24, 0x3A, 0x4C, 0x80); // Load Game with no save
 
     // As the PixelButtons: up a unit on hover, down two (onto the shadow)
     // when pressed, a step darker when pressed and grey when disabled.

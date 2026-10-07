@@ -110,6 +110,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
             SetUpDefinitionButton();
             TurnFaceDown();
         }
+        if (TestGroups.IsEnabled(Feature.NewCardArt)) UseCardFont();
         else
         {
             ShowFront();
@@ -145,6 +146,29 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
 
     private const float TermSidePadding = 10f;
     private const float TermMinFontSize = 8f;
+
+    // Group 2: the term and the Definition button's label in Atkinson
+    // Hyperlegible Next SemiBold, like the themed text boxes and pixel
+    // buttons. The label shrinks to fit if it has to.
+    void UseCardFont()
+    {
+        TMP_FontAsset font = TextBoxTheme.SemiBold;
+        if (font == null) return;
+        var label = helpButton != null ? helpButton.GetComponentInChildren<TMP_Text>(true) : null;
+        foreach (TMP_Text text in new[] { frontText, label })
+        {
+            if (text == null) continue;
+            text.font = font;
+            text.fontSharedMaterial = font.material;
+            text.fontStyle = FontStyles.Normal;
+        }
+        if (label != null)
+        {
+            label.fontSizeMax = label.fontSize;
+            label.fontSizeMin = TermMinFontSize;
+            label.enableAutoSizing = true;
+        }
+    }
 
     void Update()
     {
