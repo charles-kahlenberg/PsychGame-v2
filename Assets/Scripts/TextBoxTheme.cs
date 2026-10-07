@@ -7,16 +7,14 @@ using UnityEngine.UI;
 // boxes to match the paper-layer background, set in Atkinson Hyperlegible Next (Resources/Fonts)
 // for legibility. Built at runtime on GameScene's existing objects, so every
 // script that already points at them keeps working:
-//  - Bubble Box (the scenario): sized to its text, beside the avatar, with a
-//    tail pointing at them. It can't grow into the response box; anything
-//    longer scrolls.
+//  - Bubble Box (the scenario): sized to its text, beside the avatar (or
+//    across the screen when there's none). It can't grow into the response
+//    box; anything longer scrolls.
 //  - HintBubbleContainer (Brainy's hints and the cards' definitions): the
-//    same panel with a "Brainy" name tag, centered just under the response
-//    box and growing down over the cards, scrollable once it would reach the
-//    bottom of the screen. Its tail points at the spot Brainy steps forward
-//    to (BrainBehavior.focusPosition) whenever it opens. While it's open the
-//    response box stays above the dimmed overlay and can still be clicked
-//    and typed in, so a hint can be read against the answer.
+//    same panel with a "Brainy" name tag, laid exactly over the response box
+//    so it covers the answer rather than the cards; longer text scrolls. Its
+//    tail points at the spot Brainy steps forward to
+//    (BrainBehavior.focusPosition) whenever it opens.
 //  - ResponseInput: the same paper look, and a scrollbar once an answer is
 //    longer than the box (the mouse wheel scrolls it too).
 //  - SavePromptPanel ("Do you want to save?"): a paper card on the dimmed
@@ -51,8 +49,7 @@ public static class TextBoxTheme
     private const float ResponseFontSize = 13f;
     public const float ScreenMargin = 12f;
     private const float AvatarGap = 10f;
-    private const float HintBubbleWidth = 460f;
-    private const float HintBubbleGap = 16f;       // below the response box (the name tag sits in it)
+    private const float HintBubbleWidth = 460f;    // if there's no response box to cover
     private const float HintTailFromTop = 30f;     // where the tail leaves the bubble's left edge
     private const float BrainySpeakingScale = 1.3f; // BrainBehavior grows Brainy this much when it speaks
 
@@ -99,7 +96,7 @@ public static class TextBoxTheme
                     if (overlay != null) overlay.color = OverlayTint;
 
                     StyleScenario(canvasRect, response);
-                    StyleHintBubble(canvasRect, response, overlay);
+                    StyleHintBubble(canvasRect, response);
                     if (response != null) StyleResponse(response);
                     StyleSavePrompt(canvasRect);
                     break;
@@ -115,10 +112,11 @@ public static class TextBoxTheme
         var text = box != null ? box.Find("ScenarioText")?.GetComponent<TextMeshProUGUI>() : null;
         if (text == null) return;
 
-        // From the top-left margin to just short of the avatar.
+        // From the top-left margin to just short of the avatar, or to the
+        // right margin when it's hidden (Feature.JarAvatar).
         var avatar = canvas.Find("Avatar") as RectTransform;
-        float rightAnchor = 0.8f, rightOffset = 0f;
-        if (avatar != null && avatar.anchorMin == avatar.anchorMax)
+        float rightAnchor = 1f, rightOffset = -ScreenMargin;
+        if (avatar != null && avatar.gameObject.activeSelf && avatar.anchorMin == avatar.anchorMax)
         {
             rightAnchor = avatar.anchorMin.x;
             rightOffset = avatar.anchoredPosition.x - avatar.rect.width * avatar.pivot.x - AvatarGap;
@@ -134,12 +132,11 @@ public static class TextBoxTheme
         if (response != null)
         {
             float fromTop = canvas.rect.height / 2f - EdgeY(canvas, response, top: true);
-            maxHeight = Mathf.Max(60f, fromTop - ScreenMargin - TextPanel.TailLength - 6f);
+            maxHeight = Mathf.Max(60f, fromTop - ScreenMargin - 6f);
         }
 
         StyleBodyText(text, Regular, ScenarioFontSize);
-        var panel = TextPanel.Build(box, text, minHeight: 48f, maxHeight: maxHeight, nameTag: null);
-        panel.AddTail(TextPanel.TailSide.Bottom, 0.92f);
+        TextPanel.Build(box, text, minHeight: 48f, maxHeight: maxHeight, nameTag: null);
     }
 
     // -------------------- INTRO --------------------
@@ -353,7 +350,7 @@ public static class TextBoxTheme
 
     // -------------------- BRAINY'S BUBBLE --------------------
 
-    private static void StyleHintBubble(RectTransform canvas, RectTransform response, Image overlay)
+    private static void StyleHintBubble(RectTransform canvas, RectTransform response)
     {
         var bubble = canvas.Find("HintBubbleContainer") as RectTransform;
         if (bubble == null) return;
@@ -362,32 +359,20 @@ public static class TextBoxTheme
         var text = oldScroll != null ? oldScroll.GetComponentInChildren<TextMeshProUGUI>(true) : null;
         if (text == null) return;
 
-        // Centered, hanging from just under the response box and growing down
-        // over the cards, so it never covers the answer being written.
-        float top = (response != null ? EdgeY(canvas, response, top: false) : -60f) - HintBubbleGap;
-        float bottom = -canvas.rect.height / 2f + ScreenMargin;
+        // Exactly over the response box, so Brainy covers the answer rather
+        // than the cards; anything longer scrolls.
+        Rect area = response != null
+            ? PixelButton.LocalRect(canvas, response)
+            : new Rect(-HintBubbleWidth / 2f, -180f, HintBubbleWidth, 120f);
         bubble.anchorMin = bubble.anchorMax = new Vector2(0.5f, 0.5f);
         bubble.pivot = new Vector2(0.5f, 1f);
-        bubble.anchoredPosition = new Vector2(0f, top);
-        bubble.sizeDelta = new Vector2(HintBubbleWidth, 80f);
+        bubble.anchoredPosition = new Vector2(area.center.x, area.yMax);
+        bubble.sizeDelta = new Vector2(area.width, area.height);
 
         StyleBodyText(text, Regular, BubbleFontSize);
-        var panel = TextPanel.Build(bubble, text, minHeight: 52f, maxHeight: Mathf.Max(80f, top - bottom), nameTag: "Brainy");
+        var panel = TextPanel.Build(bubble, text, minHeight: area.height, maxHeight: area.height, nameTag: "Brainy");
         panel.AddTail(TextPanel.TailSide.Left, 1f, -HintTailFromTop);
         oldScroll.gameObject.SetActive(false);
-
-        // While Brainy talks, the answer stays readable and editable: the
-        // response box is lifted above the dimmed overlay, and clicking into
-        // it doesn't close the bubble.
-        if (response != null && overlay != null)
-        {
-            var raise = bubble.gameObject.AddComponent<RaiseAboveOverlay>();
-            raise.target = response;
-            raise.overlay = overlay.transform;
-
-            var closer = overlay.GetComponent<OverlayClickCloser>();
-            if (closer != null) closer.keepOpenWhenClicked = new[] { response };
-        }
 
         // HintManager scrolls its view back to the top on each new hint.
         var hintManager = Object.FindFirstObjectByType<HintManager>();
@@ -401,8 +386,8 @@ public static class TextBoxTheme
             var brainRect = (RectTransform)brain;
             float halfWidth = brainRect.rect.width * brainRect.localScale.x * BrainySpeakingScale / 2f;
             brainBehavior.focusPosition = new Vector3(
-                -HintBubbleWidth / 2f - TextPanel.TailLength - 4f - halfWidth,
-                top - HintTailFromTop - TextPanel.TailDrop,
+                area.xMin - TextPanel.TailLength - 4f - halfWidth,
+                area.yMax - HintTailFromTop - TextPanel.TailDrop,
                 0f);
         }
     }

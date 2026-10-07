@@ -50,8 +50,7 @@ public class JarBrainy : MonoBehaviour
     // (the response screen draws Brainy a touch wider than the art).
     public static bool Apply(GameObject brainy, bool stretch = false) => Apply(brainy, Brainy, stretch);
 
-    // The player's avatar (the synopsis's NPC, the response screen's Avatar).
-    // Call before the scene's layout measures it (Awake).
+    // The synopsis's NPC. Call before the scene's layout measures it (Awake).
     public static bool ApplyAvatar(GameObject avatar)
     {
         if (!Apply(avatar, Girl, false)) return false;

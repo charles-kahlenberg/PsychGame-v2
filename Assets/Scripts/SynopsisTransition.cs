@@ -186,6 +186,14 @@ public class SynopsisTransition : MonoBehaviour
         // Both canvases share a reference resolution, so the response screen's
         // avatar can be matched value for value.
         RectTransform target = _game._avatar;
+        // Feature.JarAvatar: the response screen has no avatar, so the NPC
+        // fades out with the bubble instead of moving into its place.
+        CanvasGroup npcGroup = null;
+        if (target != null && !target.gameObject.activeSelf)
+        {
+            target = null;
+            npcGroup = FadeGroup(npc.gameObject);
+        }
         LeanTween.cancel(npc.gameObject);
         Vector2 anchorFrom = npc.anchorMin;
         Vector2 positionFrom = npc.anchoredPosition;
@@ -199,6 +207,7 @@ public class SynopsisTransition : MonoBehaviour
 
             float fade = Mathf.SmoothStep(0f, 1f, time / FadeTime);
             bubbleGroup.alpha = buttonGroup.alpha = 1f - fade;
+            if (npcGroup != null) npcGroup.alpha = 1f - fade;
             bubble.transform.localPosition = bubbleFrom + Vector3.up * 16f * fade;
             continueButton.transform.localPosition = buttonFrom + Vector3.up * 16f * fade;
 

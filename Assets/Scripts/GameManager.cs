@@ -45,9 +45,11 @@ public class GameManager : MonoBehaviour
         if (TestGroups.IsEnabled(Feature.RaisedHand))
             RaiseHand();
 
-        // Before TextBoxTheme and PixelButton lay out around the avatar (on scene load).
+        // No avatar here: Brainette fades out of the synopsis instead. Hidden
+        // before TextBoxTheme lays out (on scene load), so the scenario box
+        // takes its space.
         if (TestGroups.IsEnabled(Feature.JarAvatar))
-            JarBrainy.ApplyAvatar(GameObject.Find("Avatar"));
+            GameObject.Find("Avatar")?.SetActive(false);
     }
 
     void Update()
