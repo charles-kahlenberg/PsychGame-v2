@@ -13,6 +13,7 @@ using UnityEngine.UI;
 //  3. The pile charges up: it draws in tighter and tighter while a handful
 //     of the cards on top shake harder and harder and the screen dims. Then it bursts outwards
 //     as the screen flashes white, and the white fades away to show the menu.
+// A click anywhere skips to the white, which then fades faster to the menu.
 // Once a session, on the first scene only: back at the menu later, there's
 // no intro. ClickLogger holds the username prompt until it's done (Playing).
 //
@@ -55,6 +56,7 @@ public class MenuIntro : MaskableGraphic
     private const float FlashIn = 0.55f;
     private const float WhiteHold = 0.3f;
     private const float FadeOut = 1.4f;
+    private const float SkipFadeOut = 0.6f;   // the white's fade after a click skips the intro
 
     private const int SortingOrder = 900; // over the scene, under SceneTransition's fade
     private const string ShaderResource = "MenuCards";
@@ -87,6 +89,7 @@ public class MenuIntro : MaskableGraphic
     private Texture2D _vignetteTexture;
     private float _time;
     private float _chargeStart, _burstStart, _whiteEnd;
+    private float _fadeOut = FadeOut;
 
     public override Texture mainTexture => _atlas;
 
@@ -111,7 +114,7 @@ public class MenuIntro : MaskableGraphic
         Color blue = menuLook.GetColor("_BackColor");
         int atlasCards = Mathf.RoundToInt(menuLook.GetFloat("_CardCount"));
         Texture2D vignetteTexture = VignetteTexture(menuLook.GetColor("_VignetteColor"),
-            menuLook.GetFloat("_VignetteStart"), menuLook.GetFloat("_VignetteSoftness"));
+            menuLook.GetFloat("_VignetteStart"), menuLook.GetFloat("_VignetteSoftness"), IntroVignette);
         Destroy(menuLook);
 
         var go = new GameObject("MenuIntro");
@@ -150,7 +153,8 @@ public class MenuIntro : MaskableGraphic
 
     // The menu's vignette (MenuCards.shader, at its default screen-shaped
     // Roundness) as a texture stretched over the screen, over the cards.
-    private static Texture2D VignetteTexture(Color color, float start, float softness)
+    // MenuNewGameTransition lays it over its falling cards too.
+    internal static Texture2D VignetteTexture(Color color, float start, float softness, float strength)
     {
         const int size = 256;
         var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
@@ -164,7 +168,7 @@ public class MenuIntro : MaskableGraphic
         for (int x = 0; x < size; x++)
         {
             float fromCentre = (new Vector2(x + 0.5f, y + 0.5f) / size * 2f - Vector2.one).magnitude;
-            color.a = IntroVignette * Mathf.SmoothStep(0f, 1f, (fromCentre - start) / softness);
+            color.a = strength * Mathf.SmoothStep(0f, 1f, (fromCentre - start) / softness);
             pixels[y * size + x] = color;
         }
         texture.SetPixels32(pixels);
@@ -296,6 +300,13 @@ public class MenuIntro : MaskableGraphic
         // than skipping part of it.
         _time += Mathf.Min(Time.unscaledDeltaTime, 1f / 30f);
 
+        // A click (or tap) skips to the white.
+        if (_time < _whiteEnd && Input.GetMouseButtonDown(0))
+        {
+            _time = _whiteEnd;
+            _fadeOut = SkipFadeOut;
+        }
+
         float flashUp = Mathf.SmoothStep(0f, 1f, (_time - _burstStart - FlashDelay) / FlashIn);
         if (_time < _whiteEnd)
         {
@@ -314,7 +325,7 @@ public class MenuIntro : MaskableGraphic
             _cards = null;
             SetVerticesDirty();
         }
-        float fade = (_time - _whiteEnd) / FadeOut;
+        float fade = (_time - _whiteEnd) / _fadeOut;
         SetAlpha(_flash, 1f - Mathf.SmoothStep(0f, 1f, fade));
         if (fade >= 1f)
         {

@@ -11,8 +11,9 @@ using UnityEngine.UI;
 //
 // The shader also lights the middle of the screen, and the title and
 // buttons cast drop shadows onto the cards. This component, on the wall,
-// tells it where the buttons are every frame, so their shadows follow them
-// (e.g. as they pop on hover).
+// tells it where they are every frame, so their shadows follow them
+// (e.g. as the buttons pop on hover, or everything slides off for
+// MenuNewGameTransition).
 public class MenuCardBackground : MonoBehaviour
 {
     private const string SceneName = "SplashScene";
@@ -31,12 +32,16 @@ public class MenuCardBackground : MonoBehaviour
     private static readonly int ButtonCountId = Shader.PropertyToID("_ButtonCount");
 
     private const int MaxButtons = 8; // the shader's _Buttons array
-    // The visible button within each button image (424 x 112 of 445 x 133).
-    private const float VisibleWidth = 0.953f, VisibleHeight = 0.84f;
+    // The visible button within each button image (424 x 112 of 445 x 133),
+    // unless MenuButtonPlates has swapped the images.
+    // Set in ApplyTo: reading the test group from a field initializer runs
+    // in the constructor, where Unity forbids EditorPrefs.
+    private float _visibleWidth = 0.953f, _visibleHeight = 0.84f;
     private static readonly Vector3[] Corners = new Vector3[4];
 
     private Material _material;
     private RectTransform[] _buttons;
+    private RectTransform _title;
     private readonly Vector4[] _buttonRects = new Vector4[MaxButtons];
 
     public static bool Replaces(Scene scene)
@@ -84,22 +89,34 @@ public class MenuCardBackground : MonoBehaviour
             foreach (Transform child in canvas.transform)
                 if (child != panel && child.name != "ButtonContainer") child.gameObject.SetActive(false);
 
-            AddTitle(canvas, material);
-
             var lighting = panel.gameObject.AddComponent<MenuCardBackground>();
             lighting._material = material;
+            lighting._title = AddTitle(canvas, material);
+            if (MenuButtonPlates.Enabled)
+            {
+                lighting._visibleWidth = MenuButtonPlates.VisibleWidth;
+                lighting._visibleHeight = MenuButtonPlates.VisibleHeight;
+            }
             Transform container = canvas.transform.Find("ButtonContainer");
             lighting._buttons = container == null ? new RectTransform[0] :
                 System.Array.ConvertAll(container.GetComponentsInChildren<Button>(true), b => (RectTransform)b.transform);
         }
     }
 
-    // Each button's centre and half-size, in screen heights from the
-    // screen's centre (the shader's units). The canvas is screen-space
-    // overlay, so world space is screen pixels.
+    // Each button's centre and half-size, and the title's centre and size,
+    // in screen heights from the screen's centre (the shader's units). The
+    // canvas is screen-space overlay, so world space is screen pixels.
     private void LateUpdate()
     {
         float width = Screen.width, height = Screen.height;
+        if (_title != null)
+        {
+            _title.GetWorldCorners(Corners);
+            Vector2 min = Corners[0], max = Corners[2];
+            Vector2 centre = 0.5f * (min + max);
+            _material.SetVector(TitleRectId, new Vector4((centre.x - 0.5f * width) / height, (centre.y - 0.5f * height) / height,
+                                                         (max.x - min.x) / height, (max.y - min.y) / height));
+        }
         int count = 0;
         foreach (RectTransform button in _buttons)
         {
@@ -108,7 +125,7 @@ public class MenuCardBackground : MonoBehaviour
             Vector2 min = Corners[0], max = Corners[2];
             Vector2 centre = 0.5f * (min + max), half = 0.5f * (max - min);
             _buttonRects[count++] = new Vector4((centre.x - 0.5f * width) / height, (centre.y - 0.5f * height) / height,
-                                                half.x * VisibleWidth / height, half.y * VisibleHeight / height);
+                                                half.x * _visibleWidth / height, half.y * _visibleHeight / height);
         }
         _material.SetVectorArray(ButtonsId, _buttonRects);
         _material.SetFloat(ButtonCountId, count);
@@ -116,11 +133,11 @@ public class MenuCardBackground : MonoBehaviour
 
     // The new title art, drawn last so it's above everything, the vignette
     // (on the wall) included. The wall's shader draws its shadow on the
-    // cards, so it's told where the title is.
-    private static void AddTitle(Canvas canvas, Material wall)
+    // cards, so it's given the art here and told where it is in LateUpdate.
+    private static RectTransform AddTitle(Canvas canvas, Material wall)
     {
         var sprite = Resources.Load<Sprite>(TitleResource);
-        if (sprite == null) return;
+        if (sprite == null) return null;
 
         var go = new GameObject("Title", typeof(RectTransform), typeof(Image));
         go.transform.SetParent(canvas.transform, false);
@@ -135,9 +152,7 @@ public class MenuCardBackground : MonoBehaviour
         image.sprite = sprite;
         image.raycastTarget = false;
 
-        // In screen heights; the canvas scales to match the screen's height.
-        float referenceHeight = canvas.GetComponent<CanvasScaler>().referenceResolution.y;
         wall.SetTexture(TitleTexId, sprite.texture);
-        wall.SetVector(TitleRectId, new Vector4(0f, TitleY, rt.sizeDelta.x, rt.sizeDelta.y) / referenceHeight);
+        return rt;
     }
 }

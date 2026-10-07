@@ -29,6 +29,13 @@ Shader "PsychGame/MenuCards"
         _Speed ("Scroll Speed (card heights/s)", Float) = 0.15
         _Stagger ("Column Stagger (cards)", Float) = 0.25
 
+        // For MenuNewGameTransition (Feature.MenuNewGameTransition), whose
+        // cards fall away: 0 hides the grid, leaving the gap colour; and a
+        // copy of this material with Loose on draws the falling cards
+        // themselves, each a quad whose UVs pick its card from the atlas.
+        [HideInInspector] _ShowCards ("Show Cards", Float) = 1
+        [HideInInspector] _Loose ("Loose Cards", Float) = 0
+
         // A white light at the centre of the screen, brightening what's near it.
         _LightColor ("Centre Light Colour", Color) = (1, 1, 1, 1)
         _LightStrength ("Centre Light Strength", Range(0, 1)) = 0.06
@@ -139,6 +146,8 @@ Shader "PsychGame/MenuCards"
             float _Gap;
             float _Speed;
             float _Stagger;
+            float _ShowCards;
+            float _Loose;
             float4 _ShadowColor;
             float _ShadowStrength;
             float _ShadowSoftness;
@@ -231,6 +240,13 @@ Shader "PsychGame/MenuCards"
 
             fixed4 frag(v2f IN) : SV_Target
             {
+                if (_Loose > 0.5)
+                {
+                    fixed4 loose = tex2D(_CardTex, IN.uv);
+                    loose.rgb = lerp(dot(loose.rgb, float3(0.2126, 0.7152, 0.0722)), loose.rgb, _CardSaturation);
+                    return loose * IN.color;
+                }
+
                 // In card heights, with x stretched to the screen's shape so
                 // cards keep their proportions. The quad fills the screen.
                 float aspect = _ScreenParams.x / _ScreenParams.y;
@@ -254,7 +270,7 @@ Shader "PsychGame/MenuCards"
                 float2 uv = float2((index + saturate(local.x)) / _CardCount, saturate(local.y));
                 float2 gradScale = 1.0 / float2(cardWidth * _CardCount, 1.0);
                 fixed4 card = tex2Dgrad(_CardTex, uv, ddx(p) * gradScale, ddy(p) * gradScale);
-                card.a *= onCard;
+                card.a *= onCard * _ShowCards;
                 card.rgb = lerp(dot(card.rgb, float3(0.2126, 0.7152, 0.0722)), card.rgb, _CardSaturation);
 
                 // In screen heights from the centre, where the light is.

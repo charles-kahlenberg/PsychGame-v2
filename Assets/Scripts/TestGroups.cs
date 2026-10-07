@@ -27,6 +27,8 @@ public enum Feature
     GradingTransition,        // submitting and leaving the grading screen no longer fade to black: the screen's elements slide out while the shader background turns the next screen's (excited red for grading, the synopsis's excited blue after it), then the next screen loads straight in and its elements slide in (GradingTransition, ShaderBackground, SceneTransition, GameManager, GradingManager, IntroductionManager)
     MenuCardBackground,       // the title screen's room wall becomes Resources/MenuCards, columns of card backs (Resources/MenuCardBacks) scrolling up and down, alternating by column; the rest of the title art (glow, jar, players, title) is hidden so only the cards and buttons show, with the new title (Resources/MenuTitle) on top above them (MenuCardBackground)
     MenuIntro,                // opening on the title screen, card backs swirl in from every edge into a messy pile on the menu's blue, which bursts outwards as the screen flashes white and fades to the menu; the username prompt waits for it (MenuIntro, ClickLogger)
+    MenuButtonPlates,         // the title screen's buttons become blank stone plates (Resources/MenuButton) with their labels written on in Righteous (Resources/Fonts/Righteous) (MenuButtonPlates, MenuCardBackground)
+    MenuNewGameTransition,    // New Game skips the loading screen: the title and the other buttons slide off, then New Game, then the menu's card backs drop like sheets of paper, drifting and leaning off to one side over each other, until only the blue is left; the synopsis loads under it and the blue fades into the synopsis's background turning excited, then the synopsis begins (MenuNewGameTransition, MenuCards shader, MenuCardBackground, SplashUI, IntroductionManager)
 }
 
 // The study's conditions, all in one place: which features each test group
@@ -65,6 +67,8 @@ public static class TestGroups
         Feature.GradingTransition,
         Feature.MenuCardBackground,
         Feature.MenuIntro,
+        Feature.MenuButtonPlates,
+        Feature.MenuNewGameTransition,
     };
 
     private static readonly Dictionary<int, HashSet<Feature>> Groups = new Dictionary<int, HashSet<Feature>>

@@ -31,6 +31,9 @@ public class SplashUI : MonoBehaviour
         // Delete temp save if it exists
         SaveManager.Delete(-1);
 
+        // Group 2: the menu flies apart and the synopsis comes up, no loading screen.
+        if (MenuNewGameTransition.Play(gameObject.scene)) return;
+
         // Load loading screen, GameManager will generate new scenario & cards
         SceneTransition.Load("LoadingScene");
     }
