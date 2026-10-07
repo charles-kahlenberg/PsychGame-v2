@@ -8,10 +8,11 @@ using UnityEngine.UI;
 //  1. The title slides up and the other buttons slide off to the sides; New
 //     Game is left alone for a moment, then slides off too while the centre
 //     light fades.
-//  2. The card backs drop: each lets go of the grid, falls like a sheet of
-//     paper (speeding up to a gentle top speed, swaying and rocking) and
-//     drifts over to one side, leaning that way, so they tumble over each
-//     other until only the blue is left.
+//  2. The card backs drop: gravity takes them all at once, the ones above
+//     the screen too, so the whole wall falls straight down through it. Each
+//     lets go a touch late or early, falls a little faster or slower, and
+//     drifts and turns slightly, so they slip over each other on the way
+//     out. Then only the blue is left.
 //  3. The synopsis loads under that still blue, so the load's stall shows
 //     nothing, with the menu kept over it (Covering). The menu fades away as
 //     the synopsis's background comes up from calm to its excited look, and
@@ -31,16 +32,14 @@ public class MenuNewGameTransition : MaskableGraphic
     private const float NewGameHold = 0.1f;
     private const float RevealTime = 1.8f;     // the menu fades into the synopsis's background
 
-    // The fall, in screen heights and seconds; "each" values vary per card.
-    private const float Gravity = 3f;          // speeding up at this...
-    private const float FallSpeed = 0.9f;      // ...to about this, held back by the air
-    private const float ReleaseSpread = 0.2f;  // the cards let go up to this long after the first
-    private const float Drift = 0.35f;         // speed sideways, all the same way, each 0.6-1.4x
-    private const float Lean = 35f;            // degrees each leans the way it drifts, each 0.5-1.5x
-    private const float Sway = 0.06f;          // side to side, each 0.6-1.4x this far,
-    private const float SwayRate = 4f;         // this fast (radians a second), each 0.7-1.3x,
-    private const float SwayRock = 18f;        // rocking this many degrees each way as it swings
-    private const float Settle = 0.3f;         // how long (about) the drift and sway take to build
+    // The fall, in screen heights, seconds and degrees; each card's own
+    // values are picked within these ranges.
+    private const float Gravity = 2.2f;
+    private const float GravityMin = 0.9f, GravityMax = 1.15f; // times Gravity
+    private const float ReleaseSpread = 0.12f; // the cards let go up to this long after the first
+    private const float Drift = 0.04f;         // sideways, up to this fast either way
+    private const float Spin = 18f;            // turning, up to this fast either way (degrees a second)
+    private const float Above = 1f;            // the wall above the screen falls in too, this much of it
     private const float MaxFallTime = 6f;      // in case a card never leaves
 
     private const int CoverSortingOrder = 200; // over the intro, below SceneTransition's fade
@@ -58,14 +57,13 @@ public class MenuNewGameTransition : MaskableGraphic
     {
         public Vector2 start;  // its centre on the grid, in screen heights from the screen's centre
         public int atlasIndex;
-        public float release, drift, lean, sway, swayRate, swayPhase;
+        public float release, gravity, drift, spin;
     }
 
     private Material _wall;
     private Card[] _cards;
     private Vector2 _cardHalfSize; // screen heights
     private int _atlasCards;
-    private float _side;           // 1 right, -1 left
     private float _fallTime;
     private Texture2D _vignetteTexture;
 
@@ -214,14 +212,13 @@ public class MenuNewGameTransition : MaskableGraphic
         material = new Material(_wall) { name = "MenuCards Loose (runtime)" };
         material.SetFloat(LooseId, 1f);
         _cardHalfSize = 0.5f * cardHeight * new Vector2(cardWidth, 1f);
-        _side = Random.value < 0.5f ? 1f : -1f;
 
-        // Every card on screen, worked out as MenuCards.shader does, in card
-        // heights from the screen's bottom left. Its clock is the time since
-        // the scene loaded.
+        // Every card on screen, and those just above it, worked out as
+        // MenuCards.shader does, in card heights from the screen's bottom
+        // left. Its clock is the time since the scene loaded.
         Rect rect = rectTransform.rect;
         float aspect = rect.width / rect.height;
-        float width = aspect / cardHeight, height = 1f / cardHeight;
+        float width = aspect / cardHeight, height = 1f / cardHeight, top = (1f + Above) / cardHeight;
         Vector2 cell = new Vector2(cardWidth, 1f) + Vector2.one * gap;
         float time = Time.timeSinceLevelLoad;
 
@@ -230,27 +227,25 @@ public class MenuNewGameTransition : MaskableGraphic
         {
             float direction = column % 2 == 0 ? 1f : -1f;
             float offset = direction * speed * time + column * stagger * cell.y;
-            int lastRow = Mathf.CeilToInt((height + offset) / cell.y);
+            int lastRow = Mathf.CeilToInt((top + offset) / cell.y);
             for (int row = Mathf.FloorToInt((offset - 1f) / cell.y); row <= lastRow; row++)
             {
                 float bottom = row * cell.y + 0.5f * gap - offset;
-                if (bottom >= height || bottom + 1f <= 0f) continue;
+                if (bottom >= top || bottom + 1f <= 0f) continue;
                 cards.Add(new Card
                 {
                     start = new Vector2((column + 0.5f) * cell.x * cardHeight - 0.5f * aspect,
                                         ((row + 0.5f) * cell.y - offset) * cardHeight - 0.5f),
                     atlasIndex = CardAt(column, row),
                     release = Random.Range(0f, ReleaseSpread),
-                    drift = Drift * Random.Range(0.6f, 1.4f),
-                    lean = Lean * Random.Range(0.5f, 1.5f),
-                    sway = Sway * Random.Range(0.6f, 1.4f),
-                    swayRate = SwayRate * Random.Range(0.7f, 1.3f),
-                    swayPhase = Random.Range(0f, 2f * Mathf.PI),
+                    gravity = Gravity * Random.Range(GravityMin, GravityMax),
+                    drift = Random.Range(-Drift, Drift),
+                    spin = Random.Range(-Spin, Spin),
                 });
             }
         }
 
-        // Each on a random layer, so they fall over each other every which way.
+        // Each on a random layer, so the ones that catch up pass over or under.
         for (int i = cards.Count - 1; i > 0; i--)
         {
             int j = Random.Range(0, i + 1);
@@ -270,18 +265,12 @@ public class MenuNewGameTransition : MaskableGraphic
         overlay.texture = _vignetteTexture;
     }
 
-    // Where a card is, and its turn in degrees, this long after it let go.
-    private void Place(Card c, float age, out Vector2 position, out float rotation)
+    // Where a card is, and its turn in degrees, at this point in the fall.
+    private static void Place(Card c, float time, out Vector2 position, out float rotation)
     {
-        // Gravity against the air's drag: soon falling at a steady speed.
-        float fall = FallSpeed * age - FallSpeed * FallSpeed / Gravity * (1f - Mathf.Exp(-Gravity * age / FallSpeed));
-        // The drift and sway build from rest, so nothing jumps as it lets go
-        // (the drift's distance is its speed built up the same way).
-        float build = 1f - Mathf.Exp(-age / Settle);
-        float swing = c.swayRate * age + c.swayPhase;
-        position = c.start + new Vector2(_side * c.drift * (age - Settle * build) + c.sway * build * Mathf.Sin(swing), -fall);
-        // Leaning, and dipping, the way it's heading.
-        rotation = -build * (_side * c.lean + SwayRock * Mathf.Cos(swing));
+        float age = Mathf.Max(0f, time - c.release);
+        position = c.start + new Vector2(c.drift * age, -0.5f * c.gravity * age * age);
+        rotation = c.spin * age;
     }
 
     private bool AllGone()
@@ -290,7 +279,7 @@ public class MenuNewGameTransition : MaskableGraphic
         float halfWidth = 0.5f * rect.width / rect.height, reach = _cardHalfSize.magnitude;
         foreach (Card c in _cards)
         {
-            Place(c, Mathf.Max(0f, _fallTime - c.release), out Vector2 p, out _);
+            Place(c, _fallTime, out Vector2 p, out _);
             if (p.y + reach > -0.5f && Mathf.Abs(p.x) - reach < halfWidth) return false;
         }
         return true;
@@ -305,7 +294,7 @@ public class MenuNewGameTransition : MaskableGraphic
         Vector2 halfSize = _cardHalfSize * rect.height;
         foreach (Card c in _cards)
         {
-            Place(c, Mathf.Max(0f, _fallTime - c.release), out Vector2 p, out float rotation);
+            Place(c, _fallTime, out Vector2 p, out float rotation);
             AddCard(vh, rect.center + p * rect.height, rotation * Mathf.Deg2Rad, halfSize, c.atlasIndex);
         }
     }
