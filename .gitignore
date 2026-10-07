@@ -79,3 +79,7 @@ crashlytics-build.properties
 
 # Exported research data - contains real participant data, never commit
 CloudflareWorker/psych-log/scripts/exports/
+
+# Dynamic TMP fonts: Unity rewrites their glyph atlas (~90k lines) on every
+# play and build. Kept locally, not tracked.
+/Assets/Resources/Fonts/AtkinsonHyperlegibleNext-* SDF.asset
