@@ -3,7 +3,7 @@ Action Potential - Electrical firing of neurons
 Addiction - Psychological or physical dependence
 Adolescence - Age where puberty starts
 Albert Bandura - Coined social learning theory, which states that observations and modeling play a role in how people learn
-All-or-none Principle - Neurons need a certain level of signal in order to fire, and when that level is reached, they fire a prescribed amount
+All-or-None Principle - Neurons need a certain level of signal in order to fire, and when that level is reached, they fire a prescribed amount
 Amnesia - An inability to either create new memories or to retrieve old memories as a result of brain injury or disease
 Attachment - Our strong early emotional development between infants and their caregivers. Secure attachments lead to later psychological well-being.
 Basilar Membrane - The membrane that goes through the cochlea, where our hair cells are placed
@@ -26,7 +26,7 @@ Demand Characteristics - The participant behaves in a particular way in an exper
 Dependent Variable - The variable that the experimenter measures
 Depth Perception - Seeing in three dimensions
 Dopamine - A neurotransmitter that makes you feel good or rewarded; also involved in motor control
-Double-blind Study - Neither the participant nor the researcher knows which group is the treatment or the placebo
+Double-Blind Study - Neither the participant nor the researcher knows which group is the treatment or the placebo
 Dreams - Visual experience during sleep
 Egocentrism - Seeing only from one's own perspective
 Elizabeth Loftus - Memory researcher who did much work examining the fallibility of eyewitness testimony and recovered memories
@@ -46,7 +46,7 @@ Imprinting - A deep level of social bonding to a caregiver that is innate and ge
 Independent Variable - The variable that the experimenter manipulates in a true experiment
 Learned Helplessness - A condition where individuals believe they have no control over their situation
 Limbic System - The forebrain structures regulate automatic and endocrine functioning, as well as aid in the functions of memory and emotion
-Long-term Memory - Has the capacity to store large amounts of information that can retrieved into working memory
+Long-Term Memory - Has the capacity to store large amounts of information that can retrieved into working memory
 Mindfulness - The practice of paying attention to the present moment to promote mental clarity and well-being
 Mnemonic Device - Method to help remember
 Neurons - The special cells in our body that can quickly communicate with one another that underlie all of our sensations, thinking, and behavior
@@ -82,7 +82,7 @@ Temperament - Individual response style to environmental stimulus
 Thalamus - The forebrain structure that gets information from the senses and then sends the information to the cerebral cortex to be processed
 Theory of Mind - Ability to understand that others have mental states that may differ from your own
 Transduction - The process by which our sensory receptor neurons change an external energy source into neuronal energy
-Variable-ratio Schedule - A pattern of reinforcement is based on the number of responses needed for the reinforcement to change
+Variable-Ratio Schedule - A pattern of reinforcement is based on the number of responses needed for the reinforcement to change
 Vicarious Reinforcement - Behavior changes based on observing others being rewarded or punished
 Wilhelm Wundt - Created first lab for psychological research in 1879, founder of the structuralist movement
 Working Memory - Responsible for temporarily holding and manipulating both visual and verbal information needed for complex tasks

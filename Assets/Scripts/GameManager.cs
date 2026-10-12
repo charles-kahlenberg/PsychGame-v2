@@ -24,7 +24,7 @@ public class GameManager : MonoBehaviour
     public List<ScenarioResponse> responseHistory = new List<ScenarioResponse>();
 
     private List<string> allVocab = new List<string>();
-    private Dictionary<string, string> termToDefinition = new Dictionary<string, string>();
+    private Dictionary<string, string> termToDefinition = new Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase); // saves made before a term's capitalization was fixed still find it
 
     [Header("Card Refresh")]
     public Button refreshButton;

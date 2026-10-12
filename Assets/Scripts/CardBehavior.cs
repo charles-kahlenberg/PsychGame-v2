@@ -604,7 +604,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         rect.sizeDelta = new Vector2(Mathf.Max(rect.sizeDelta.x, DefinitionButtonWidth), rect.sizeDelta.y);
 
         // The button always shows under the term, so the term's box stops
-        // just above it: a three-line term like "Variable-ratio Schedule"
+        // just above it: a three-line term like "Variable-Ratio Schedule"
         // shrinks to fit instead of running into the button.
         if (frontText != null)
         {
