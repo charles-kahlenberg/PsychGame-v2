@@ -76,3 +76,4 @@ MonoBehaviour:
     frontLayers:
     - sprite: {fileID: 21300000, guid: 7f7015a3fd5740a6bd141a3a20ac3640, type: 3}
       drift: 0
+    icon: {fileID: 21300000, guid: e7925a283bc2415aaccff43c82eb718b, type: 3}

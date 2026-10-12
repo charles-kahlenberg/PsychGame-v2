@@ -431,8 +431,9 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
     private Color? plainBodyColor; // the card's own color, from before any art was applied
 
     // Dresses the card in one area's art, replacing whatever it wore for the
-    // last hand. Null puts the plain card back.
-    public void ShowArt(CardArt.AreaArt art)
+    // last hand, with the icons of all the term's areas in the front's
+    // corner box. Null puts the plain card back.
+    public void ShowArt(CardArt.AreaArt art, Sprite[] icons = null)
     {
         driftLayers.Clear();
 
@@ -457,10 +458,53 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
 
         int back = SetArtLayers(backFace, art?.backLayers, cardSize);
         int front = SetArtLayers(frontFace, art?.frontLayers, cardSize);
+        SetIcons(art != null ? icons : null, front, cardSize);
 
         // With art on both sides, the art is the card: the plain card image
         // goes invisible but still catches clicks (it's the Button's graphic).
         if (body != null) body.color = back > 0 && front > 0 ? Color.clear : plainBodyColor.Value;
+    }
+
+    // The icon box drawn into the front art (Art/Cards/CardFront.png), inside
+    // its border, in that image's pixels from its top-left corner.
+    private static readonly Vector2 FrontArtSize = new Vector2(284f, 380f);
+    private static readonly Rect IconBox = new Rect(12f, 12f, 122f, 28f);
+    private const float IconPad = 3f; // front-art pixels around and between icons
+
+    private readonly System.Collections.Generic.List<Image> iconImages =
+        new System.Collections.Generic.List<Image>();
+
+    // Lines the icons up left to right in the front's icon box, just above
+    // the front art layers; icons left over from the last hand are hidden.
+    void SetIcons(Sprite[] icons, int sibling, Vector2 cardSize)
+    {
+        if (frontFace == null) return;
+
+        int count = icons?.Length ?? 0;
+        float sx = cardSize.x / FrontArtSize.x, sy = cardSize.y / FrontArtSize.y;
+        float height = IconBox.height - 2f * IconPad;
+        float x = IconBox.xMin + IconPad;
+
+        for (int i = 0; i < Mathf.Max(count, iconImages.Count); i++)
+        {
+            if (i >= count)
+            {
+                if (iconImages[i].gameObject.activeSelf) iconImages[i].gameObject.SetActive(false);
+                continue;
+            }
+
+            Image image = i < iconImages.Count ? iconImages[i] : NewArtLayer(frontFace, iconImages);
+            float width = height * icons[i].rect.width / icons[i].rect.height;
+
+            var rect = image.rectTransform;
+            rect.SetSiblingIndex(sibling + i);
+            rect.sizeDelta = new Vector2(width * sx, height * sy);
+            rect.anchoredPosition = new Vector2((x + width / 2f) * sx - cardSize.x / 2f, cardSize.y / 2f - IconBox.center.y * sy);
+
+            if (image.sprite != icons[i]) image.sprite = icons[i];
+            if (!image.gameObject.activeSelf) image.gameObject.SetActive(true);
+            x += width + IconPad;
+        }
     }
 
     static Sprite FirstSprite(CardArt.Layer[] layers)

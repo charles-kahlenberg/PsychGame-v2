@@ -220,7 +220,7 @@ public class GameManager : MonoBehaviour
 
             PsychArea? area = TermAreas.PickArea(currentCards[i]);
             if (area == null) Debug.LogWarning($"[GameManager] No area listed for \"{currentCards[i]}\" in term_areas.txt.");
-            card.ShowArt(art.For(area));
+            card.ShowArt(art.For(area), art.IconsFor(TermAreas.Get(currentCards[i])));
         }
     }
 

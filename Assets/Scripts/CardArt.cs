@@ -36,6 +36,9 @@ public class CardArt : ScriptableObject
 
         [Tooltip("The face-up side (behind the term), bottom layer first.")]
         public Layer[] frontLayers;
+
+        [Tooltip("Small icon for the box in the front's top-left corner. Every card shows the icons of all its term's areas.")]
+        public Sprite icon;
     }
 
     [Tooltip("One entry per area of psychology. The first entry is also used for any term with no area listed.")]
@@ -56,5 +59,16 @@ public class CardArt : ScriptableObject
             Debug.LogWarning($"[CardArt] No art for {area.Value}; using {areas[0].area}.");
         }
         return areas[0];
+    }
+
+    // The icons for each of the given areas that has one, in order.
+    public Sprite[] IconsFor(PsychArea[] termAreas)
+    {
+        var icons = new System.Collections.Generic.List<Sprite>();
+        if (areas == null) return icons.ToArray();
+        foreach (var area in termAreas)
+            foreach (var a in areas)
+                if (a != null && a.area == area && a.icon != null) icons.Add(a.icon);
+        return icons.ToArray();
     }
 }
