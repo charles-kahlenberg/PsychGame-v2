@@ -602,7 +602,23 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
 
         var rect = (RectTransform)helpButton.transform;
         rect.sizeDelta = new Vector2(Mathf.Max(rect.sizeDelta.x, DefinitionButtonWidth), rect.sizeDelta.y);
+
+        // The button always shows under the term, so the term's box stops
+        // just above it: a three-line term like "Variable-ratio Schedule"
+        // shrinks to fit instead of running into the button.
+        if (frontText != null)
+        {
+            var term = frontText.rectTransform;
+            var parent = (RectTransform)term.parent;
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            float buttonTop = parent.InverseTransformPoint(corners[1]).y;
+            float bottom = buttonTop + TermButtonGap - Mathf.Lerp(parent.rect.yMin, parent.rect.yMax, term.anchorMin.y);
+            term.offsetMin = new Vector2(term.offsetMin.x, Mathf.Max(term.offsetMin.y, bottom));
+        }
     }
+
+    private const float TermButtonGap = 3f;
 
     // PUBLIC so you can wire it in Button OnClick exactly like BrainHint.OnBrainClicked.
     // Group 1 asks the AI for help with the concept; group 2 shows the definition.
