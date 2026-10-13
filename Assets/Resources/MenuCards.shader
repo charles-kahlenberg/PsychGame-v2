@@ -28,6 +28,11 @@ Shader "PsychGame/MenuCards"
         _Gap ("Gap (card heights)", Float) = 0.056
         _Speed ("Scroll Speed (card heights/s)", Float) = 0.15
         _Stagger ("Column Stagger (cards)", Float) = 0.25
+        // The scroll's clock, the seconds since the menu loaded, set every
+        // frame by MenuCardBackground.cs. Not _Time: URP sets that to the
+        // seconds since the game started, so MenuNewGameTransition, working
+        // out where each card was to drop it, put them somewhere else.
+        [HideInInspector] _ScrollTime ("Scroll Time", Float) = 0
 
         // For MenuNewGameTransition (Feature.MenuNewGameTransition), whose
         // cards fall away: 0 hides the grid, leaving the gap colour; and a
@@ -146,6 +151,7 @@ Shader "PsychGame/MenuCards"
             float _Gap;
             float _Speed;
             float _Stagger;
+            float _ScrollTime;
             float _ShowCards;
             float _Loose;
             float4 _ShadowColor;
@@ -234,7 +240,7 @@ Shader "PsychGame/MenuCards"
             {
                 column = floor(p.x / cell.x);
                 float direction = fmod(abs(column), 2.0) < 0.5 ? 1.0 : -1.0;
-                p.y += direction * _Speed * _Time.y + column * _Stagger * cell.y;
+                p.y += direction * _Speed * _ScrollTime + column * _Stagger * cell.y;
                 return p;
             }
 

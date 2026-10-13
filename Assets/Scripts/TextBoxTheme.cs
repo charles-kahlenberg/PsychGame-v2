@@ -38,7 +38,7 @@ public static class TextBoxTheme
     public static readonly Color Edge = new Color32(0x2E, 0x35, 0x66, 0xFF);
     public static readonly Color Accent = new Color32(0x4A, 0x54, 0x94, 0xFF);
     private static readonly Color PlaceholderInk = new Color32(0x6B, 0x6F, 0x85, 0xFF);
-    private static readonly Color OverlayTint = new Color(0.05f, 0.06f, 0.12f, 0.6f);
+    public static readonly Color OverlayTint = new Color(0.05f, 0.06f, 0.12f, 0.6f);
 
     private static readonly string[] SceneNames =
         { "GameScene", "IntroductionScene", "RulesScene", "GradingScene", "ReviewScene" };
@@ -312,24 +312,10 @@ public static class TextBoxTheme
         }
 
         var nameBox = prompt.Find("SaveNameInput") as RectTransform;
-        var input = nameBox != null ? nameBox.GetComponent<TMP_InputField>() : null;
-        if (input != null)
+        if (nameBox != null && nameBox.GetComponent<TMP_InputField>() != null)
         {
             Center(nameBox, new Vector2(0f, 55f), new Vector2(340f, 36f));
-            TextPanel.AddPaper(nameBox);
-            if (input.textComponent != null) StyleBodyText(input.textComponent, Regular, ResponseFontSize);
-            if (input.placeholder is TMP_Text placeholder)
-            {
-                StyleBodyText(placeholder, Regular, ResponseFontSize);
-                placeholder.fontStyle = FontStyles.Italic;
-                placeholder.color = PlaceholderInk;
-            }
-            foreach (var t in new[] { input.textComponent, input.placeholder as TMP_Text })
-                if (t != null) t.alignment = TextAlignmentOptions.Left; // vertically centered in the box
-            input.customCaretColor = true;
-            input.caretColor = Ink;
-            input.caretWidth = 2;
-            input.selectionColor = new Color(Accent.r, Accent.g, Accent.b, 0.3f);
+            StyleLineInput(nameBox.GetComponent<TMP_InputField>());
         }
 
         foreach (var name in new[] { "Yes", "No" })
@@ -338,6 +324,25 @@ public static class TextBoxTheme
             if (button != null)
                 Center(button, new Vector2(name == "Yes" ? -60f : 60f, 0f), button.sizeDelta);
         }
+    }
+
+    // A one-line paper input box (the save prompt's name, the dictionary's search).
+    public static void StyleLineInput(TMP_InputField input)
+    {
+        TextPanel.AddPaper((RectTransform)input.transform);
+        if (input.textComponent != null) StyleBodyText(input.textComponent, Regular, ResponseFontSize);
+        if (input.placeholder is TMP_Text placeholder)
+        {
+            StyleBodyText(placeholder, Regular, ResponseFontSize);
+            placeholder.fontStyle = FontStyles.Italic;
+            placeholder.color = PlaceholderInk;
+        }
+        foreach (var t in new[] { input.textComponent, input.placeholder as TMP_Text })
+            if (t != null) t.alignment = TextAlignmentOptions.Left; // vertically centered in the box
+        input.customCaretColor = true;
+        input.caretColor = Ink;
+        input.caretWidth = 2;
+        input.selectionColor = new Color(Accent.r, Accent.g, Accent.b, 0.3f);
     }
 
     // Places a box by its middle, relative to its parent's middle.
@@ -445,7 +450,7 @@ public static class TextBoxTheme
         box.gameObject.AddComponent<ScrollbarWhenOverflowing>().Init(input, scrollbar);
     }
 
-    private static void StyleBodyText(TMP_Text text, TMP_FontAsset font, float size)
+    public static void StyleBodyText(TMP_Text text, TMP_FontAsset font, float size)
     {
         text.font = font;
         text.fontSharedMaterial = font.material;

@@ -24,6 +24,14 @@ using UnityEngine.UI;
 // material in its Loose mode so they look the same. On the frame they let go
 // the wall stops drawing its cards (_ShowCards) and its vignette moves to a
 // layer above them. Every timing and look knob is a constant below.
+//
+// Smoothness: the fall's clock steps at most MaxStep a frame, so a stalled
+// frame (the browser now and then gives one of 100-300ms) pauses the cards
+// rather than dropping them the whole way at once, which looked like a
+// glitch. It's well above an ordinary slow frame: capped at 1/30s, a game
+// running near 30fps had every other frame cut short, and the fall juddered
+// all the time. Everything the let-go needs is made on the click, while
+// nothing's moving yet, so that frame does no extra work.
 public class MenuNewGameTransition : MaskableGraphic
 {
     private const float SlideTime = 0.65f;
@@ -42,6 +50,7 @@ public class MenuNewGameTransition : MaskableGraphic
     private const float Spin = 18f;            // turning, up to this fast either way (degrees a second)
     private const float Above = 1f;            // the wall above the screen falls in too, this much of it
     private const float MaxFallTime = 6f;      // in case a card never leaves
+    private const float MaxStep = 0.1f;        // the most the fall moves on in one frame (only stalls are cut)
 
     private const int CoverSortingOrder = 200; // over the intro, below SceneTransition's fade
     private const string NewGameButton = "NewGameButton";
@@ -68,6 +77,7 @@ public class MenuNewGameTransition : MaskableGraphic
     private int _atlasCards;
     private float _fallTime;
     private Texture2D _vignetteTexture;
+    private RawImage _vignette;
 
     // Starts it on the title screen. False when it can't (another group, or
     // the menu's cards aren't there): load the old way.
@@ -109,6 +119,7 @@ public class MenuNewGameTransition : MaskableGraphic
     private IEnumerator Run(Transform canvas)
     {
         GradingTransition.BlockClicks(canvas);
+        Prepare();
         Vector2 size = ((RectTransform)canvas).rect.size;
 
         // 1. The buttons' layout would pull them back mid-slide. Its size
@@ -155,7 +166,7 @@ public class MenuNewGameTransition : MaskableGraphic
         while (_cards != null)
         {
             yield return null;
-            _fallTime += Time.deltaTime;
+            _fallTime += Mathf.Min(Time.deltaTime, MaxStep);
             if (AllGone() || _fallTime > MaxFallTime) _cards = null;
             SetVerticesDirty();
         }
@@ -201,6 +212,19 @@ public class MenuNewGameTransition : MaskableGraphic
 
     // -------------------- THE FALL --------------------
 
+    // What the let-go needs, made on the click (see Smoothness above): the
+    // loose cards' material and the vignette that goes over them, hidden.
+    private void Prepare()
+    {
+        material = new Material(_wall) { name = "MenuCards Loose (runtime)" };
+        _vignetteTexture = MenuIntro.VignetteTexture(_wall.GetColor("_VignetteColor"),
+            _wall.GetFloat("_VignetteStart"), _wall.GetFloat("_VignetteSoftness"), _wall.GetFloat(VignetteStrengthId));
+        _vignette = Layer<RawImage>(transform, "Vignette");
+        _vignette.raycastTarget = false;
+        _vignette.texture = _vignetteTexture;
+        _vignette.enabled = false;
+    }
+
     private void LetGo()
     {
         var atlas = (Texture2D)_wall.GetTexture("_CardTex");
@@ -211,13 +235,14 @@ public class MenuNewGameTransition : MaskableGraphic
         float stagger = _wall.GetFloat("_Stagger");
         float cardWidth = atlas.width / (float)(_atlasCards * atlas.height);
 
-        material = new Material(_wall) { name = "MenuCards Loose (runtime)" };
+        material.CopyPropertiesFromMaterial(_wall); // as the wall is now, its light faded out
         material.SetFloat(LooseId, 1f);
         _cardHalfSize = 0.5f * cardHeight * new Vector2(cardWidth, 1f);
 
         // Every card on screen, and those just above it, worked out as
         // MenuCards.shader does, in card heights from the screen's bottom
-        // left. Its clock is the time since the scene loaded.
+        // left. Its clock is the time since the scene loaded, the one
+        // MenuCardBackground gives the shader (_ScrollTime) every frame.
         Rect rect = rectTransform.rect;
         float aspect = rect.width / rect.height;
         float width = aspect / cardHeight, height = 1f / cardHeight, top = (1f + Above) / cardHeight;
@@ -260,13 +285,8 @@ public class MenuNewGameTransition : MaskableGraphic
 
         // The wall's vignette darkened its cards too, so it goes over these.
         _wall.SetFloat(ShowCardsId, 0f);
-        float vignette = _wall.GetFloat(VignetteStrengthId);
         _wall.SetFloat(VignetteStrengthId, 0f);
-        _vignetteTexture = MenuIntro.VignetteTexture(_wall.GetColor("_VignetteColor"),
-            _wall.GetFloat("_VignetteStart"), _wall.GetFloat("_VignetteSoftness"), vignette);
-        var overlay = Layer<RawImage>(transform, "Vignette");
-        overlay.raycastTarget = false;
-        overlay.texture = _vignetteTexture;
+        _vignette.enabled = true;
     }
 
     // Where a card is, and its turn in degrees, at this point in the fall.

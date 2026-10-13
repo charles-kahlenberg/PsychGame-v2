@@ -10,7 +10,7 @@ public enum Feature
     BrainyAttentionCue,       // Brainy hops every few seconds while idle (BrainBehavior)
     BrainyBesideResponseBox,  // Brainy rests just left of the response box instead of bottom right (BrainBehavior)
     CardTweening,             // cards deal in, sweep out/in on refresh, and float while idle (CardBehavior, GameManager)
-    FaceDownCards,            // cards are dealt face-down and flip over in the hand when clicked, staying face-up; the AI Help button becomes a Definition popup (CardBehavior, GameManager)
+    FaceDownCards,            // cards are dealt face-down and flip over in the hand when clicked, staying face-up; every face-up card shows the AI Help button, labelled Hint (CardBehavior, GameManager)
     HoverAnimations,          // buttons pop on hover (ButtonHoverPop)
     RaisedHand,               // the hand is a bit smaller, flatter and higher so no card hangs off the bottom; the response box makes room (GameManager)
     NewCardArt,              // layered card back/front art per area of psychology from Resources/CardArt; placeholders for areas still being drawn (CardBehavior, CardArt, TermAreas, GameManager)
@@ -30,6 +30,7 @@ public enum Feature
     MenuButtonPlates,         // the title screen's buttons become blank stone plates (Resources/MenuButton) with their labels written on in Righteous (Resources/Fonts/Righteous) (MenuButtonPlates, MenuCardBackground)
     MenuNewGameTransition,    // New Game skips the loading screen: the title and the other buttons slide off, then New Game, then the menu's card backs, and those above the screen, fall straight down with a little drift and turn each, leaving only the blue; the synopsis loads under it and the blue fades into the synopsis's background turning excited, then the synopsis begins (MenuNewGameTransition, MenuCards shader, MenuCardBackground, SplashUI, IntroductionManager)
     JarAvatar,                // the synopsis's NPC is Brainette, the girl jar from Resources (girlbrainy), centred up the screen with a separate bow that twitches like Brainy's moustache, and she fades out on Continue; the response screen has no avatar; the synopsis's fallback line names her instead of Alex (JarBrainy, IntroductionManager, GameManager, SynopsisTransition, TextBoxTheme)
+    Dictionary,               // a closed book in the response screen's bottom right (Resources/DictionaryBook) pops on hover; clicked, it opens (DictionaryBookOpen) and slowly grows to the middle of the screen, where its left page holds a search box over an index of terms and its right page the chosen term's definition; definitions live there instead of on the cards; Refresh moves to the middle of the bottom, under the hand; the book and Menu shrink on narrow screens to stay clear of the hand (TermDictionary, FitBesideHand, TextLinkClicks, GameManager, PixelButton, SynopsisTransition)
 }
 
 // The study's conditions, all in one place: which features each test group
@@ -71,6 +72,7 @@ public static class TestGroups
         Feature.MenuButtonPlates,
         Feature.MenuNewGameTransition,
         Feature.JarAvatar,
+        Feature.Dictionary,
     };
 
     private static readonly Dictionary<int, HashSet<Feature>> Groups = new Dictionary<int, HashSet<Feature>>

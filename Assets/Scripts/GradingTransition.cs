@@ -73,6 +73,9 @@ public class GradingTransition : MonoBehaviour
     private static void Bootstrap()
     {
         if (!Enabled) return;
+        // The extra event system in the scene laid over is on for a moment
+        // before it stands down, and UI Toolkit (unused here) warns about two.
+        EventSystem.SetUITookitEventSystemOverride(null, sendEvents: false, createPanelGameObjectsOnStart: false);
         SceneManager.sceneLoaded += (scene, mode) =>
         {
             if (scene.name == "GameScene" && mode == LoadSceneMode.Single)
@@ -128,7 +131,7 @@ public class GradingTransition : MonoBehaviour
 
         var cards = FindObjectsByType<CardBehavior>(FindObjectsSortMode.None);
         Array.Sort(cards, (a, b) => string.CompareOrdinal(a.name, b.name));
-        for (int i = 0; i < cards.Length; i++) cards[i].SweepOut(CardsDelay + i * CardBehavior.DealStagger);
+        for (int i = 0; i < cards.Length; i++) cards[i].SweepOut(CardsDelay + i * CardBehavior.SweepStagger);
 
         // Excited and red together: at no excitement the red doesn't show.
         yield return Background(k => ShaderBackground.Excite = ShaderBackground.Heat = k);

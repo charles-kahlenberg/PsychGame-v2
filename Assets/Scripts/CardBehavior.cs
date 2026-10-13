@@ -35,7 +35,8 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
     // back in on refresh, and gently float while sitting in the hand.
 
     public const float DealDuration = 0.45f;
-    public const float DealStagger = 0.08f;           // delay between each card
+    public const float DealStagger = 0.15f;           // delay between each card dealt in: far enough apart to hear each one land
+    public const float SweepStagger = 0.08f;          // delay between each card swept out
     private static readonly Vector3 DealOffset = new Vector3(0f, -420f, 0f); // start below the screen
     private const float DealTilt = 12f;                // degrees of extra tilt while flying in
 
@@ -52,15 +53,14 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
     // Feature.FaceDownCards: cards are dealt face-down, like real cards.
     // Clicking one flips it over right there in the hand to reveal the term,
     // and it stays face-up until the next hand. The Help button becomes
-    // "Definition", shows on every face-up card, and pops the term's
-    // definition up in the hint bubble instead of asking the AI.
+    // "Hint" and shows on every face-up card; it still asks the AI how the
+    // term fits the scenario. Definitions are in the dictionary (TermDictionary).
 
     private static bool FaceDownCards => TestGroups.IsEnabled(Feature.FaceDownCards);
-    private const float DefinitionButtonWidth = 60f; // "Definition" doesn't fit the "Help" button's width
     private const float FlipHalfDuration = 0.15f;    // edge-on, then the other side
 
     private bool isFlippingInHand = false;
-    private float tilt;       // current extra tilt around Z (deal, sweep, idle sway)
+    private float tilt;      // current extra tilt around Z (deal, sweep, idle sway)
     private float flipAngle;  // current turn around the card's own Y while flipping in the hand
 
     void Awake()
@@ -107,7 +107,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
 
         if (FaceDownCards)
         {
-            SetUpDefinitionButton();
+            SetUpHintButton();
             TurnFaceDown();
         }
         if (TestGroups.IsEnabled(Feature.NewCardArt)) UseCardFont();
@@ -121,7 +121,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
             DealIn(cardIndex * DealStagger);
 
         // Hide Help on start (wired through its UnityEvent). Group 2's
-        // Definition button stays active and shows and hides with the front face.
+        // Hint button stays active and shows and hides with the front face.
         if (helpButton != null && !FaceDownCards)
             helpButton.gameObject.SetActive(false);
 
@@ -147,7 +147,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
     private const float TermSidePadding = 10f;
     private const float TermMinFontSize = 8f;
 
-    // Group 2: the term and the Definition button's label in Atkinson
+    // Group 2: the term and the Hint button's label in Atkinson
     // Hyperlegible Next SemiBold, like the themed text boxes and pixel
     // buttons. The label shrinks to fit if it has to.
     void UseCardFont()
@@ -212,7 +212,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         if (FaceDownCards)
         {
             // Group 2: face-down cards flip over in the hand; face-up ones
-            // stay put (their Definition button handles the rest).
+            // stay put (their Hint button handles the rest).
             if (!isRevealed && !isFlippingInHand) FlipInHand();
             return;
         }
@@ -237,6 +237,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         {
             isFlipped = !isFlipped;
             bool toBack = isFlipped;
+            Sfx.CardFlip();
             LeanTween.rotateY(gameObject, 90f, 0.15f).setOnComplete(() =>
             {
                 if (toBack) ShowBack(); else ShowFront();
@@ -295,6 +296,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
     void FlipInHand()
     {
         isFlippingInHand = true;
+        Sfx.CardFlip();
         LeanTween.value(gameObject, 1f, 0f, FlipHalfDuration)
             .setOnUpdate(SetFlipWidth)
             .setOnComplete(() =>
@@ -350,7 +352,8 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         transform.localScale = originalScale;
         SetTilt(DealTilt);
 
-        LeanTween.moveLocal(gameObject, originalPos, DealDuration).setDelay(delay).setEaseOutBack();
+        LeanTween.moveLocal(gameObject, originalPos, DealDuration).setDelay(delay).setEaseOutBack()
+            .setOnStart(Sfx.CardDeal);
         LeanTween.value(gameObject, 1f, 0f, DealDuration).setDelay(delay).setEaseOutCubic()
             .setOnUpdate(t => SetTilt(DealTilt * t))
             .setOnComplete(() => isDealing = false);
@@ -372,7 +375,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
     }
 
     // How long a whole hand takes to sweep out / deal in with the stagger.
-    public static float SweepOutTime(int cardCount) => DealDuration * 0.7f + DealStagger * (cardCount - 1);
+    public static float SweepOutTime(int cardCount) => DealDuration * 0.7f + SweepStagger * (cardCount - 1);
     public static float DealInTime(int cardCount) => DealDuration + DealStagger * (cardCount - 1);
 
     // Rotation relative to where the card rests in the hand, around Z only.
@@ -431,9 +434,8 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
     private Color? plainBodyColor; // the card's own color, from before any art was applied
 
     // Dresses the card in one area's art, replacing whatever it wore for the
-    // last hand, with the icons of all the term's areas in the front's
-    // corner box. Null puts the plain card back.
-    public void ShowArt(CardArt.AreaArt art, Sprite[] icons = null)
+    // last hand. Null puts the plain card back.
+    public void ShowArt(CardArt.AreaArt art)
     {
         driftLayers.Clear();
 
@@ -458,53 +460,10 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
 
         int back = SetArtLayers(backFace, art?.backLayers, cardSize);
         int front = SetArtLayers(frontFace, art?.frontLayers, cardSize);
-        SetIcons(art != null ? icons : null, front, cardSize);
 
         // With art on both sides, the art is the card: the plain card image
         // goes invisible but still catches clicks (it's the Button's graphic).
         if (body != null) body.color = back > 0 && front > 0 ? Color.clear : plainBodyColor.Value;
-    }
-
-    // The icon box drawn into the front art (Art/Cards/CardFront.png), inside
-    // its border, in that image's pixels from its top-left corner.
-    private static readonly Vector2 FrontArtSize = new Vector2(284f, 380f);
-    private static readonly Rect IconBox = new Rect(12f, 12f, 122f, 28f);
-    private const float IconPad = 3f; // front-art pixels around and between icons
-
-    private readonly System.Collections.Generic.List<Image> iconImages =
-        new System.Collections.Generic.List<Image>();
-
-    // Lines the icons up left to right in the front's icon box, just above
-    // the front art layers; icons left over from the last hand are hidden.
-    void SetIcons(Sprite[] icons, int sibling, Vector2 cardSize)
-    {
-        if (frontFace == null) return;
-
-        int count = icons?.Length ?? 0;
-        float sx = cardSize.x / FrontArtSize.x, sy = cardSize.y / FrontArtSize.y;
-        float height = IconBox.height - 2f * IconPad;
-        float x = IconBox.xMin + IconPad;
-
-        for (int i = 0; i < Mathf.Max(count, iconImages.Count); i++)
-        {
-            if (i >= count)
-            {
-                if (iconImages[i].gameObject.activeSelf) iconImages[i].gameObject.SetActive(false);
-                continue;
-            }
-
-            Image image = i < iconImages.Count ? iconImages[i] : NewArtLayer(frontFace, iconImages);
-            float width = height * icons[i].rect.width / icons[i].rect.height;
-
-            var rect = image.rectTransform;
-            rect.SetSiblingIndex(sibling + i);
-            rect.sizeDelta = new Vector2(width * sx, height * sy);
-            rect.anchoredPosition = new Vector2((x + width / 2f) * sx - cardSize.x / 2f, cardSize.y / 2f - IconBox.center.y * sy);
-
-            if (image.sprite != icons[i]) image.sprite = icons[i];
-            if (!image.gameObject.activeSelf) image.gameObject.SetActive(true);
-            x += width + IconPad;
-        }
     }
 
     static Sprite FirstSprite(CardArt.Layer[] layers)
@@ -593,7 +552,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
     }
 
     // Group 2. Face-down: the card back (its art, no text). Face-up: the term
-    // and its Definition button.
+    // and its Hint button.
     //
     // Both faces stay active and are shown and hidden through CanvasGroups.
     // Re-activating a face mid-flip made Unity rebuild all its graphics and
@@ -620,7 +579,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
     {
         if (group == null) return;
         group.alpha = shown ? 1f : 0f;
-        group.blocksRaycasts = shown; // a hidden face's Definition button can't be clicked
+        group.blocksRaycasts = shown; // a hidden face's Hint button can't be clicked
         group.interactable = shown;
     }
 
@@ -632,20 +591,19 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         return true;
     }
 
-    // Group 2: relabels the scene's Help button as Definition. Renaming the
-    // object keeps the click logs accurate ("DefinitionButton", not "HelpButton").
-    // The definition text moves off the card back and into the popup.
-    void SetUpDefinitionButton()
+    // Group 2: relabels the scene's Help button as Hint. Renaming the object
+    // keeps the click logs apart from group 1's ("HintButton", not "HelpButton").
+    // The definition text comes off the card back (it's in the dictionary).
+    void SetUpHintButton()
     {
         if (backText != null) backText.gameObject.SetActive(false);
         if (helpButton == null) return;
 
-        helpButton.name = "DefinitionButton";
+        helpButton.name = "HintButton";
         var label = helpButton.GetComponentInChildren<TMP_Text>(true);
-        if (label != null) label.text = "Definition";
+        if (label != null) label.text = "Hint";
 
         var rect = (RectTransform)helpButton.transform;
-        rect.sizeDelta = new Vector2(Mathf.Max(rect.sizeDelta.x, DefinitionButtonWidth), rect.sizeDelta.y);
 
         // The button always shows under the term, so the term's box stops
         // just above it: a three-line term like "Variable-Ratio Schedule"
@@ -665,36 +623,9 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
     private const float TermButtonGap = 3f;
 
     // PUBLIC so you can wire it in Button OnClick exactly like BrainHint.OnBrainClicked.
-    // Group 1 asks the AI for help with the concept; group 2 shows the definition.
     public void OnHelpButtonPressed()
     {
-        if (FaceDownCards) ShowDefinition();
-        else RequestAiConceptHelp();
-    }
-
-    // Group 2: pops the term's definition up in the same bubble Brainy's hints use.
-    void ShowDefinition()
-    {
-        if (hintOverlay == null || hintText == null)
-        {
-            Debug.LogWarning("[CardBehavior] Assign Hint Overlay and Hint Text fields on the card.");
-            return;
-        }
-
-        string term = frontText != null ? frontText.text.Trim() : "";
-        string definition = backText != null ? backText.text.Trim() : "";
-
-        OpenHintBubble();
-        hintText.text = string.IsNullOrEmpty(definition)
-            ? "No definition available."
-            : $"<b>{term}</b>\n\n{definition}";
-
-        // Group 2: Brainy steps up to the bubble its tail points at.
-        if (TextBoxTheme.Enabled)
-        {
-            var brain = FindFirstObjectByType<BrainBehavior>();
-            if (brain != null) brain.StepUpToBubble();
-        }
+        RequestAiConceptHelp();
     }
 
     void OpenHintBubble()
@@ -707,7 +638,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         if (hintBubbleContainer != null) hintBubbleContainer.SetAsLastSibling();
     }
 
-    // Group 1: asks the AI how this card's concept applies to the current scenario.
+    // Asks the AI how this card's concept applies to the current scenario.
     public void RequestAiConceptHelp()
     {
         if (hintManager == null)
@@ -747,6 +678,13 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         {
             Debug.LogWarning("[CardBehavior] Scenario text is empty.");
             return;
+        }
+
+        // Group 2: Brainy steps up to the bubble its tail points at.
+        if (TextBoxTheme.Enabled)
+        {
+            var brain = FindFirstObjectByType<BrainBehavior>();
+            if (brain != null) brain.StepUpToBubble();
         }
 
         // 6) Ask AI using the concept-aware prompt

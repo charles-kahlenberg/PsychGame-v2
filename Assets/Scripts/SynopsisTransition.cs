@@ -75,6 +75,7 @@ public class SynopsisTransition : MonoBehaviour
         ("Brain", Vector2.left, 0.18f),
         ("SubmitButton", Vector2.right, 0.22f),
         ("BackButton", Vector2.down, 0.4f),
+        ("DictionaryButton", Vector2.down, 0.4f),
         ("RefreshCardsButton", Vector2.down, 0.45f),
     };
 
@@ -89,6 +90,9 @@ public class SynopsisTransition : MonoBehaviour
     private static void Bootstrap()
     {
         if (!Enabled) return;
+        // The extra event system in the scene laid over is on for a moment
+        // before it stands down, and UI Toolkit (unused here) warns about two.
+        EventSystem.SetUITookitEventSystemOverride(null, sendEvents: false, createPanelGameObjectsOnStart: false);
         SceneManager.sceneLoaded += (scene, mode) =>
         {
             if (scene.name == "GameScene" && mode == LoadSceneMode.Single && _pending)

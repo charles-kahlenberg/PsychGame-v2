@@ -11,10 +11,12 @@ using UnityEngine.UI;
 // handlers and logging are unchanged. Each plate sits where its button was,
 // except on the response screen (GameScene):
 //  - Submit: just right of the response box, level with its bottom edge.
-//  - Refresh: bottom of the screen, under the avatar, with the refreshes left
-//    as diamonds in a tab on top (GameManager.UpdateRefreshUI calls
-//    ShowRefreshesLeft).
-//  - Back to Menu: bottom left, drawn as a back arrow and "MENU".
+//  - Refresh: bottom of the screen, with the refreshes left as diamonds in a
+//    tab on top (GameManager.UpdateRefreshUI calls ShowRefreshesLeft). Under
+//    the avatar; with Feature.Dictionary, in the middle, in the gap under the
+//    hand's raised middle card.
+//  - Back to Menu: bottom left, drawn as a back arrow and "MENU", pinned to
+//    the corner and shrunk on narrow screens (FitBesideHand).
 // The save slots are blank plates that keep their own label (the save's name).
 // The title screen's buttons are hand-drawn to match its art, so they stay.
 public class PixelButton : MonoBehaviour
@@ -24,6 +26,7 @@ public class PixelButton : MonoBehaviour
     private const float ShadowDepth = 2f;    // the drop shadow below each plate, in canvas units
     private const float ScreenMargin = 14f;
     private const float SubmitGap = 6f;
+    private const float RefreshBottom = 3f; // tucked low, clear of the middle card's bob and hover pop
 
     private static readonly Color LabelInk = new Color32(0xF7, 0xF1, 0xE6, 0xFF);    // the art's cream
     private static readonly Color LabelDimInk = new Color32(0xB9, 0xB9, 0xC2, 0xFF); // ...and its disabled grey
@@ -79,8 +82,15 @@ public class PixelButton : MonoBehaviour
             Place(c, submit, new Vector2(box.xMax + SubmitGap, box.yMin - ShadowDepth), new Vector2(0f, 0f));
         }
 
+        bool dictionary = TestGroups.IsEnabled(Feature.Dictionary);
         var refresh = Restyle(c, "RefreshCardsButton", "refresh2");
-        if (refresh != null)
+        var middleCard = c.Find("Card3") as RectTransform;
+        if (refresh != null && dictionary && middleCard != null)
+        {
+            // The cards are anchored at the canvas's center, so this holds at any screen shape.
+            Place(c, refresh, new Vector2(LocalRect(c, middleCard).center.x, c.rect.yMin + RefreshBottom), new Vector2(0.5f, 0f));
+        }
+        else if (refresh != null)
         {
             var avatar = c.Find("Avatar") as RectTransform;
             float x = avatar != null ? LocalRect(c, avatar).center.x : c.rect.xMax - 90f;
@@ -88,8 +98,7 @@ public class PixelButton : MonoBehaviour
         }
 
         var back = Restyle(c, "BackButton", "menu");
-        if (back != null)
-            Place(c, back, new Vector2(c.rect.xMin + ScreenMargin, c.rect.yMin + ScreenMargin), new Vector2(0f, 0f));
+        if (back != null) FitBesideHand.Pin(back, back.sizeDelta, right: false);
 
         // The save prompt's buttons (TextBoxTheme lays out the rest of it).
         Restyle(c, "SavePromptPanel/Yes", "save");

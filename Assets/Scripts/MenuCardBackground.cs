@@ -30,6 +30,7 @@ public class MenuCardBackground : MonoBehaviour
     private static readonly int TitleRectId = Shader.PropertyToID("_TitleRect");
     private static readonly int ButtonsId = Shader.PropertyToID("_Buttons");
     private static readonly int ButtonCountId = Shader.PropertyToID("_ButtonCount");
+    private static readonly int ScrollTimeId = Shader.PropertyToID("_ScrollTime");
 
     private const int MaxButtons = 8; // the shader's _Buttons array
     // The visible button within each button image (424 x 112 of 445 x 133),
@@ -108,6 +109,10 @@ public class MenuCardBackground : MonoBehaviour
     // canvas is screen-space overlay, so world space is screen pixels.
     private void LateUpdate()
     {
+        // The scroll's clock: MenuNewGameTransition reads the same one to
+        // drop each card from exactly where the shader drew it.
+        _material.SetFloat(ScrollTimeId, Time.timeSinceLevelLoad);
+
         float width = Screen.width, height = Screen.height;
         if (_title != null)
         {

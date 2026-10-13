@@ -125,6 +125,7 @@ internal static class UsernamePromptUI
             onSubmit(username);
         }
 
+        button.onClick.AddListener(Sfx.Button);
         button.onClick.AddListener(Submit);
         inputField.onSubmit.AddListener(_ => Submit());
 

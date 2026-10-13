@@ -11,7 +11,7 @@ using UnityEngine;
 // stretched over the whole card, so export each layer on the full card
 // canvas (transparent where it shouldn't cover anything). The card takes the
 // shape of the first back layer, so the art is never squashed. Front layers
-// are drawn behind the term text and the Definition button.
+// are drawn behind the term text and the Hint button.
 [CreateAssetMenu(menuName = "PsychGame/Card Art", fileName = "CardArt")]
 public class CardArt : ScriptableObject
 {
@@ -37,7 +37,7 @@ public class CardArt : ScriptableObject
         [Tooltip("The face-up side (behind the term), bottom layer first.")]
         public Layer[] frontLayers;
 
-        [Tooltip("Small icon for the box in the front's top-left corner. Every card shows the icons of all its term's areas.")]
+        [Tooltip("Small icon shown beside the area's terms in the dictionary. A term in several areas gets all their icons.")]
         public Sprite icon;
     }
 

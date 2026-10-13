@@ -64,7 +64,7 @@ internal static class GraphicsNotice
         buttonRect.pivot = new Vector2(0.5f, 0f);
         buttonRect.sizeDelta = new Vector2(120, 38);
         buttonRect.anchoredPosition = new Vector2(0, 12);
-        buttonGO.AddComponent<Button>().onClick.AddListener(() => Object.Destroy(canvasGO));
+        buttonGO.AddComponent<Button>().onClick.AddListener(() => { Sfx.Button(); Object.Destroy(canvasGO); });
 
         var buttonLabel = UsernamePromptUI.CreateUIObject("Text", buttonGO.transform);
         var buttonLabelText = buttonLabel.AddComponent<Text>();

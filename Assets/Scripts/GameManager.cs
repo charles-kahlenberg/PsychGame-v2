@@ -25,6 +25,7 @@ public class GameManager : MonoBehaviour
 
     private List<string> allVocab = new List<string>();
     private Dictionary<string, string> termToDefinition = new Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase); // saves made before a term's capitalization was fixed still find it
+    public IReadOnlyDictionary<string, string> Definitions => termToDefinition; // filled in Start
 
     [Header("Card Refresh")]
     public Button refreshButton;
@@ -44,6 +45,11 @@ public class GameManager : MonoBehaviour
 
         if (TestGroups.IsEnabled(Feature.RaisedHand))
             RaiseHand();
+
+        // After the hand is raised (the book keeps clear of it), and before
+        // SynopsisTransition looks for the book to slide it in.
+        if (TestGroups.IsEnabled(Feature.Dictionary))
+            TermDictionary.Build(this);
 
         // No avatar here: Brainette fades out of the synopsis instead. Hidden
         // before TextBoxTheme lays out (on scene load), so the scenario box
@@ -220,7 +226,7 @@ public class GameManager : MonoBehaviour
 
             PsychArea? area = TermAreas.PickArea(currentCards[i]);
             if (area == null) Debug.LogWarning($"[GameManager] No area listed for \"{currentCards[i]}\" in term_areas.txt.");
-            card.ShowArt(art.For(area), art.IconsFor(TermAreas.Get(currentCards[i])));
+            card.ShowArt(art.For(area));
         }
     }
 
@@ -268,12 +274,12 @@ public class GameManager : MonoBehaviour
         float canvasBottom = -canvasHeight / 2f;
 
         float lowest = float.MaxValue;
-        foreach (RectTransform card in cards) lowest = Mathf.Min(lowest, CardExtentY(card, bottom: true));
+        foreach (RectTransform card in cards) lowest = Mathf.Min(lowest, CardExtent(card, 1, min: true));
         float lift = Mathf.Max(0f, canvasBottom + HandBottomMargin - lowest);
         foreach (RectTransform card in cards) card.anchoredPosition += new Vector2(0f, lift);
 
         float handTop = float.MinValue;
-        foreach (RectTransform card in cards) handTop = Mathf.Max(handTop, CardExtentY(card, bottom: false));
+        foreach (RectTransform card in cards) handTop = Mathf.Max(handTop, CardExtent(card, 1, min: false));
 
         // Make room above the hand: raise the response box a little, then
         // trim its bottom edge for the rest, keeping its top where it ends up.
@@ -294,16 +300,17 @@ public class GameManager : MonoBehaviour
         if (submit) ((RectTransform)submit.transform).anchoredPosition += new Vector2(0f, needed);
     }
 
-    // The card's lowest (or highest) corner, in its parent's space.
-    static float CardExtentY(RectTransform card, bool bottom)
+    // The card's lowest/highest (axis 1) or leftmost/rightmost (axis 0)
+    // corner, in its parent's space.
+    public static float CardExtent(RectTransform card, int axis, bool min)
     {
         Rect r = card.rect;
-        float extreme = bottom ? float.MaxValue : float.MinValue;
+        float extreme = min ? float.MaxValue : float.MinValue;
         foreach (var corner in new[] { new Vector2(r.xMin, r.yMin), new Vector2(r.xMin, r.yMax), new Vector2(r.xMax, r.yMin), new Vector2(r.xMax, r.yMax) })
         {
             Vector3 p = card.localRotation * Vector3.Scale(corner, card.localScale);
-            float y = card.anchoredPosition.y + p.y;
-            extreme = bottom ? Mathf.Min(extreme, y) : Mathf.Max(extreme, y);
+            float v = card.anchoredPosition[axis] + p[axis];
+            extreme = min ? Mathf.Min(extreme, v) : Mathf.Max(extreme, v);
         }
         return extreme;
     }
@@ -361,8 +368,9 @@ public class GameManager : MonoBehaviour
         var cards = FindObjectsByType<CardBehavior>(FindObjectsSortMode.None);
         System.Array.Sort(cards, (a, b) => string.CompareOrdinal(a.name, b.name));
 
+        Sfx.CardFan();
         for (int i = 0; i < cards.Length; i++)
-            cards[i].SweepOut(i * CardBehavior.DealStagger);
+            cards[i].SweepOut(i * CardBehavior.SweepStagger);
 
         yield return new WaitForSeconds(CardBehavior.SweepOutTime(cards.Length));
 
