@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8743", "--directory", "docs"],
       "port": 8743
+    },
+    {
+      "name": "psychgame-test-build",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8744", "--directory", "C:/Users/charl/AppData/Local/Temp/claude/C--Users-charl-Downloads-PsychGame-the-cool-version-PsychGame-the-cool-version-PsychGame-the-cool-version/fbb3e009-92a6-4364-9dab-c6f4fb91cca2/scratchpad/webgl"],
+      "port": 8744
     }
   ]
 }
