@@ -42,7 +42,6 @@ Hawthorne Effect - Individuals alter their behaviors or performance due to being
 Hippocampus - A subcortical brain region that maintains our working memory
 Homeostasis - The body's ability to maintain stable internal conditions
 Hypothesis - A testable prediction
-Imprinting - A deep level of social bonding to a caregiver that is innate and genetically programmed
 Independent Variable - The variable that the experimenter manipulates in a true experiment
 Learned Helplessness - A condition where individuals believe they have no control over their situation
 Limbic System - The forebrain structures regulate automatic and endocrine functioning, as well as aid in the functions of memory and emotion
@@ -52,10 +51,7 @@ Mnemonic Device - Method to help remember
 Neurons - The special cells in our body that can quickly communicate with one another that underlie all of our sensations, thinking, and behavior
 Neurotransmitters - Chemicals that communicate between neurons
 Neutral Stimulus - Stimulus that when presented alone does not elicit an automatic response
-Night Terrors - Occurring during non-rem sleep a person can walk around speaking incoherently and then wake from sleep in a terrified state
-Object Permanence - The ability to understand an object continues to exist even when out of sight
 Occipital Lobe - One of the four brain lobes is the brain in the back responsible for the beginning stages of vision
-Phantom Limb Pain - When a person loses a limb they sometimes still feel pain in that missing body part
 Placebo Effect - The belief that you were treated causing improvement
 Positive Reinforcement - Increasing probability of response
 Preconventional Level - The first step is Kohlberg's theory. Focused on avoiding punishment or gaining rewards

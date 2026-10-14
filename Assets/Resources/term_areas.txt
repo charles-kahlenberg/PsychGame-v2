@@ -46,7 +46,6 @@ Hawthorne Effect - 1
 Hippocampus - 2
 Homeostasis - 2, 6
 Hypothesis - 1
-Imprinting - 4
 Independent Variable - 1
 Learned Helplessness - 2, 6, 7
 Limbic System - 2
@@ -56,10 +55,7 @@ Mnemonic Device - 3
 Neurons - 2
 Neurotransmitters - 2
 Neutral Stimulus - 7
-Night Terrors - 2, 4, 6
-Object Permanence - 4
 Occipital Lobe - 2
-Phantom Limb Pain - 2, 6, 7
 Placebo Effect - 1
 Positive Reinforcement - 7
 Preconventional Level - 4
