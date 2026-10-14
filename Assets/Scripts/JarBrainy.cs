@@ -4,10 +4,9 @@ using UnityEngine.UI;
 
 // Group 2 (Feature.JarBrainy): every Brainy is the jar, Resources/poirot.png,
 // with the moustache, Resources/moustache.png, laid on separately so it can
-// twitch now and then. Feature.JarAvatar does the same for the player's
-// avatar: Brainette's jar, Resources/girlbrainy.png, with her bow,
-// Resources/girlbrainybow.png. Apply / ApplyAvatar set an image up; this
-// component sits on the moustache or bow and twitches it.
+// twitch now and then. Feature.JarAvatar makes the synopsis's NPC the same
+// Brainy. Apply / ApplyAvatar set an image up; this component sits on the
+// moustache and twitches it.
 public class JarBrainy : MonoBehaviour
 {
     // A jar and the piece laid over it: where that sits in the jar's art
@@ -28,17 +27,6 @@ public class JarBrainy : MonoBehaviour
         size = 1.2f,
     };
 
-    // girlbrainy.png is framed like poirot.png. The bow sits on the upper
-    // right of the jar, just under the lid, a bit smaller than drawn so it
-    // clears her eye.
-    private static readonly Look Girl = new Look
-    {
-        jar = "girlbrainy", piece = "girlbrainybow",
-        min = new Vector2(0.5984f, 0.5451f), max = new Vector2(0.9843f, 0.8684f),
-        pivot = new Vector2(0.5f, 0.5f),
-        size = 0.8f,
-    };
-
     // The avatar's box was drawn for a standing person; the jar is this share
     // of its height, at the same spot across but centred up the screen.
     private const float AvatarJarHeight = 0.55f;
@@ -53,7 +41,7 @@ public class JarBrainy : MonoBehaviour
     // The synopsis's NPC. Call before the scene's layout measures it (Awake).
     public static bool ApplyAvatar(GameObject avatar)
     {
-        if (!Apply(avatar, Girl, false)) return false;
+        if (!Apply(avatar, Brainy, false)) return false;
 
         var rt = (RectTransform)avatar.transform;
         var jar = avatar.GetComponent<Image>().sprite;

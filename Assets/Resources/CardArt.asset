@@ -22,6 +22,7 @@ MonoBehaviour:
     frontLayers:
     - sprite: {fileID: 21300000, guid: 7f7015a3fd5740a6bd141a3a20ac3640, type: 3}
       drift: 0
+    backColor: {r: 0.587, g: 0.498, b: 0.425, a: 1}
   - area: 2
     backLayers:
     - sprite: {fileID: 21300000, guid: ce32d19d60401114ba5d0f68f523de72, type: 3}
@@ -31,6 +32,7 @@ MonoBehaviour:
     frontLayers:
     - sprite: {fileID: 21300000, guid: 7f7015a3fd5740a6bd141a3a20ac3640, type: 3}
       drift: 0
+    backColor: {r: 0.796, g: 0.715, b: 0.512, a: 1}
   - area: 3
     backLayers:
     - sprite: {fileID: 21300000, guid: 0070dfc786f65c149907530b2e05e409, type: 3}
@@ -40,6 +42,7 @@ MonoBehaviour:
     frontLayers:
     - sprite: {fileID: 21300000, guid: 7f7015a3fd5740a6bd141a3a20ac3640, type: 3}
       drift: 0
+    backColor: {r: 0.499, g: 0.306, b: 0.690, a: 1}
   - area: 4
     backLayers:
     - sprite: {fileID: 21300000, guid: f5c2252d29c33494da9d38355156d061, type: 3}
@@ -49,6 +52,7 @@ MonoBehaviour:
     frontLayers:
     - sprite: {fileID: 21300000, guid: 7f7015a3fd5740a6bd141a3a20ac3640, type: 3}
       drift: 0
+    backColor: {r: 0.480, g: 0.073, b: 0.073, a: 1}
   - area: 5
     backLayers:
     - sprite: {fileID: 21300000, guid: 7f45a75df8bbe8043bdd9f893c230ea6, type: 3}
@@ -58,6 +62,7 @@ MonoBehaviour:
     frontLayers:
     - sprite: {fileID: 21300000, guid: 7f7015a3fd5740a6bd141a3a20ac3640, type: 3}
       drift: 0
+    backColor: {r: 0.702, g: 0.085, b: 0.435, a: 1}
   - area: 6
     backLayers:
     - sprite: {fileID: 21300000, guid: 32999e6907607034d91978f8ceb4efec, type: 3}
@@ -67,6 +72,7 @@ MonoBehaviour:
     frontLayers:
     - sprite: {fileID: 21300000, guid: 7f7015a3fd5740a6bd141a3a20ac3640, type: 3}
       drift: 0
+    backColor: {r: 0.315, g: 0.478, b: 0.528, a: 1}
   - area: 7
     backLayers:
     - sprite: {fileID: 21300000, guid: e07306bf4d1f83047843822f9c2dd532, type: 3}
@@ -77,3 +83,4 @@ MonoBehaviour:
     - sprite: {fileID: 21300000, guid: 7f7015a3fd5740a6bd141a3a20ac3640, type: 3}
       drift: 0
     icon: {fileID: 21300000, guid: e7925a283bc2415aaccff43c82eb718b, type: 3}
+    backColor: {r: 0.141, g: 0.558, b: 0.177, a: 1}

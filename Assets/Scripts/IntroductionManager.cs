@@ -99,7 +99,7 @@ public class IntroductionManager : MonoBehaviour
             Debug.LogWarning("[IntroductionManager] Worker response did not contain 'intro'. Raw: " + resp);
 
         // Fallback if something fails
-        string speaker = TestGroups.IsEnabled(Feature.JarAvatar) ? "Brainette" : "Alex";
+        string speaker = TestGroups.IsEnabled(Feature.JarAvatar) ? "Brainy" : "Alex";
         introText = intro != null ? intro.Trim() : $"Hi, I’m {speaker}! I really need your help with something important.";
     }
 

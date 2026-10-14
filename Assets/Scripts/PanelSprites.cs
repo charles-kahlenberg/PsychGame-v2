@@ -2,18 +2,21 @@ using UnityEngine;
 
 // The text boxes' sprites, drawn once in code: a rounded paper panel with an
 // indigo edge, its soft shadow, a speech tail, and a white pill for the
-// scrollbars and name tag. Drawn at Density texture pixels per canvas unit.
+// scrollbars and name tag. Also the cards' hover glow. Drawn at Density
+// texture pixels per canvas unit.
 public static class PanelSprites
 {
     public const float Density = 4f;
     public const float EdgeWidth = EdgePx / Density;
+    public const float GlowSpread = GlowPx / Density;
     public static readonly Vector2 TailBase = new Vector2((TailBaseLeft + TailBaseRight) / 2f / TailW, 1f);
 
     private const int EdgePx = 6;
     private const int RadiusPx = 40;
     private const int TailW = 144, TailH = 96, TailBaseLeft = 12, TailBaseRight = 96, TailTipX = 126;
+    private const int GlowPx = 48, GlowRimPx = 12, GlowRadiusPx = 8; // the card back's corners are only slightly rounded
 
-    private static Sprite _panel, _shadow, _tail, _pill;
+    private static Sprite _panel, _shadow, _tail, _pill, _glow;
 
     public static Sprite Panel
     {
@@ -104,6 +107,30 @@ public static class PanelSprites
                 pixels[y * size + x] = new Color(1f, 1f, 1f, Mathf.Clamp01(0.5f - RoundedBox(p, half, radius)));
             }
             return _pill = Finish(tex, pixels, radius + 2);
+        }
+    }
+
+    // White light, brightest along the edge of a card-cornered box (the
+    // card's edge): fading out over GlowSpread around it, and over a short
+    // rim inside, where it spills onto the card. Clear in the middle.
+    public static Sprite Glow
+    {
+        get
+        {
+            if (_glow != null) return _glow;
+            const int size = 144;
+            var tex = NewTexture(size, size, "CardGlow");
+            var pixels = new Color32[size * size];
+            Vector2 half = new Vector2(size / 2f - GlowPx, size / 2f - GlowPx);
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                Vector2 p = new Vector2(x + 0.5f - size / 2f, y + 0.5f - size / 2f);
+                float d = RoundedBox(p, half, GlowRadiusPx);
+                float light = 1f - Mathf.Clamp01(d > 0f ? d / GlowPx : -d / GlowRimPx);
+                pixels[y * size + x] = new Color(1f, 1f, 1f, light * light);
+            }
+            return _glow = Finish(tex, pixels, GlowPx + GlowRimPx + 4);
         }
     }
 

@@ -110,6 +110,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
             SetUpHintButton();
             TurnFaceDown();
         }
+        if (TestGroups.IsEnabled(Feature.CardHoverGlow)) AddGlow();
         if (TestGroups.IsEnabled(Feature.NewCardArt)) UseCardFont();
         else
         {
@@ -177,6 +178,9 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
 
         if (driftLayers.Count > 0)
             ApplyDrift();
+
+        if (glow != null)
+            FadeGlow();
 
         // Click-off to reset
         if (isFocused && Input.GetMouseButtonDown(0))
@@ -257,12 +261,98 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
 
     public void OnPointerEnter(PointerEventData eventData)
     {
+        isHovered = true;
         if (!isFocused) LeanTween.scale(gameObject, originalScale * 1.1f, 0.15f).setEaseOutSine();
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
+        isHovered = false;
         if (!isFocused) LeanTween.scale(gameObject, originalScale, 0.15f).setEaseInSine();
+    }
+
+    // -------------------- GROUP 2 HOVER GLOW --------------------
+    // Feature.CardHoverGlow: a face-down card's edges glow while the pointer
+    // is over it, as if a light were shining on its hidden face from behind,
+    // so it reads as something to turn over. The glow fades as it flips.
+
+    private const float GlowFade = 0.15f;      // seconds to fade fully in or out
+    private const float GlowArtMargin = 2f;    // the card back art's clear edge (6 of its 380 px), so the light starts at the art
+    private const float GlowAlpha = 0.55f;     // at the card's edge
+    private const float GlowSaturation = 0.6f; // of the card back's, so the light is tinted, not painted
+    private const float GlowTintStrength = 0.7f; // how far the tint layer turns what's under it to the glow's color
+
+    private Image glow;     // the light, laid over what's around the card
+    private Image glowTint; // tints what's around the card the light's color, so it shows on the pale response box too
+    private Color glowColor = Color.white; // set from the card back's color in ShowArt
+    private float glowLevel;
+    private bool isHovered;
+
+    private static Material glowTintMaterial; // shared by every card, kept for the session
+
+    void AddGlow()
+    {
+        // Over both faces, so its rim spills a little onto the card.
+        glow = NewGlowLayer("HoverGlow");
+        glow.rectTransform.SetAsLastSibling();
+
+        if (glowTintMaterial == null)
+        {
+            var shader = Resources.Load<Shader>("CardGlowTint");
+            if (shader != null && shader.isSupported) glowTintMaterial = new Material(shader) { name = "CardGlowTint (runtime)" };
+        }
+        if (glowTintMaterial != null)
+        {
+            // Under both faces, so it tints only what's around the card (the
+            // card's own Image is clear once it wears art).
+            glowTint = NewGlowLayer("HoverGlowTint");
+            glowTint.rectTransform.SetAsFirstSibling();
+            glowTint.material = glowTintMaterial;
+        }
+    }
+
+    Image NewGlowLayer(string name)
+    {
+        var image = new GameObject(name, typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+        var rect = image.rectTransform;
+        rect.SetParent(transform, false);
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        float reach = PanelSprites.GlowSpread - GlowArtMargin;
+        rect.offsetMin = new Vector2(-reach, -reach);
+        rect.offsetMax = new Vector2(reach, reach);
+
+        image.sprite = PanelSprites.Glow;
+        image.type = Image.Type.Sliced;
+        image.fillCenter = false; // the sprite's middle is clear
+        image.pixelsPerUnitMultiplier = PanelSprites.Density;
+        image.raycastTarget = false; // the halo isn't part of the card's hover area
+        image.enabled = false;
+        return image;
+    }
+
+    void FadeGlow()
+    {
+        bool lit = isHovered && !isRevealed && !isFlippingInHand;
+        glowLevel = Mathf.MoveTowards(glowLevel, lit ? 1f : 0f, Time.deltaTime / GlowFade);
+        float fade = Mathf.SmoothStep(0f, 1f, glowLevel);
+        SetGlowLayer(glow, GlowAlpha * fade);
+        if (glowTint != null) SetGlowLayer(glowTint, GlowTintStrength * fade);
+    }
+
+    void SetGlowLayer(Image layer, float alpha)
+    {
+        layer.enabled = alpha > 0f;
+        var c = glowColor;
+        c.a = alpha;
+        layer.color = c; // unchanged colors don't redraw
+    }
+
+    // A bright light of the card back's hue, softened.
+    static Color LightColor(Color back)
+    {
+        Color.RGBToHSV(back, out float h, out float s, out _);
+        return Color.HSVToRGB(h, s * GlowSaturation, 1f);
     }
 
     public void ResetCard()
@@ -445,6 +535,8 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         Vector2 cardSize = Vector2.zero;
         if (art != null)
         {
+            glowColor = LightColor(art.backColor);
+
             // Take the shape of the card back so the art isn't squashed (keeps
             // the card's height, adjusts its width).
             var cardRect = (RectTransform)transform;
@@ -479,6 +571,12 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
     int SetArtLayers(GameObject face, CardArt.Layer[] layers, Vector2 cardSize)
     {
         if (face == null) return 0;
+
+        // Card4's BackFace sits 8 units off the card's middle in the scene
+        // (group 1's definition text is laid out there), which put its art
+        // above the card's click area and out of line with the hover glow.
+        ((RectTransform)face.transform).anchoredPosition = Vector2.zero;
+
         if (!artLayers.TryGetValue(face, out var pool))
             artLayers[face] = pool = new System.Collections.Generic.List<Image>();
 

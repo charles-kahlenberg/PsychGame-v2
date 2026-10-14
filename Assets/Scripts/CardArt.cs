@@ -39,6 +39,9 @@ public class CardArt : ScriptableObject
 
         [Tooltip("Small icon shown beside the area's terms in the dictionary. A term in several areas gets all their icons.")]
         public Sprite icon;
+
+        [Tooltip("The card back's main color. The glow around a hovered face-down card is a soft, bright light of the same hue (white if left black).")]
+        public Color backColor;
     }
 
     [Tooltip("One entry per area of psychology. The first entry is also used for any term with no area listed.")]

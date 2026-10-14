@@ -51,7 +51,7 @@ public class GameManager : MonoBehaviour
         if (TestGroups.IsEnabled(Feature.Dictionary))
             TermDictionary.Build(this);
 
-        // No avatar here: Brainette fades out of the synopsis instead. Hidden
+        // No avatar here: Brainy fades out of the synopsis instead. Hidden
         // before TextBoxTheme lays out (on scene load), so the scenario box
         // takes its space.
         if (TestGroups.IsEnabled(Feature.JarAvatar))
