@@ -11,6 +11,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
     private bool isFocused = false;
     private bool isFlipped = false;  // group 1: definition side showing
     private bool isRevealed = false; // group 2: term showing (cards are dealt face-down)
+    public bool IsRevealed => !FaceDownCards || isRevealed; // the dictionary hides face-down cards' terms
 
     [Header("Faces")]
     public TextMeshProUGUI frontText;        // the term
@@ -126,7 +127,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
         if (helpButton != null && !FaceDownCards)
             helpButton.gameObject.SetActive(false);
 
-        if (hintManager == null) hintManager = FindObjectOfType<HintManager>();
+        if (hintManager == null) hintManager = FindFirstObjectByType<HintManager>();
         if (hintManager == null) Debug.LogWarning("[CardBehavior] HintManager not found in scene.");
     }
 
@@ -741,7 +742,7 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
     {
         if (hintManager == null)
         {
-            hintManager = FindObjectOfType<HintManager>();
+            hintManager = FindFirstObjectByType<HintManager>();
             if (hintManager == null)
             {
                 Debug.LogWarning("[CardBehavior] No HintManager assigned/found.");
@@ -765,7 +766,9 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
 
         // 5) Gather concept & scenario
         string concept = frontText != null ? frontText.text.Trim() : "";
-        string scenario = scenarioText != null ? scenarioText.text.Trim() : PlayerPrefs.GetString("LastScenario", "");
+        // No scenario when the round started without one (e.g. playing
+        // GameScene straight from the Editor after the scenario list ran out).
+        string scenario = scenarioText != null ? (scenarioText.text ?? "").Trim() : PlayerPrefs.GetString("LastScenario", "");
 
         if (string.IsNullOrWhiteSpace(concept))
         {

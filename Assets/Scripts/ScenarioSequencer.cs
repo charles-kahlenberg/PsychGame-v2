@@ -53,6 +53,12 @@ public static class ScenarioSequencer
         PlayerPrefs.Save();
     }
 
+    // The next GetNextScenario starts from the top of Scenarios.txt again.
+    public static void Reset()
+    {
+        PlayerPrefs.DeleteKey(ScenarioListKey);
+    }
+
     // Get next scenario sequentially
     public static string GetNextScenario()
     {

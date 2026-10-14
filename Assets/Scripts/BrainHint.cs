@@ -27,7 +27,7 @@ public class BrainHint : MonoBehaviour
         hintBubbleContainer.gameObject.SetActive(false);
         if (hintOverlay != null) hintOverlay.SetActive(false);
 
-        hintManager = FindObjectOfType<HintManager>();
+        hintManager = FindFirstObjectByType<HintManager>();
         if (hintManager != null)
         {
             hintManager.OnHintReady += OnHintReceived;

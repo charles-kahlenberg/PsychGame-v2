@@ -4,13 +4,14 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// Feature.Dictionary (groups 2 and 3): every term and its definition, in a
-// book that sits closed in the bottom-right corner of the response screen
+// Feature.Dictionary (groups 2 and 3): the terms in the player's hand and
+// their definitions, in a book that sits closed in the bottom-right corner of the response screen
 // (Resources/DictionaryBook; FitBesideHand shrinks it on narrow screens, and
 // it pops on hover like the other buttons). Clicking it opens the book
 // (DictionaryBookOpen) and slowly carries it up to the middle of the screen,
-// where its pages hold the dictionary: on the left a search box over the
-// index of terms, A to Z, each with its areas' icons (CardArt) on its left; on the right the chosen term and its definition.
+// where its pages hold the dictionary: on the left the hand, card by card,
+// each term with its areas' icons (CardArt) on its left, or "Unknown" for a
+// card still face-down; on the right the chosen card's term and definition.
 // Esc or a click off the book carries it back to its corner.
 public class TermDictionary : MonoBehaviour
 {
@@ -19,13 +20,20 @@ public class TermDictionary : MonoBehaviour
     private const float OpenHeight = 400f;     // the open book in the middle, if the screen's wide enough
     private const float OpenMargin = 12f;      // ...otherwise it fits the width, this far from each side
     private const float OpenTime = 0.7f, CloseTime = 0.45f, FadeTime = 0.2f;
-    private const float SearchHeight = 28f, SearchGap = 8f;
-    private const float IndexFontSize = 13f, EntryFontSize = 14f;
-    private const float IconHeight = 18f, IconGap = 3f; // the index's area icons
+    private const float FontSize = 18f, MinFontSize = 11f; // a long hand or definition shrinks to fit its page
+    // The hand's list: a term's wrapped lines close together, a clear gap
+    // before the next term (both in hundredths of the font size).
+    private const float IndexLineSpacing = -8f, IndexTermSpacing = 70f;
+    private const float TitleScale = 1.3f, TitleDilate = 0.2f, TitleGap = 12f; // the right page's term, thickened past SemiBold (there's no Bold font)
+    private const string UnknownTerm = "Unknown";
+    private const float IconHeight = 22f, IconGap = 3f; // the index's area icons
 
-    // The pages' writing areas in DictionaryBookOpen, as fractions of the picture (from its bottom left).
-    private static readonly Rect LeftPage = Rect.MinMaxRect(0.085f, 0.16f, 0.46f, 0.877f);
-    private static readonly Rect RightPage = Rect.MinMaxRect(0.565f, 0.16f, 0.925f, 0.877f);
+    // The pages' writing areas in DictionaryBookOpen, as fractions of the
+    // picture (from its bottom left): below the light band along the pages'
+    // curved tops, with a little room (78 of its 324 pixels down; the hand's
+    // list 88).
+    private static readonly Rect LeftPage = Rect.MinMaxRect(0.085f, 0.16f, 0.46f, 0.728f);
+    private static readonly Rect RightPage = Rect.MinMaxRect(0.565f, 0.16f, 0.925f, 0.76f);
 
     private GameManager _game;
     private RectTransform _canvas, _book, _page;
@@ -33,12 +41,11 @@ public class TermDictionary : MonoBehaviour
     private Image _icon, _dim;
     private Sprite _open;
     private CanvasGroup _contents;
-    private TMP_InputField _search;
-    private TMP_Text _index, _entry;
-    private List<string> _terms;                               // A to Z, read on the first open (GameManager loads them in Start)
-    private readonly List<string> _matches = new List<string>(); // what the index shows
-    private string _chosen;
-    private readonly Dictionary<string, Sprite[]> _icons = new Dictionary<string, Sprite[]>(); // each term's area icons
+    private TMP_Text _index, _title, _entry;
+    private readonly CardBehavior[] _cards = new CardBehavior[5]; // Card1..Card5, in the same order as GameManager.currentCards
+    private int _chosen;                                           // which card the right page shows
+    private int _hovered = -1;                                     // which card's line the pointer is over
+    private Sprite[][] _slotIcons = new Sprite[0][];               // each listed card's area icons (none while face-down)
     private readonly List<Image> _iconImages = new List<Image>();
     private bool _closing;
 
@@ -72,6 +79,8 @@ public class TermDictionary : MonoBehaviour
         d._book = book;
         d._icon = image;
         d._open = open;
+        for (int i = 0; i < d._cards.Length; i++)
+            d._cards[i] = c.Find($"Card{i + 1}")?.GetComponent<CardBehavior>();
         book.gameObject.AddComponent<Button>().onClick.AddListener(d.Open);
         d.BuildPage();
     }
@@ -94,70 +103,50 @@ public class TermDictionary : MonoBehaviour
         Stretch(contents);
         _contents = contents.gameObject.AddComponent<CanvasGroup>();
 
-        // Left page: the search box, and the index under it.
-        var left = Area(contents, "LeftPage", LeftPage);
-
-        var search = TMP_DefaultControls.CreateInputField(new TMP_DefaultControls.Resources());
-        search.name = "DictionarySearch";
-        foreach (Transform t in search.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = left.gameObject.layer;
-        var searchRect = (RectTransform)search.transform;
-        searchRect.SetParent(left, false);
-        TopStrip(searchRect, 0f, SearchHeight);
-        _search = search.GetComponent<TMP_InputField>();
-        TextBoxTheme.StyleLineInput(_search);
-        ((TMP_Text)_search.placeholder).text = "Search...";
-        _search.onValueChanged.AddListener(_ => ShowIndex());
-
-        var index = NewChild("Index", left);
-        Stretch(index);
-        index.offsetMax = new Vector2(0f, -(SearchHeight + SearchGap));
-        _index = ScrollingText(index, IndexFontSize);
+        // Left page: the hand.
+        _index = NewChild("Index", Area(contents, "LeftPage", LeftPage)).gameObject.AddComponent<TextMeshProUGUI>();
+        Stretch(_index.rectTransform);
+        PageText(_index, FontSize);
+        _index.lineSpacing = IndexLineSpacing;
+        _index.paragraphSpacing = IndexTermSpacing;
         _index.raycastTarget = true; // for clicks on the terms
-        _index.gameObject.AddComponent<TextLinkClicks>().Clicked = Choose;
+        var links = _index.gameObject.AddComponent<TextLinkClicks>();
+        links.Clicked = Choose;
+        links.Hovered = link =>
+        {
+            _hovered = link != null && int.TryParse(link, out int i) ? i : -1;
+            ShowIndex();
+        };
         TMPro_EventManager.TEXT_CHANGED_EVENT.Add(OnTextChanged);
 
-        // Right page: the chosen term.
-        _entry = NewChild("Entry", Area(contents, "RightPage", RightPage)).gameObject.AddComponent<TextMeshProUGUI>();
-        Stretch(_entry.rectTransform);
-        TextBoxTheme.StyleBodyText(_entry, TextBoxTheme.Regular, EntryFontSize);
-    }
+        // Right page: the chosen term, and its definition filling the rest of the page.
+        var right = Area(contents, "RightPage", RightPage);
+        var column = right.gameObject.AddComponent<VerticalLayoutGroup>();
+        column.spacing = TitleGap;
+        column.childControlWidth = column.childControlHeight = true;
+        column.childForceExpandWidth = true;
+        column.childForceExpandHeight = false;
 
-    // A text in a vertical scroll view filling `view`, with a slim scrollbar that shows when it's needed.
-    private static TMP_Text ScrollingText(RectTransform view, float fontSize)
-    {
-        view.gameObject.AddComponent<RectMask2D>();
+        _title = NewChild("Title", right).gameObject.AddComponent<TextMeshProUGUI>();
+        TextBoxTheme.StyleBodyText(_title, TextBoxTheme.SemiBold, FontSize * TitleScale);
+        _title.fontMaterial.SetFloat(ShaderUtilities.ID_FaceDilate, TitleDilate); // its own copy of the material, so only the title thickens
+        _title.UpdateMeshPadding();
 
-        var text = NewChild("Text", view).gameObject.AddComponent<TextMeshProUGUI>();
-        TextBoxTheme.StyleBodyText(text, TextBoxTheme.Regular, fontSize);
-        TopStrip(text.rectTransform, 0f, 0f);
-        text.rectTransform.offsetMax = new Vector2(-TextPanel.ScrollbarGutter, 0f);
-        text.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-        var scrollbar = TextPanel.MakeScrollbar(view, 0f, 0f);
-        scrollbar.gameObject.SetActive(true);
-
-        var scroll = view.gameObject.AddComponent<ScrollRect>();
-        scroll.horizontal = false;
-        scroll.movementType = ScrollRect.MovementType.Clamped;
-        scroll.scrollSensitivity = 18f;
-        scroll.viewport = view;
-        scroll.content = text.rectTransform;
-        scroll.verticalScrollbar = scrollbar;
-        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
-        return text;
+        _entry = NewChild("Definition", right).gameObject.AddComponent<TextMeshProUGUI>();
+        PageText(_entry, FontSize);
+        var fill = _entry.gameObject.AddComponent<LayoutElement>();
+        fill.preferredHeight = 0f; // takes the room left under the title, and shrinks to fit it
+        fill.flexibleHeight = 1f;
     }
 
     // -------------------- OPENING AND CLOSING --------------------
 
     private void Open()
     {
-        if (_terms == null)
-        {
-            _terms = new List<string>(_game.Definitions.Keys);
-            _terms.Sort(System.StringComparer.OrdinalIgnoreCase);
-            LoadIcons();
-            ShowIndex();
-        }
+        // The hand may have been refreshed or turned over since the last
+        // look; a card still face-down gives way to the first face-up one.
+        if (!Known(_chosen)) _chosen = System.Math.Max(0, System.Array.FindIndex(_cards, card => card != null && card.IsRevealed));
+        ShowIndex();
 
         _closing = false;
         _dim.color = new Color(_dim.color.r, _dim.color.g, _dim.color.b, 0f);
@@ -176,7 +165,6 @@ public class TermDictionary : MonoBehaviour
         {
             _contents.blocksRaycasts = true;
             LeanTween.alphaCanvas(_contents, 1f, FadeTime);
-            _search.ActivateInputField();
         });
     }
 
@@ -235,61 +223,66 @@ public class TermDictionary : MonoBehaviour
 
     // -------------------- THE PAGES --------------------
 
-    // The index: every term containing what's typed, the chosen one in the
-    // accent colour. The first match is chosen if the last choice is gone.
+    // The hand, card by card, the chosen one in bold in the accent colour; a
+    // card still face-down is listed as Unknown, dimmed, with no icons. The
+    // one under the pointer is underlined in the accent colour, so the
+    // lines read as something to click.
     private void ShowIndex()
     {
-        if (_terms == null) return;
-        string query = _search.text.Trim();
+        List<string> hand = _game.currentCards;
+        if (_chosen >= hand.Count) _chosen = 0;
+        string accent = ColorUtility.ToHtmlStringRGB(TextBoxTheme.Accent);
+        string dimInk = ColorUtility.ToHtmlStringRGB(TextBoxTheme.Ink) + "99";
 
-        _matches.Clear();
-        foreach (string term in _terms)
-            if (term.IndexOf(query, System.StringComparison.OrdinalIgnoreCase) >= 0) _matches.Add(term);
-        if (!_matches.Contains(_chosen)) _chosen = _matches.Count > 0 ? _matches[0] : null;
-
-        if (_matches.Count == 0)
+        CardArt art = CardArt.Load();
+        _slotIcons = new Sprite[hand.Count][];
+        float column = 0f;
+        var sb = new StringBuilder();
+        for (int i = 0; i < hand.Count; i++)
         {
-            _index.text = $"No terms match \"<noparse>{query}</noparse>\".";
+            bool known = Known(i);
+            _slotIcons[i] = known && art != null ? art.IconsFor(TermAreas.Get(hand[i])) : new Sprite[0];
+            float width = 0f;
+            foreach (Sprite icon in _slotIcons[i]) width += IconWidth(icon) + IconGap;
+            column = Mathf.Max(column, width);
+
+            string name = known ? hand[i] : $"<i>{UnknownTerm}</i>";
+            if (i == _chosen) name = $"<color=#{accent}><b>{name}</b></color>";
+            else if (i == _hovered) name = $"<color=#{accent}>{name}</color>";
+            else if (!known) name = $"<color=#{dimInk}>{name}</color>";
+            if (i == _hovered) name = $"<u>{name}</u>";
+            sb.Append($"<link=\"{i}\">{name}</link>\n");
+        }
+        _index.margin = new Vector4(column, 0f, 0f, 0f); // room on the left for the most icons any card has
+        _index.text = sb.ToString().TrimEnd();
+
+        if (hand.Count == 0)
+        {
+            _title.text = _entry.text = "";
+        }
+        else if (!Known(_chosen))
+        {
+            _title.text = UnknownTerm;
+            _entry.text = "This card is still face-down. Turn it over in your hand to read it here.";
         }
         else
         {
-            string accent = ColorUtility.ToHtmlStringRGB(TextBoxTheme.Accent);
-            var sb = new StringBuilder();
-            for (int i = 0; i < _matches.Count; i++)
-            {
-                string term = _matches[i] == _chosen ? $"<color=#{accent}><b>{_matches[i]}</b></color>" : _matches[i];
-                sb.Append($"<link=\"{i}\">{term}</link>\n");
-            }
-            _index.text = sb.ToString().TrimEnd();
+            _title.text = hand[_chosen];
+            _entry.text = _game.Definitions.TryGetValue(hand[_chosen], out string definition) ? definition : "No definition available.";
         }
-
-        _entry.text = _chosen == null ? "" : $"<size=130%><b>{_chosen}</b></size>\n\n{_game.Definitions[_chosen]}";
     }
+
+    // Whether the card in this slot of the hand is face-up.
+    private bool Known(int slot) => slot < _cards.Length && _cards[slot] != null && _cards[slot].IsRevealed;
 
     private void Choose(string link)
     {
-        if (!int.TryParse(link, out int i) || i >= _matches.Count) return;
-        _chosen = _matches[i];
+        if (!int.TryParse(link, out int i) || i >= _game.currentCards.Count) return;
+        _chosen = i;
         ShowIndex();
     }
 
     // -------------------- AREA ICONS --------------------
-
-    // Every term's icons, and a column left of the index wide enough for the most any term has.
-    private void LoadIcons()
-    {
-        CardArt art = CardArt.Load();
-        float column = 0f;
-        foreach (string term in _terms)
-        {
-            Sprite[] icons = art != null ? art.IconsFor(TermAreas.Get(term)) : new Sprite[0];
-            _icons[term] = icons;
-            float width = 0f;
-            foreach (Sprite icon in icons) width += IconWidth(icon) + IconGap;
-            column = Mathf.Max(column, width);
-        }
-        _index.margin = new Vector4(column, 0f, 0f, 0f);
-    }
 
     private static float IconWidth(Sprite icon) => IconHeight * icon.rect.width / icon.rect.height;
 
@@ -318,11 +311,11 @@ public class TermDictionary : MonoBehaviour
         TMP_TextInfo info = _index.textInfo;
         float left = _index.rectTransform.rect.xMin;
         int used = 0;
-        for (int i = 0; i < info.linkCount && i < _matches.Count; i++)
+        for (int i = 0; i < info.linkCount && i < _slotIcons.Length; i++)
         {
             TMP_LineInfo line = info.lineInfo[info.characterInfo[info.linkInfo[i].linkTextfirstCharacterIndex].lineNumber];
             float x = left;
-            foreach (Sprite icon in _icons[_matches[i]])
+            foreach (Sprite icon in _slotIcons[i])
             {
                 if (used == _iconImages.Count) _iconImages.Add(NewIcon());
                 Image image = _iconImages[used++];
@@ -353,6 +346,14 @@ public class TermDictionary : MonoBehaviour
     }
 
     // -------------------- HELPERS --------------------
+
+    private static void PageText(TMP_Text text, float size)
+    {
+        TextBoxTheme.StyleBodyText(text, TextBoxTheme.SemiBold, size); // ink that holds up on the pages' texture
+        text.fontSizeMax = size;
+        text.fontSizeMin = MinFontSize;
+        text.enableAutoSizing = true;
+    }
 
     // A child covering `area` of its parent, given as fractions of it.
     private static RectTransform Area(RectTransform parent, string name, Rect area)

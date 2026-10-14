@@ -94,7 +94,7 @@ public class GameManager : MonoBehaviour
                 usedVocab.Clear();
                 responseHistory.Clear();
 
-                currentScenario = ScenarioSequencer.GetNextScenario();
+                currentScenario = NextScenario();
                 GenerateNewCards();
             }
             else if (SaveManager.HasSave(currentSaveSlot))
@@ -111,7 +111,7 @@ public class GameManager : MonoBehaviour
             }
             else
             {
-                currentScenario = ScenarioSequencer.GetNextScenario();
+                currentScenario = NextScenario();
                 GenerateNewCards();
             }
         }
@@ -127,6 +127,22 @@ public class GameManager : MonoBehaviour
             SynopsisTransition.Revealed += BeginRound;
         else
             BeginRound();
+    }
+
+    static string NextScenario()
+    {
+        string scenario = ScenarioSequencer.GetNextScenario();
+#if UNITY_EDITOR
+        // Pressing Play on GameScene skips the menu's New Game, which is what
+        // starts the scenario list over, so test runs used it up and left the
+        // round with no scenario. In the Editor it starts over by itself.
+        if (scenario == null)
+        {
+            ScenarioSequencer.Reset();
+            scenario = ScenarioSequencer.GetNextScenario();
+        }
+#endif
+        return scenario;
     }
 
     void BeginRound()
