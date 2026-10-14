@@ -72,7 +72,7 @@ Shaping - Reinforcement by successive approximations
 Sleep Apnea - Chronic sleep disorder when the person constantly pauses while asleep, resulting in poor sleep quality
 Stimulus Generalization - Responding to variations of the original stimulus
 Stroop Effect - When two skills come into conflict, the more practiced skill will be performed first
-Synapse - A way to assign participants to groups where there's an equal likelihood of being in any group
+Synapse - Gap between the terminal button of one neuron and the dendrites of the next, between which neurotransmitter flows
 Taste Receptor Cells - The receptor cells in our taste buds that allow us to sense the chemicals in our food
 Temperament - Individual response style to environmental stimulus
 Thalamus - The forebrain structure that gets information from the senses and then sends the information to the cerebral cortex to be processed
