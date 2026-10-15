@@ -32,6 +32,8 @@ public enum Feature
     JarAvatar,                // the synopsis's NPC is the moustached jar Brainy (as Feature.JarBrainy), centred up the screen, and fades out on Continue; the response screen has no avatar; the synopsis's fallback line names Brainy instead of Alex (JarBrainy, IntroductionManager, GameManager, SynopsisTransition, TextBoxTheme)
     Dictionary,               // a closed book in the response screen's bottom right (Resources/DictionaryBook) pops on hover; clicked, it opens (DictionaryBookOpen) and slowly grows to the middle of the screen, where its left page lists the hand's terms (Unknown for cards still face-down) and its right page the chosen card's definition (nothing until the player picks a term; each pick is logged as a "definition" card event); definitions live there instead of on the cards; Refresh moves to the middle of the bottom, under the hand; the book and Menu shrink on narrow screens to stay clear of the hand (TermDictionary, FitBesideHand, TextLinkClicks, GameManager, PixelButton, SynopsisTransition)
     CardHoverGlow,            // a face-down card's edges glow a soft light of its back's color while hovered, as if lit from behind, spilling a little onto the card and tinting the response box's paper too, fading as it flips (CardBehavior, PanelSprites, CardArt, Resources/CardGlowTint)
+    GameOverview,             // before the first scenario's synopsis, Brainy first explains the game in the same speech bubble; Continue swaps it for the scenario's picture and synopsis (IntroductionManager)
+    GradingTabs,              // with ThemedTextBoxes, the grading screen leads with Brainy's feedback, in a panel fitted to its text beside Brainy and the score (the background shows below it); the scenario and response sit behind two tabs along the top and open above the feedback, pushing it down, when clicked (GradingTabs, TextBoxTheme, TextPanel, GradingTransition)
 }
 
 // The study's conditions, all in one place: which features each test group
@@ -75,6 +77,8 @@ public static class TestGroups
         Feature.JarAvatar,
         Feature.Dictionary,
         Feature.CardHoverGlow,
+        Feature.GameOverview,
+        Feature.GradingTabs,
     };
 
     private static readonly Dictionary<int, HashSet<Feature>> Groups = new Dictionary<int, HashSet<Feature>>

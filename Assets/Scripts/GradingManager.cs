@@ -96,7 +96,9 @@ public class GradingManager : MonoBehaviour
 
         if (string.IsNullOrEmpty(feedback))
         {
-            aiResponseText.text = "<b>Brainy's Feedback:</b>\nFailed to get feedback.";
+            aiResponseText.text =
+                $"<b><color={Head}>Brainy's Feedback:\n</color></b><color={Body}>Failed to get feedback.</color>";
+            if (scoreText != null) scoreText.text = "Score: N/A"; // not left on "Loading..."
             yield break;
         }
 

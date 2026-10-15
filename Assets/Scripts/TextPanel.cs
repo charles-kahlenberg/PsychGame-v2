@@ -18,6 +18,18 @@ public class TextPanel : MonoBehaviour
 
     public ScrollRect Scroll { get; private set; }
 
+    // The tallest it grows before scrolling; can change as the room around it does.
+    public float MaxHeight
+    {
+        get => _maxHeight;
+        set
+        {
+            if (Mathf.Approximately(value, _maxHeight)) return;
+            _maxHeight = value;
+            _fittedWidth = -1f; // refit next frame, without jumping back to the top
+        }
+    }
+
     private RectTransform _panel, _viewport, _content;
     private TMP_Text _text;
     private Scrollbar _scrollbar;

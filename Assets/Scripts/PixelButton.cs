@@ -105,18 +105,18 @@ public class PixelButton : MonoBehaviour
         Restyle(c, "SavePromptPanel/No", "skip");
     }
 
-    // Next is the screen's one button, so its art is bigger. Like Submit, it
-    // sits just right of its box (Brainy's feedback panel, which TextBoxTheme
-    // insets by its screen margin), level with the box's bottom edge.
+    // Next is the screen's one button, so its art is bigger. It's pinned to
+    // the bottom-right corner, so it holds its place at any screen shape;
+    // with ThemedTextBoxes, under Brainy in the right-hand column.
     private static void ApplyToGrading(RectTransform c)
     {
         var next = Restyle(c, "NextButton", "next");
-        var feedback = c.Find("AIResponseScrollView") as RectTransform;
-        if (next == null || feedback == null) return;
+        if (next == null) return;
 
-        Rect box = LocalRect(c, feedback);
-        float inset = TextBoxTheme.Enabled ? TextBoxTheme.ScreenMargin : 0f;
-        Place(c, next, new Vector2(box.xMax - inset + SubmitGap, box.yMin + inset - ShadowDepth), new Vector2(0f, 0f));
+        float x = TextBoxTheme.Enabled ? TextBoxTheme.GradingColumnX : -ScreenMargin - next.sizeDelta.x / 2f;
+        next.anchorMin = next.anchorMax = new Vector2(1f, 0f);
+        next.pivot = new Vector2(0.5f, 0f);
+        next.anchoredPosition = new Vector2(x, TextBoxTheme.ScreenMargin - ShadowDepth);
     }
 
     // `name` is a path under the canvas. The plate is centered where the button was.

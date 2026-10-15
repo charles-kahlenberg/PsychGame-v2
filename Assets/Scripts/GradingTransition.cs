@@ -59,6 +59,7 @@ public class GradingTransition : MonoBehaviour
     // for them), the side they come from and go to, and when they set off.
     private static readonly (string name, Vector2 side, float delay)[] GradingSlides =
     {
+        ("GradingTabs", Vector2.up, 0f), // the scenario and response tabs, with GradingTabs
         ("ScenarioTextScrollView", Vector2.up, 0f),
         ("UserResponseTextScrollView", Vector2.left, 0.1f),
         ("AIResponseScrollView", Vector2.left, 0.18f),

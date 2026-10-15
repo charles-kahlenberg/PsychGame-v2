@@ -131,7 +131,7 @@ public class GameManager : MonoBehaviour
 
     static string NextScenario()
     {
-        string scenario = ScenarioSequencer.GetNextScenario();
+        string scenario = ScenarioSequencer.Current();
 #if UNITY_EDITOR
         // Pressing Play on GameScene skips the menu's New Game, which is what
         // starts the scenario list over, so test runs used it up and left the
@@ -139,7 +139,7 @@ public class GameManager : MonoBehaviour
         if (scenario == null)
         {
             ScenarioSequencer.Reset();
-            scenario = ScenarioSequencer.GetNextScenario();
+            scenario = ScenarioSequencer.Current();
         }
 #endif
         return scenario;

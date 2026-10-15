@@ -143,13 +143,23 @@ public class ClickLogger : MonoBehaviour
 
     private IEnumerator StartSession()
     {
-        yield return PostJson("/session/start", JsonUtility.ToJson(new SessionStartPayload
+        string json = JsonUtility.ToJson(new SessionStartPayload
         {
             sessionId = _sessionId,
             username = _username,
             testGroup = TestGroups.CurrentGroup,
             features = TestGroups.EnabledFeaturesString(),
-        }));
+        });
+
+        // Retried until it lands (the insert ignores repeats): a batch sent
+        // for a session row that was never written fails the FK and is lost.
+        for (float wait = 2f; ; wait = Mathf.Min(wait * 2f, 30f))
+        {
+            bool ok = false;
+            yield return Worker.Post(WorkerUrl + "/session/start", json, r => ok = r != null, timeoutSeconds: 10);
+            if (ok) break;
+            yield return new WaitForSecondsRealtime(wait);
+        }
 
         _sessionReady = true;
         // Send anything that piled up (e.g. clicks during the username

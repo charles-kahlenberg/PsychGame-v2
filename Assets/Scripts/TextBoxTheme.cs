@@ -24,8 +24,10 @@ using UnityEngine.UI;
 //  - RulesScene: Brainy's bubble is the panel with a "Brainy" name tag, its
 //    tail toward Brainy; it holds the example too (RulesManager).
 //  - GradingScene: the scenario, response and feedback scroll views become
-//    fixed-size panels that scroll, and Brainy's score bubble is a small
-//    panel with a name tag and a tail toward Brainy.
+//    fixed-size panels that scroll (with Feature.GradingTabs, panels that fit
+//    their text, the other two opening from tabs above the feedback),
+//    and Brainy's score bubble is a small panel with a name tag and a tail
+//    toward Brainy, the two pinned down the right edge.
 //  - ReviewScene: the saved responses are one tall panel that scrolls, under
 //    a light title.
 // GradingManager and ResponseReview colour their text for paper.
@@ -203,15 +205,32 @@ public static class TextBoxTheme
 
     private const float PanelGap = 12f; // between panels stacked down the screen
 
+    // The grading screen's right-hand column (Brainy, the score, and Next
+    // below them, which PixelButton places), pinned to the right edge so it
+    // keeps its size and place at any screen shape.
+    private const float GradingColumnWidth = 160f;
+    public const float GradingColumnX = -(ScreenMargin + GradingColumnWidth / 2f); // its middle, from the right edge
+    private const float GradingBrainyBottom = 54f; // clear of Next
+    private static readonly Vector2 GradingBrainySize = new Vector2(110f, 115f);
+    private const float ScoreFontSize = 15f;
+
     private static void StyleGrading(RectTransform canvas)
     {
         var grading = Object.FindFirstObjectByType<GradingManager>();
         if (grading == null) return;
 
-        FixedPanel(canvas, grading.scenarioText, top: ScreenMargin, bottom: PanelGap / 2f);
-        FixedPanel(canvas, grading.userResponseText, top: PanelGap / 2f, bottom: PanelGap / 2f);
-        FixedPanel(canvas, grading.aiResponseText, top: PanelGap / 2f, bottom: ScreenMargin);
-        StyleScoreBubble(canvas, grading.scoreText);
+        if (TestGroups.IsEnabled(Feature.GradingTabs))
+        {
+            GradingTabs.Build(canvas, grading.scenarioText, grading.userResponseText, grading.aiResponseText,
+                              right: 2f * ScreenMargin + GradingColumnWidth);
+        }
+        else
+        {
+            FixedPanel(canvas, grading.scenarioText, top: ScreenMargin, bottom: PanelGap / 2f);
+            FixedPanel(canvas, grading.userResponseText, top: PanelGap / 2f, bottom: PanelGap / 2f);
+            FixedPanel(canvas, grading.aiResponseText, top: PanelGap / 2f, bottom: ScreenMargin);
+        }
+        StyleBrainyColumn(canvas, grading.scoreText);
     }
 
     private static void StyleReview(RectTransform canvas)
@@ -260,24 +279,57 @@ public static class TextBoxTheme
         old.gameObject.SetActive(false);
     }
 
-    // Brainy's score, beside Brainy: a small panel with their name tag, its
-    // tail toward them, growing up from where the old bubble's bottom was.
-    private static void StyleScoreBubble(RectTransform canvas, TMP_Text text)
+    // Replaces the scroll view holding `text` with a paper panel on `parent`
+    // (the canvas or a full-screen layer over it), `top` below the screen's
+    // top and from the left margin to `right` in from the right edge, so it
+    // keeps its place at any screen shape. It fits its text between the
+    // heights and scrolls past the maximum.
+    public static TextPanel LeftPanel(RectTransform parent, TMP_Text text, float top, float right, float minHeight, float maxHeight)
     {
-        var bubble = text != null ? text.transform.parent as RectTransform : null;
+        var old = text != null ? text.GetComponentInParent<ScrollRect>(true)?.transform as RectTransform : null;
+        if (old == null) return null;
+
+        var panel = (RectTransform)new GameObject(old.name + "Panel", typeof(RectTransform)).transform;
+        panel.gameObject.layer = old.gameObject.layer;
+        panel.SetParent(parent, false);
+        if (parent == old.parent) panel.SetSiblingIndex(old.GetSiblingIndex());
+        panel.anchorMin = new Vector2(0f, 1f);
+        panel.anchorMax = new Vector2(1f, 1f);
+        panel.pivot = new Vector2(0.5f, 1f);
+        panel.offsetMin = new Vector2(ScreenMargin, -top - minHeight);
+        panel.offsetMax = new Vector2(-right, -top); // TextPanel sets the height
+
+        StyleBodyText(text, Regular, ScenarioFontSize);
+        var built = TextPanel.Build(panel, text, minHeight, maxHeight, nameTag: null);
+        old.gameObject.SetActive(false);
+        return built;
+    }
+
+    // Down the grading screen's right: Brainy, and above them their score in
+    // a small panel with their name tag, its tail toward them.
+    private static void StyleBrainyColumn(RectTransform canvas, TMP_Text score)
+    {
+        var brainy = canvas.Find("Brainy") as RectTransform;
+        if (brainy != null) PinBottomRight(brainy, new Vector2(GradingColumnX, GradingBrainyBottom), GradingBrainySize);
+
+        var bubble = score != null ? score.transform.parent as RectTransform : null;
         if (bubble == null || bubble == canvas) return;
 
-        float width = Mathf.Max(110f, PixelButton.LocalRect(canvas, bubble).width);
-        float x = (bubble.anchorMin.x + bubble.anchorMax.x) / 2f;
-        bubble.anchorMin = bubble.anchorMax = new Vector2(x, bubble.anchorMin.y);
-        bubble.pivot = new Vector2(0.5f, 0f);
-        bubble.anchoredPosition = Vector2.zero;
-        bubble.sizeDelta = new Vector2(width, 40f);
+        float bubbleBottom = GradingBrainyBottom + GradingBrainySize.y + TextPanel.TailLength - 6f;
+        PinBottomRight(bubble, new Vector2(GradingColumnX, bubbleBottom), new Vector2(GradingColumnWidth, 40f));
+        StyleBodyText(score, SemiBold, ScoreFontSize);
+        score.alignment = TextAlignmentOptions.Top;
+        var panel = TextPanel.Build(bubble, score, minHeight: 40f, maxHeight: 90f, nameTag: "Brainy");
+        panel.AddTail(TextPanel.TailSide.Bottom, 0.6f);
+    }
 
-        StyleBodyText(text, SemiBold, BubbleFontSize);
-        text.alignment = TextAlignmentOptions.Top;
-        var panel = TextPanel.Build(bubble, text, minHeight: 40f, maxHeight: 90f, nameTag: "Brainy");
-        panel.AddTail(TextPanel.TailSide.Bottom, 0.85f);
+    // Places a box by the middle of its bottom edge, from the screen's bottom-right corner.
+    private static void PinBottomRight(RectTransform rt, Vector2 position, Vector2 size)
+    {
+        rt.anchorMin = rt.anchorMax = new Vector2(1f, 0f);
+        rt.pivot = new Vector2(0.5f, 0f);
+        rt.sizeDelta = size;
+        rt.anchoredPosition = position;
     }
 
     // -------------------- SAVE PROMPT --------------------

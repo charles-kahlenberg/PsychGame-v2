@@ -59,6 +59,23 @@ public static class ScenarioSequencer
         PlayerPrefs.DeleteKey(ScenarioListKey);
     }
 
+    // The round's scenario: the one already chosen (LastScenario), or, at the
+    // start of a new game (which clears it), the next one, saved so the
+    // synopsis and the response screen agree whichever of them opens first.
+    public static string Current()
+    {
+        string scenario = PlayerPrefs.GetString("LastScenario", "");
+        if (!string.IsNullOrEmpty(scenario)) return scenario;
+
+        scenario = GetNextScenario();
+        if (scenario != null)
+        {
+            PlayerPrefs.SetString("LastScenario", scenario);
+            PlayerPrefs.Save();
+        }
+        return scenario;
+    }
+
     // Get next scenario sequentially
     public static string GetNextScenario()
     {
