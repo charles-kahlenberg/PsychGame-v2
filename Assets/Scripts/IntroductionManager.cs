@@ -166,7 +166,7 @@ public class IntroductionManager : MonoBehaviour
     private void AddScenarioImage()
     {
         int number = ScenarioNumber();
-        string folder = "ScenarioImages/" + number + "/"; // layered art, animated by PhoneScenarioArt
+        string folder = "ScenarioImages/" + number + "/"; // layered art, animated by PhoneScenarioArt or ChocolateScenarioArt
         Sprite sprite = Resources.Load<Sprite>(folder + "Background") ?? Resources.Load<Sprite>("ScenarioImages/" + number) ?? Resources.Load<Sprite>("ScenarioImages/Placeholder");
         if (sprite == null) return;
 
@@ -206,6 +206,7 @@ public class IntroductionManager : MonoBehaviour
         image.preserveAspect = true;
         image.raycastTarget = false;
         PhoneScenarioArt.Add(picture, folder);
+        ChocolateScenarioArt.Add(picture, folder);
     }
 
     public void OnContinueClicked()
