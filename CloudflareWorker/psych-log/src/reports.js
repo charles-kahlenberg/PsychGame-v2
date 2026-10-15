@@ -241,6 +241,10 @@ export function buildSessionReport(session, rows, scenarioTexts) {
     push(v.end, 9, `Left ${label}`, v.scenario, `Spent ${fmtDuration(v.durationMs)}`);
   }
   for (const c of rows.cardEvents) {
+    if (c.event_type === "definition") {
+      push(t(c.timestamp), 4, "Viewed definition", scenarioOf(c.scenario), formatCards(c.cards));
+      continue;
+    }
     const refresh = c.event_type === "refresh";
     const after = refresh && c.elapsed_ms != null ? ` (previous cards shown for ${fmtDuration(c.elapsed_ms)})` : "";
     push(t(c.timestamp), 3, refresh ? "Cards refreshed" : "Cards dealt", scenarioOf(c.scenario), formatCards(c.cards) + after);
@@ -297,7 +301,7 @@ export function buildSessionReport(session, rows, scenarioTexts) {
   for (const c of rows.cardEvents) {
     const a = attemptFor(scenarioOf(c.scenario), t(c.timestamp));
     if (c.event_type === "refresh") a.refreshes++;
-    else if (!a.initialCards) a.initialCards = formatCards(c.cards);
+    else if (c.event_type === "initial" && !a.initialCards) a.initialCards = formatCards(c.cards);
   }
   for (const u of rows.userResponses) {
     attemptFor(scenarioOf(u.scenario), t(u.timestamp)).responses.push(u.response || "");

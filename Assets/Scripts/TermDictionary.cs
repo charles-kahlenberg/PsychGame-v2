@@ -12,6 +12,8 @@ using UnityEngine.UI;
 // where its pages hold the dictionary: on the left the hand, card by card,
 // each term with its areas' icons (CardArt) on its left, or "Unknown" for a
 // card still face-down; on the right the chosen card's term and definition.
+// It opens with nothing chosen, so every definition read is a click, and
+// each click is logged (ClickLogger card event "definition").
 // Esc or a click off the book carries it back to its corner.
 public class TermDictionary : MonoBehaviour
 {
@@ -43,7 +45,7 @@ public class TermDictionary : MonoBehaviour
     private CanvasGroup _contents;
     private TMP_Text _index, _title, _entry;
     private readonly CardBehavior[] _cards = new CardBehavior[5]; // Card1..Card5, in the same order as GameManager.currentCards
-    private int _chosen;                                           // which card the right page shows
+    private int _chosen = -1;                                      // which card the right page shows (-1: none yet)
     private int _hovered = -1;                                     // which card's line the pointer is over
     private Sprite[][] _slotIcons = new Sprite[0][];               // each listed card's area icons (none while face-down)
     private readonly List<Image> _iconImages = new List<Image>();
@@ -143,9 +145,7 @@ public class TermDictionary : MonoBehaviour
 
     private void Open()
     {
-        // The hand may have been refreshed or turned over since the last
-        // look; a card still face-down gives way to the first face-up one.
-        if (!Known(_chosen)) _chosen = System.Math.Max(0, System.Array.FindIndex(_cards, card => card != null && card.IsRevealed));
+        _chosen = -1; // the player picks what to read
         ShowIndex();
 
         _closing = false;
@@ -230,7 +230,7 @@ public class TermDictionary : MonoBehaviour
     private void ShowIndex()
     {
         List<string> hand = _game.currentCards;
-        if (_chosen >= hand.Count) _chosen = 0;
+        if (_chosen >= hand.Count) _chosen = -1;
         string accent = ColorUtility.ToHtmlStringRGB(TextBoxTheme.Accent);
         string dimInk = ColorUtility.ToHtmlStringRGB(TextBoxTheme.Ink) + "99";
 
@@ -260,6 +260,11 @@ public class TermDictionary : MonoBehaviour
         {
             _title.text = _entry.text = "";
         }
+        else if (_chosen < 0)
+        {
+            _title.text = "";
+            _entry.text = "Choose a term on the left to read its definition.";
+        }
         else if (!Known(_chosen))
         {
             _title.text = UnknownTerm;
@@ -280,6 +285,9 @@ public class TermDictionary : MonoBehaviour
         if (!int.TryParse(link, out int i) || i >= _game.currentCards.Count) return;
         _chosen = i;
         ShowIndex();
+        // What the player saw: the term, or Unknown for a face-down card.
+        string term = Known(i) ? _game.currentCards[i] : UnknownTerm;
+        ClickLogger.LogCardEvent(_game.currentScenario, "definition", new List<string> { term }, -1);
     }
 
     // -------------------- AREA ICONS --------------------

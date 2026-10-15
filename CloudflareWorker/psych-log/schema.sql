@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS card_events (
   timestamp TEXT NOT NULL,
   timestamp_et TEXT NOT NULL,
   scenario TEXT,
-  event_type TEXT NOT NULL,        -- 'initial' or 'refresh'
+  event_type TEXT NOT NULL,        -- 'initial', 'refresh', or 'definition' (a term picked in the dictionary book)
   cards TEXT,                      -- pipe-separated card names
   elapsed_ms INTEGER,
   FOREIGN KEY (session_id) REFERENCES sessions(session_id)
