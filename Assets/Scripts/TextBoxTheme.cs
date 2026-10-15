@@ -216,7 +216,11 @@ public static class TextBoxTheme
 
     private static void StyleGrading(RectTransform canvas)
     {
-        var grading = Object.FindFirstObjectByType<GradingManager>();
+        // This scene's own: the last grading screen can still be loaded while
+        // the next is set up under it (GradingTransition).
+        GradingManager grading = null;
+        foreach (GameObject root in canvas.gameObject.scene.GetRootGameObjects())
+            if ((grading = root.GetComponentInChildren<GradingManager>()) != null) break;
         if (grading == null) return;
 
         if (TestGroups.IsEnabled(Feature.GradingTabs))

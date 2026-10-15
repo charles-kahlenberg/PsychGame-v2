@@ -35,18 +35,22 @@ public class GradingTabs : MonoBehaviour
     // far in from the right edge the panels stop.
     public static void Build(RectTransform canvas, TMP_Text scenario, TMP_Text response, TMP_Text feedback, float right)
     {
+        float margin = TextBoxTheme.ScreenMargin;
+        float top = margin + TabHeight + TabGap, bottom = canvas.rect.height - margin;
+        float room = bottom - top;
+
+        var feedbackPanel = TextBoxTheme.LeftPanel(canvas, feedback, top, right, MinPanelHeight, room);
+        if (feedbackPanel == null || scenario == null || response == null) return;
+
         var row = NewRect("GradingTabs", canvas);
         row.anchorMin = Vector2.zero;
         row.anchorMax = Vector2.one;
         row.offsetMin = row.offsetMax = Vector2.zero;
 
-        float margin = TextBoxTheme.ScreenMargin;
         var tabs = row.gameObject.AddComponent<GradingTabs>();
-        tabs._top = tabs._feedbackTop = margin + TabHeight + TabGap;
-        tabs._bottom = canvas.rect.height - margin;
-        float room = tabs._bottom - tabs._top;
-
-        tabs._feedback = TextBoxTheme.LeftPanel(canvas, feedback, tabs._top, right, MinPanelHeight, room);
+        tabs._top = tabs._feedbackTop = top;
+        tabs._bottom = bottom;
+        tabs._feedback = feedbackPanel;
         float x = margin;
         tabs._tabs = new[]
         {
@@ -56,13 +60,17 @@ public class GradingTabs : MonoBehaviour
     }
 
     // The feedback follows the open panel's bottom down (and back up), and
-    // can grow only as far as the bottom of the screen.
+    // can grow only as far as the bottom of the screen. Once there it's left
+    // alone: nudged every frame, it re-measured its text every frame.
     void LateUpdate()
     {
-        if (_feedback == null) return;
+        if (_tabs == null) return;
         Tab open = Array.Find(_tabs, t => t.panel.gameObject.activeSelf);
         float target = _top + (open != null ? open.panel.rect.height + TabGap : 0f);
-        _feedbackTop = Mathf.Lerp(_feedbackTop, target, 1f - Mathf.Exp(-Time.unscaledDeltaTime * 18f));
+        if (_feedbackTop == target) return;
+        _feedbackTop = Mathf.Abs(_feedbackTop - target) < 0.5f
+            ? target
+            : Mathf.Lerp(_feedbackTop, target, 1f - Mathf.Exp(-Time.unscaledDeltaTime * 18f));
 
         var rt = (RectTransform)_feedback.transform;
         rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, -_feedbackTop); // x is GradingTransition's to slide
@@ -121,6 +129,7 @@ public class GradingTabs : MonoBehaviour
     // Clicks on the tabs are left to their buttons, so this never fights a toggle.
     void Update()
     {
+        if (_tabs == null) return;
         Tab open = Array.Find(_tabs, t => t.panel.gameObject.activeSelf);
         if (open == null) return;
 

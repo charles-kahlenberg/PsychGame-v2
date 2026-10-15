@@ -33,10 +33,12 @@ public class SceneTransition : MonoBehaviour
         _instance.FadeOutAndLoad(sceneName);
     }
 
+    // Loads in the background, so the screen being cut from (which covers
+    // the load and waits for it) keeps moving instead of freezing on the click.
     public static void Cut(string sceneName)
     {
         if (_instance != null) _instance._cut = true;
-        SceneManager.LoadScene(sceneName);
+        SceneManager.LoadSceneAsync(sceneName);
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]

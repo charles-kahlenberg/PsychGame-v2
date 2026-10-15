@@ -1,0 +1,10 @@
+name = "psych-ai"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Keeps request logs (and the failure console.error) in the dashboard.
+[observability]
+enabled = true
+
+# Set as a secret, not here — never commit the real value:
+#   wrangler secret put OPENAI_API_KEY

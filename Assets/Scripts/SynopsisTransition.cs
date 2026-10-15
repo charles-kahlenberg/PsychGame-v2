@@ -107,12 +107,13 @@ public class SynopsisTransition : MonoBehaviour
                 if (_game == null) return;
 
                 Revealed = null; // anything left from a screen that never got revealed
-                // The intro is laid over next frame. Until then only the
-                // background shows (ShaderBackground keeps it), as on the
-                // intro's own first frames, for GradingTransition's cut in.
+                // The intro is laid over once it loads, in the background.
+                // Until then only the background shows (ShaderBackground
+                // keeps it), as on the intro's own first frames, for
+                // GradingTransition's cut in.
                 _game.gameObject.AddComponent<CanvasGroup>().alpha = 0f;
                 CardsBeforeDeal = PlayerPrefs.GetString("LastCards", "");
-                SceneManager.LoadScene("IntroductionScene", LoadSceneMode.Additive);
+                SceneManager.LoadSceneAsync("IntroductionScene", LoadSceneMode.Additive);
             }
             else if (scene.name == "IntroductionScene" && mode == LoadSceneMode.Additive)
             {

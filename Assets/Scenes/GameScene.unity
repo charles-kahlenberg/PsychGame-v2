@@ -3999,7 +3999,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dc307d363352e844f9307d86ea145e81, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  workerUrl: https://psych-hints.dauriagoalie31.workers.dev
+  workerUrl: https://psych-ai.charliekahlenberg.workers.dev/hint
   hintText: {fileID: 1211065673}
   hintOverlay: {fileID: 1789710095}
   hintScrollView: {fileID: 1481337831}

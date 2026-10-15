@@ -892,7 +892,7 @@ MonoBehaviour:
   speechBubble: {fileID: 777657195}
   dialogueText: {fileID: 220083870}
   continueButton: {fileID: 1272007810}
-  introductionWorkerUrl: https://psych-introduction.dauriagoalie31.workers.dev
+  introductionWorkerUrl: https://psych-ai.charliekahlenberg.workers.dev/intro
   timeoutSeconds: 20
 --- !u!4 &1530346059
 Transform:

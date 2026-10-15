@@ -17,9 +17,9 @@ using UnityEngine.UI;
 //     response screen is swapped for the grading screen on the same
 //     background, and its panels slide in.
 //  2. Next: the next round (GameScene, with its synopsis and its own tucked
-//     grading screen) loads straight away, under this grading screen, which
-//     is kept over it (Cover): the load's stall lands on the click, while
-//     nothing is moving yet. Then the panels slide out while the background
+//     grading screen) loads straight away in the background, under this
+//     grading screen, which is kept over it (Cover) and stays still, its
+//     background moving, until the load is done. Then the panels slide out while the background
 //     turns the synopsis's blue, and the synopsis begins underneath: its NPC
 //     walks in and its speech bubble drops in from the top.
 public class GradingTransition : MonoBehaviour
@@ -84,7 +84,7 @@ public class GradingTransition : MonoBehaviour
                 _leaving = _showing = false;
                 _grading = null;
                 Shown = null; // anything left from a grading screen that was never shown
-                SceneManager.LoadScene("GradingScene", LoadSceneMode.Additive);
+                SceneManager.LoadSceneAsync("GradingScene", LoadSceneMode.Additive); // in the background: it's hidden until Submit
             }
             else if (scene.name == "GradingScene" && mode == LoadSceneMode.Additive)
             {
@@ -186,17 +186,16 @@ public class GradingTransition : MonoBehaviour
     {
         SceneTransition.Cut(synopsisScene);
 
-        // Wait out the loads (the intro comes a frame after GameScene), and
-        // then the long frame they made, so nothing starts with a jump. The
-        // new screens set the look to the intro's; it stays red until it turns.
+        // Wait out the loads (the intro comes after GameScene), and then the
+        // long frame they made, so nothing starts with a jump. The look stays
+        // red (ShaderBackground leaves it alone while this covers) until it turns.
+        ShaderBackground.Excite = ShaderBackground.Heat = 1f;
         Scene intro;
         do
         {
-            ShaderBackground.Excite = ShaderBackground.Heat = 1f;
             yield return null;
             intro = SceneManager.GetSceneByName("IntroductionScene");
         } while (!intro.isLoaded);
-        ShaderBackground.Heat = 1f;
         yield return null;
 
         // The intro's background is hidden under this one until it goes.

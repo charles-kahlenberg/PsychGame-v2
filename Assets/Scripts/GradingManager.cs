@@ -18,8 +18,8 @@ public class GradingManager : MonoBehaviour
     public ScrollRect aiResponseScrollView;
 
     [Header("Cloudflare Worker")]
-    [Tooltip("Example: https://psych-grading.dauriagoalie31.workers.dev")]
-    public string gradingWorkerUrl = "https://psych-grading.dauriagoalie31.workers.dev";
+    [Tooltip("Example: https://psych-ai.charliekahlenberg.workers.dev/grade")]
+    public string gradingWorkerUrl = "https://psych-ai.charliekahlenberg.workers.dev/grade";
 
     private Coroutine loadingDotsCoroutine;
     private bool isLoading = false;

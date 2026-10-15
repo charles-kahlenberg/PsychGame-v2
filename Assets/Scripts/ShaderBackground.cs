@@ -107,8 +107,10 @@ public class ShaderBackground : MonoBehaviour
         // GameScene opening under a synopsis shows only this until the intro
         // is laid over it (SynopsisTransition), so it starts out the same.
         // The grading screen tucked in for later (GradingTransition) leaves
-        // the look alone.
-        if (mode == LoadSceneMode.Single || scene.name == IntroSceneName)
+        // the look alone, as does a load under the last grading screen,
+        // which keeps it red until it turns it to the synopsis's itself:
+        // reset here, a frame of blue showed before it caught up.
+        if ((mode == LoadSceneMode.Single || scene.name == IntroSceneName) && !GradingTransition.Covering)
         {
             Excite = scene.name == IntroSceneName || SynopsisTransition.ShowsSynopsis(scene) ? 1f : 0f;
             Heat = 0f;

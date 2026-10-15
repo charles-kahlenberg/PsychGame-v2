@@ -8,8 +8,8 @@ using UnityEngine.UI;
 public class HintManager : MonoBehaviour
 {
     [Header("Cloudflare Worker")]
-    [Tooltip("Example: https://psych-hints.dauriagoalie31.workers.dev")]
-    public string workerUrl = "https://psych-hints.dauriagoalie31.workers.dev";
+    [Tooltip("Example: https://psych-ai.charliekahlenberg.workers.dev/hint")]
+    public string workerUrl = "https://psych-ai.charliekahlenberg.workers.dev/hint";
 
     [Header("UI")]
     public TMP_Text hintText;

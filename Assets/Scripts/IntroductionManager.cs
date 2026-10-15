@@ -13,8 +13,8 @@ public class IntroductionManager : MonoBehaviour
     public Button continueButton;
 
     [Header("Cloudflare Worker")]
-    [Tooltip("Your Worker URL, e.g. https://psych-introduction.dauriagoalie31.workers.dev")]
-    public string introductionWorkerUrl = "https://psych-introduction.dauriagoalie31.workers.dev";
+    [Tooltip("Your Worker URL, e.g. https://psych-ai.charliekahlenberg.workers.dev/intro")]
+    public string introductionWorkerUrl = "https://psych-ai.charliekahlenberg.workers.dev/intro";
 
     private string currentScenario;
     private bool skipTyping = false;
@@ -24,7 +24,7 @@ public class IntroductionManager : MonoBehaviour
 
     private const string GameOverview =
         "Here’s how the game works: each round, I’ll show you an everyday scenario and deal you 5 psychology terms. " +
-        "Write a response that explains the scenario using as many of the terms as you can. Not every term will fit! " +
+        "Write a response that explains the scenario using as many of the terms as you can. " +
         "If you get stuck, click on me for a nudge. Now, let’s look at your first scenario.";
 
     // Before TextBoxTheme fits the speech bubble around the NPC (on scene load).
