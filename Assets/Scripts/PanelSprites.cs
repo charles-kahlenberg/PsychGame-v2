@@ -64,31 +64,34 @@ public static class PanelSprites
 
     // A tail pointing down and a little to the right. Its top edge has no
     // outline: it laps over the panel's edge line.
-    public static Sprite Tail
+    public static Sprite Tail => _tail != null ? _tail : _tail = MakeTail(TailTipX, "TextPanelTail");
+
+    // The same, pointing straight down (the grading screen's score, right above Brainy).
+    public static Sprite StraightTail => _straightTail != null ? _straightTail : _straightTail = MakeTail((TailBaseLeft + TailBaseRight) / 2, "TextPanelStraightTail");
+
+    private static Sprite _straightTail;
+
+    private static Sprite MakeTail(int tipX, string name)
     {
-        get
+        var tex = NewTexture(TailW, TailH, name);
+        var pixels = new Color32[TailW * TailH];
+        Vector2 a = new Vector2(TailBaseLeft, TailH + 6f);
+        Vector2 b = new Vector2(TailBaseRight, TailH + 6f);
+        Vector2 tip = new Vector2(tipX, 2f);
+        for (int y = 0; y < TailH; y++)
+        for (int x = 0; x < TailW; x++)
         {
-            if (_tail != null) return _tail;
-            var tex = NewTexture(TailW, TailH, "TextPanelTail");
-            var pixels = new Color32[TailW * TailH];
-            Vector2 a = new Vector2(TailBaseLeft, TailH + 6f);
-            Vector2 b = new Vector2(TailBaseRight, TailH + 6f);
-            Vector2 tip = new Vector2(TailTipX, 2f);
-            for (int y = 0; y < TailH; y++)
-            for (int x = 0; x < TailW; x++)
-            {
-                Vector2 p = new Vector2(x + 0.5f, y + 0.5f);
-                float d = Triangle(p, a, b, tip);
-                float toSides = Mathf.Min(Segment(p, a, tip), Segment(p, b, tip));
-                float edge = d > 0f ? 1f : Mathf.Clamp01(EdgePx + 0.5f - toSides);
-                Color c = Color.Lerp(TextBoxTheme.Paper, TextBoxTheme.Edge, edge);
-                c.a = Mathf.Clamp01(0.5f - d);
-                pixels[y * TailW + x] = c;
-            }
-            tex.SetPixels32(pixels);
-            tex.Apply(false, true);
-            return _tail = Sprite.Create(tex, new Rect(0, 0, TailW, TailH), TailBase, 100f, 0, SpriteMeshType.FullRect);
+            Vector2 p = new Vector2(x + 0.5f, y + 0.5f);
+            float d = Triangle(p, a, b, tip);
+            float toSides = Mathf.Min(Segment(p, a, tip), Segment(p, b, tip));
+            float edge = d > 0f ? 1f : Mathf.Clamp01(EdgePx + 0.5f - toSides);
+            Color c = Color.Lerp(TextBoxTheme.Paper, TextBoxTheme.Edge, edge);
+            c.a = Mathf.Clamp01(0.5f - d);
+            pixels[y * TailW + x] = c;
         }
+        tex.SetPixels32(pixels);
+        tex.Apply(false, true);
+        return Sprite.Create(tex, new Rect(0, 0, TailW, TailH), TailBase, 100f, 0, SpriteMeshType.FullRect);
     }
 
     public static Sprite Pill

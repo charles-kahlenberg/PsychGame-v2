@@ -324,7 +324,7 @@ public static class TextBoxTheme
         StyleBodyText(score, SemiBold, ScoreFontSize);
         score.alignment = TextAlignmentOptions.Top;
         var panel = TextPanel.Build(bubble, score, minHeight: 40f, maxHeight: 90f, nameTag: "Brainy");
-        panel.AddTail(TextPanel.TailSide.Bottom, 0.6f);
+        panel.AddTail(TextPanel.TailSide.Bottom, 0.5f, straight: true); // Brainy is centred right below
     }
 
     // Places a box by the middle of its bottom edge, from the screen's bottom-right corner.

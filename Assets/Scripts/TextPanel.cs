@@ -136,13 +136,14 @@ public class TextPanel : MonoBehaviour
 
     // `along` is how far along the edge (0-1) the tail sits; `offset` nudges
     // it from there in canvas units, e.g. a fixed distance below the top.
-    public void AddTail(TailSide side, float along, float offset = 0f)
+    // `straight`: the tail points straight out instead of slanting.
+    public void AddTail(TailSide side, float along, float offset = 0f, bool straight = false)
     {
         var tail = NewChild("Tail", _panel);
         var image = tail.gameObject.AddComponent<Image>();
-        image.sprite = PanelSprites.Tail;
+        image.sprite = straight ? PanelSprites.StraightTail : PanelSprites.Tail;
         image.raycastTarget = false;
-        tail.sizeDelta = new Vector2(PanelSprites.Tail.rect.width, PanelSprites.Tail.rect.height) / PanelSprites.Density;
+        tail.sizeDelta = image.sprite.rect.size / PanelSprites.Density;
         tail.pivot = PanelSprites.TailBase;
 
         // The tail's base overlaps the panel's edge line by exactly its width,
