@@ -10,7 +10,7 @@ public class TextPanel : MonoBehaviour
 {
     public enum TailSide { Bottom, Left }
 
-    public const float TailLength = 23.5f;  // how far the tail reaches out from the panel
+    public const float TailLength = 23f;    // how far the tail reaches out from the panel
     public const float TailDrop = 18f;      // how far the left tail's tip sits below where it leaves the panel
     public const float ScrollbarGutter = 9f;
     private const float PadX = 16f, PadTop = 12f, PadBottom = 13f, NameTagExtra = 5f;

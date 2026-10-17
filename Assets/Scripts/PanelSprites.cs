@@ -1,9 +1,9 @@
 using UnityEngine;
 
-// The text boxes' sprites, drawn once in code: a rounded paper panel with an
-// indigo edge, its soft shadow, a speech tail, and a white pill for the
-// scrollbars and name tag. Also the cards' hover glow. Drawn at Density
-// texture pixels per canvas unit.
+// The text boxes' sprites: the frame (art from Resources/TextBox), and, drawn
+// once in code, its soft shadow, a speech tail in the frame's pixel style,
+// and a white pill for the scrollbars and name tag. Also the cards' hover
+// glow. All at Density texture pixels per canvas unit.
 public static class PanelSprites
 {
     public const float Density = 4f;
@@ -11,35 +11,17 @@ public static class PanelSprites
     public const float GlowSpread = GlowPx / Density;
     public static readonly Vector2 TailBase = new Vector2((TailBaseLeft + TailBaseRight) / 2f / TailW, 1f);
 
-    private const int EdgePx = 6;
-    private const int RadiusPx = 40;
+    private const int EdgePx = 4; // the frame's outline: one art pixel
+    private const int RadiusPx = 40; // the shadow's corners, about the frame's
     private const int TailW = 144, TailH = 96, TailBaseLeft = 12, TailBaseRight = 96, TailTipX = 126;
     private const int GlowPx = 48, GlowRimPx = 12, GlowRadiusPx = 8; // the card back's corners are only slightly rounded
 
     private static Sprite _panel, _shadow, _tail, _pill, _glow;
 
-    public static Sprite Panel
-    {
-        get
-        {
-            if (_panel != null) return _panel;
-            const int size = 96;
-            var tex = NewTexture(size, size, "TextPanel");
-            var pixels = new Color32[size * size];
-            Vector2 half = new Vector2(size / 2f - 1f, size / 2f - 1f);
-            for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                Vector2 p = new Vector2(x + 0.5f - size / 2f, y + 0.5f - size / 2f);
-                float d = RoundedBox(p, half, RadiusPx);
-                float edge = Mathf.Clamp01(d + EdgePx + 0.5f);
-                Color c = Color.Lerp(TextBoxTheme.Paper, TextBoxTheme.Edge, edge);
-                c.a = Mathf.Clamp01(0.5f - d);
-                pixels[y * size + x] = c;
-            }
-            return _panel = Finish(tex, pixels, RadiusPx + 4);
-        }
-    }
+    // The text box frame (Resources/TextBox/Frame): the hand-drawn corner and
+    // edge, mirrored into a 9-slice at 4 texels per art pixel (like the
+    // PixelButtons), point-filtered so the corners stay crisp at any size.
+    public static Sprite Panel => _panel != null ? _panel : _panel = Resources.Load<Sprite>("TextBox/Frame");
 
     public static Sprite Shadow
     {
@@ -62,8 +44,9 @@ public static class PanelSprites
         }
     }
 
-    // A tail pointing down and a little to the right. Its top edge has no
-    // outline: it laps over the panel's edge line.
+    // A tail pointing down and a little to the right, in the frame's colours
+    // and one-art-pixel outline. Its top edge has no outline: it laps over
+    // the frame's edge line.
     public static Sprite Tail => _tail != null ? _tail : _tail = MakeTail(TailTipX, "TextPanelTail");
 
     // The same, pointing straight down (the grading screen's score, right above Brainy).
@@ -71,23 +54,29 @@ public static class PanelSprites
 
     private static Sprite _straightTail;
 
+    // The frame art's colours (Resources/TextBox/Frame).
+    private static readonly Color32 ArtLine = new Color32(8, 6, 6, 255), ArtFill = new Color32(255, 255, 255, 255);
+
+    // Drawn an art pixel (EdgePx texels) at a time: inside the triangle is
+    // fill, and outline where a neighbour is outside, so the sides step like
+    // the frame's corners.
     private static Sprite MakeTail(int tipX, string name)
     {
         var tex = NewTexture(TailW, TailH, name);
+        tex.filterMode = FilterMode.Point;
         var pixels = new Color32[TailW * TailH];
-        Vector2 a = new Vector2(TailBaseLeft, TailH + 6f);
-        Vector2 b = new Vector2(TailBaseRight, TailH + 6f);
-        Vector2 tip = new Vector2(tipX, 2f);
-        for (int y = 0; y < TailH; y++)
-        for (int x = 0; x < TailW; x++)
+        Vector2 a = new Vector2(TailBaseLeft, TailH + 6f) / EdgePx;
+        Vector2 b = new Vector2(TailBaseRight, TailH + 6f) / EdgePx;
+        Vector2 tip = new Vector2(tipX, 2f) / EdgePx;
+        System.Func<int, int, bool> inside = (x, y) => Inside(new Vector2(x + 0.5f, y + 0.5f), a, b, tip);
+        for (int y = 0; y < TailH / EdgePx; y++)
+        for (int x = 0; x < TailW / EdgePx; x++)
         {
-            Vector2 p = new Vector2(x + 0.5f, y + 0.5f);
-            float d = Triangle(p, a, b, tip);
-            float toSides = Mathf.Min(Segment(p, a, tip), Segment(p, b, tip));
-            float edge = d > 0f ? 1f : Mathf.Clamp01(EdgePx + 0.5f - toSides);
-            Color c = Color.Lerp(TextBoxTheme.Paper, TextBoxTheme.Edge, edge);
-            c.a = Mathf.Clamp01(0.5f - d);
-            pixels[y * TailW + x] = c;
+            if (!inside(x, y)) continue;
+            bool edge = !inside(x - 1, y) || !inside(x + 1, y) || !inside(x, y - 1) || !inside(x, y + 1);
+            for (int dy = 0; dy < EdgePx; dy++)
+            for (int dx = 0; dx < EdgePx; dx++)
+                pixels[(y * EdgePx + dy) * TailW + x * EdgePx + dx] = edge ? ArtLine : ArtFill;
         }
         tex.SetPixels32(pixels);
         tex.Apply(false, true);
@@ -163,20 +152,6 @@ public static class PanelSprites
     {
         Vector2 q = new Vector2(Mathf.Abs(p.x), Mathf.Abs(p.y)) - half + new Vector2(radius, radius);
         return new Vector2(Mathf.Max(q.x, 0f), Mathf.Max(q.y, 0f)).magnitude + Mathf.Min(Mathf.Max(q.x, q.y), 0f) - radius;
-    }
-
-    private static float Segment(Vector2 p, Vector2 a, Vector2 b)
-    {
-        Vector2 pa = p - a, ba = b - a;
-        float h = Mathf.Clamp01(Vector2.Dot(pa, ba) / Vector2.Dot(ba, ba));
-        return (pa - ba * h).magnitude;
-    }
-
-    // Signed distance to a triangle (negative inside).
-    private static float Triangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
-    {
-        float d = Mathf.Min(Segment(p, a, b), Mathf.Min(Segment(p, b, c), Segment(p, c, a)));
-        return Inside(p, a, b, c) ? -d : d;
     }
 
     private static bool Inside(Vector2 p, Vector2 a, Vector2 b, Vector2 c)

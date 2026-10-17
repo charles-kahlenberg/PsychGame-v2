@@ -213,6 +213,8 @@ public static class TextBoxTheme
     private const float GradingBrainyBottom = 54f; // clear of Next
     private static readonly Vector2 GradingBrainySize = new Vector2(110f, 115f);
     private const float ScoreFontSize = 15f;
+    private const float ScoreTailGap = 3f;    // between the score tail's tip and the top of Brainy's jar
+    private const float JarMiddle = 0.035f;   // the jar's body sits this share of Brainy's width right of the image's middle (Resources/poirot)
 
     private static void StyleGrading(RectTransform canvas)
     {
@@ -319,12 +321,14 @@ public static class TextBoxTheme
         var bubble = score != null ? score.transform.parent as RectTransform : null;
         if (bubble == null || bubble == canvas) return;
 
-        float bubbleBottom = GradingBrainyBottom + GradingBrainySize.y + TextPanel.TailLength - 6f;
+        float bubbleBottom = GradingBrainyBottom + GradingBrainySize.y + TextPanel.TailLength + ScoreTailGap;
         PinBottomRight(bubble, new Vector2(GradingColumnX, bubbleBottom), new Vector2(GradingColumnWidth, 40f));
         StyleBodyText(score, SemiBold, ScoreFontSize);
         score.alignment = TextAlignmentOptions.Top;
         var panel = TextPanel.Build(bubble, score, minHeight: 40f, maxHeight: 90f, nameTag: "Brainy");
-        panel.AddTail(TextPanel.TailSide.Bottom, 0.5f, straight: true); // Brainy is centred right below
+        // Brainy is right below; the tail points at the middle of the jar itself.
+        float jar = TestGroups.IsEnabled(Feature.JarBrainy) ? JarMiddle * GradingBrainySize.x : 0f;
+        panel.AddTail(TextPanel.TailSide.Bottom, 0.5f, jar, straight: true);
     }
 
     // Places a box by the middle of its bottom edge, from the screen's bottom-right corner.

@@ -1,9 +1,9 @@
 using UnityEngine;
 
-// The response screen's bottom-corner buttons (Menu on the left, the
-// dictionary's book on the right): pinned to their corner, and shrunk to the
-// room between that screen edge and the hand, so a narrow screen neither cuts
-// them off nor runs them under the cards. The canvas keeps its height and
+// The response screen's buttons beside the hand (Menu in the bottom-left
+// corner, the dictionary's book just right of the cards): pinned to the corner or against
+// the hand, and shrunk to the room between that screen edge and the hand, so
+// a narrow screen neither cuts them off nor runs them under the cards. The canvas keeps its height and
 // changes width with the window, so they refit whenever the width changes.
 public class FitBesideHand : MonoBehaviour
 {
@@ -18,12 +18,10 @@ public class FitBesideHand : MonoBehaviour
     private float _fittedWidth = -1f;
 
     // Call once the hand is laid out (after GameManager.RaiseHand). `fullSize`
-    // is the size it shows at when there's room.
-    public static void Pin(RectTransform rt, Vector2 fullSize, bool right)
+    // is the size it shows at when there's room. `atHand` sets it against the
+    // hand instead of in the screen's corner.
+    public static void Pin(RectTransform rt, Vector2 fullSize, bool right, bool atHand = false)
     {
-        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(right ? 1f : 0f, 0f);
-        rt.anchoredPosition = new Vector2(right ? -ScreenMargin : ScreenMargin, ScreenMargin);
-
         var fit = rt.gameObject.AddComponent<FitBesideHand>();
         fit._canvas = (RectTransform)rt.GetComponentInParent<Canvas>().rootCanvas.transform;
         fit._rt = rt;
@@ -34,6 +32,19 @@ public class FitBesideHand : MonoBehaviour
             if (!(fit._canvas.Find($"Card{i}") is RectTransform card)) continue;
             float edge = GameManager.CardExtent(card, 0, min: !right);
             fit._handEdge = right ? Mathf.Max(fit._handEdge, edge) : Mathf.Min(fit._handEdge, edge);
+        }
+
+        if (atHand)
+        {
+            // The cards are anchored at the canvas's center, so this holds at any screen shape.
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
+            rt.pivot = new Vector2(right ? 0f : 1f, 0f);
+            rt.anchoredPosition = new Vector2(fit._handEdge + (right ? HandClearance : -HandClearance), ScreenMargin);
+        }
+        else
+        {
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(right ? 1f : 0f, 0f);
+            rt.anchoredPosition = new Vector2(right ? -ScreenMargin : ScreenMargin, ScreenMargin);
         }
     }
 

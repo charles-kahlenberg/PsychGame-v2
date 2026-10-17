@@ -30,6 +30,7 @@ public class ShaderBackground : MonoBehaviour
 {
     private static readonly string[] SceneNames = { "GameScene", "GradingScene", "ReviewScene" };
     private const string IntroSceneName = "IntroductionScene";
+    private const string EndSceneName = "GameEndScene";
     private const string ShaderResource = "ThoughtCurrents";
     private const string FieldShaderResource = "ThoughtCurrentsField";
 
@@ -49,6 +50,7 @@ public class ShaderBackground : MonoBehaviour
     private static readonly int ExciteWarpId = Shader.PropertyToID("_ExciteWarp");
     private static readonly int ExciteFlowSpeedId = Shader.PropertyToID("_ExciteFlowSpeed");
     private static readonly int HeatId = Shader.PropertyToID("_Heat");
+    private static readonly int MonoId = Shader.PropertyToID("_Mono");
 
     // 0 is the calm look, 1 the intro's lively one; 1 on the intro screen and
     // 0 everywhere else as each loads.
@@ -57,6 +59,9 @@ public class ShaderBackground : MonoBehaviour
     // The excited look's colour: 0 the intro's blue, 1 the grading screen's
     // red. 0 as each screen loads, like Excite; GradingTransition turns it up.
     public static float Heat;
+
+    // The excited look in black and white: 1 on the end screen (Feature.TrophyEnd), 0 elsewhere.
+    public static float Mono;
 
     private static Shader _shader, _fieldShader;
     private static float _flowTime;
@@ -75,7 +80,8 @@ public class ShaderBackground : MonoBehaviour
     {
         if (!TestGroups.IsEnabled(Feature.ShaderBackground)) return false;
         return System.Array.IndexOf(SceneNames, scene.name) >= 0 ||
-               (scene.name == IntroSceneName && TestGroups.IsEnabled(Feature.SynopsisTransition));
+               (scene.name == IntroSceneName && TestGroups.IsEnabled(Feature.SynopsisTransition)) ||
+               (scene.name == EndSceneName && TestGroups.IsEnabled(Feature.TrophyEnd));
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -115,6 +121,8 @@ public class ShaderBackground : MonoBehaviour
             Excite = scene.name == IntroSceneName || SynopsisTransition.ShowsSynopsis(scene) ? 1f : 0f;
             Heat = 0f;
         }
+        Mono = scene.name == EndSceneName ? 1f : 0f;
+        if (scene.name == EndSceneName) Excite = 1f;
 
         foreach (GameObject root in scene.GetRootGameObjects())
         {
@@ -208,6 +216,7 @@ public class ShaderBackground : MonoBehaviour
         float e = Mathf.Clamp01(Excite);
         _material.SetFloat(ExciteId, e);
         _material.SetFloat(HeatId, Mathf.Clamp01(Heat));
+        _material.SetFloat(MonoId, Mathf.Clamp01(Mono));
         _material.SetFloat(AspectId, aspect);
         _fieldMaterial.SetFloat(ScaleId, Mathf.Lerp(_material.GetFloat(ScaleId), _material.GetFloat(ExciteScaleId), e));
         _fieldMaterial.SetFloat(WarpId, Mathf.Lerp(_material.GetFloat(WarpId), _material.GetFloat(ExciteWarpId), e));

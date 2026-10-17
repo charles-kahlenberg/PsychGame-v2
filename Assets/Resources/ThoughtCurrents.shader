@@ -70,6 +70,14 @@ Shader "PsychGame/ThoughtCurrents"
         _HeatLine ("Hot Contour Colour", Color) = (1, 0.549, 0.549, 1)      // #FF8C8C
         _HeatGlow ("Hot Pulse and Spark Colour", Color) = (1, 0.8627, 0.8392, 1) // #FFDCD6
 
+        // And in black and white, for the end screen's trophy (Feature.TrophyEnd).
+        _Mono ("Black and White", Range(0, 1)) = 0
+        _MonoDeep ("Mono Deep Colour", Color) = (0.5412, 0.5412, 0.5412, 1)  // #8A8A8A
+        _MonoMid ("Mono Mid Colour", Color) = (0.149, 0.149, 0.149, 1)       // #262626
+        _MonoLight ("Mono Light Colour", Color) = (0.0863, 0.0863, 0.0863, 1) // #161616
+        _MonoLine ("Mono Contour Colour", Color) = (0.902, 0.902, 0.902, 1)  // #E6E6E6
+        _MonoGlow ("Mono Pulse and Spark Colour", Color) = (1, 1, 1, 1)      // #FFFFFF
+
         // The noise field, rendered each frame by ShaderBackground.cs.
         [HideInInspector] _FieldTex ("Field", 2D) = "gray" {}
         [HideInInspector] _Aspect ("Aspect", Float) = 1.7778
@@ -174,6 +182,13 @@ Shader "PsychGame/ThoughtCurrents"
             float4 _HeatLine;
             float4 _HeatGlow;
 
+            float _Mono;
+            float4 _MonoDeep;
+            float4 _MonoMid;
+            float4 _MonoLight;
+            float4 _MonoLine;
+            float4 _MonoGlow;
+
             v2f vert(appdata_t v)
             {
                 v2f OUT;
@@ -227,11 +242,11 @@ Shader "PsychGame/ThoughtCurrents"
                 return lerp(lerp(s3, s2, sx), lerp(s1, s0, sx), sy);
             }
 
-            float3 palette(float k, float e, float h)
+            float3 palette(float k, float e, float h, float m)
             {
-                float3 deep = lerp(_ColorDeep.rgb, lerp(_ExciteDeep.rgb, _HeatDeep.rgb, h), e);
-                float3 mid = lerp(_ColorMid.rgb, lerp(_ExciteMid.rgb, _HeatMid.rgb, h), e);
-                float3 light = lerp(_ColorLight.rgb, lerp(_ExciteLight.rgb, _HeatLight.rgb, h), e);
+                float3 deep = lerp(_ColorDeep.rgb, lerp(lerp(_ExciteDeep.rgb, _HeatDeep.rgb, h), _MonoDeep.rgb, m), e);
+                float3 mid = lerp(_ColorMid.rgb, lerp(lerp(_ExciteMid.rgb, _HeatMid.rgb, h), _MonoMid.rgb, m), e);
+                float3 light = lerp(_ColorLight.rgb, lerp(lerp(_ExciteLight.rgb, _HeatLight.rgb, h), _MonoLight.rgb, m), e);
                 return k < 0.5
                     ? lerp(deep, mid, k * 2.0)
                     : lerp(mid, light, k * 2.0 - 1.0);
@@ -268,8 +283,9 @@ Shader "PsychGame/ThoughtCurrents"
                 float field = saturate(sampleField(IN.uv));
                 float e = saturate(_Excite);
                 float h = saturate(_Heat);
-                float3 exciteLine = lerp(_ExciteLine.rgb, _HeatLine.rgb, h);
-                float3 glow = lerp(_GlowColor.rgb, _HeatGlow.rgb, h);
+                float m = saturate(_Mono);
+                float3 exciteLine = lerp(lerp(_ExciteLine.rgb, _HeatLine.rgb, h), _MonoLine.rgb, m);
+                float3 glow = lerp(lerp(_GlowColor.rgb, _HeatGlow.rgb, h), _MonoGlow.rgb, m);
                 float layers = lerp(_Layers, _ExciteLayers, e);
 
                 // Cut the field into flat layers. The half-step offset keeps
@@ -282,7 +298,7 @@ Shader "PsychGame/ThoughtCurrents"
                 float within = x - layer; // 0 at a layer's bottom edge, 1 at its top
 
                 float stepped = layer + smoothstep(1.0 - w, 1.0, within);
-                float3 col = palette(saturate(stepped / max(layers, 1.0)), e, h);
+                float3 col = palette(saturate(stepped / max(layers, 1.0)), e, h, m);
 
                 // The layer above casts a soft shadow as it's approached...
                 col *= 1.0 - _LayerShadow * smoothstep(0.55, 1.0, within);

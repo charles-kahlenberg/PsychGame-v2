@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -13,11 +14,13 @@ using UnityEngine.UI;
 //  - Submit: just right of the response box, level with its bottom edge.
 //  - Refresh: bottom of the screen, with the refreshes left as diamonds in a
 //    tab on top (GameManager.UpdateRefreshUI calls ShowRefreshesLeft). Under
-//    the avatar; with Feature.Dictionary, in the middle, in the gap under the
-//    hand's raised middle card.
-//  - Back to Menu: bottom left, drawn as a back arrow and "MENU", pinned to
-//    the corner and shrunk on narrow screens (FitBesideHand).
+//    the avatar; with Feature.Dictionary, in the middle, under the hand's
+//    middle card (GameManager.RaiseHand lifts the hand clear of it).
+//  - Back to Menu: bottom left, pinned to the corner and shrunk on narrow
+//    screens (FitBesideHand).
 // The save slots are blank plates that keep their own label (the save's name).
+// Continue, Next, Submit and Menu are redone as the title screen's plate in
+// green and blue, labelled in its font (Replate).
 // The title screen's buttons are hand-drawn to match its art, so they stay.
 public class PixelButton : MonoBehaviour
 {
@@ -26,7 +29,7 @@ public class PixelButton : MonoBehaviour
     private const float ShadowDepth = 2f;    // the drop shadow below each plate, in canvas units
     private const float ScreenMargin = 14f;
     private const float SubmitGap = 6f;
-    private const float RefreshBottom = 3f; // tucked low, clear of the middle card's bob and hover pop
+    private const float RefreshBottom = 3f; // tucked low; GameManager.HandBottomMargin keeps the cards clear of it
 
     private static readonly Color LabelInk = new Color32(0xF7, 0xF1, 0xE6, 0xFF);    // the art's cream
     private static readonly Color LabelDimInk = new Color32(0xB9, 0xB9, 0xC2, 0xFF); // ...and its disabled grey
@@ -126,6 +129,7 @@ public class PixelButton : MonoBehaviour
         var button = t != null ? t.GetComponent<Button>() : null;
         var image = button != null ? button.GetComponent<Image>() : null;
         if (image == null) return null;
+        if (Plates.TryGetValue(sprites, out var redone)) return Replate(canvas, t, button, image, redone);
         if (Load(sprites + "_normal") == null)
         {
             Debug.LogWarning($"[PixelButton] Resources/{Folder}{sprites}_normal is missing; leaving {name} as it is.");
@@ -167,6 +171,94 @@ public class PixelButton : MonoBehaviour
         return t;
     }
 
+    // The redone buttons: a blank plate (Resources/ButtonPlates, the title
+    // screen's plate in other colours) with the label written on in the title
+    // screen's font, moving as the title screen's do (MenuButtonPlates).
+    // Labels are in the title screen's ink, shrinking to fit their plate.
+    // Refresh is its own plate (Resources/ButtonPlates/Refresh),
+    // drawn at its art's shape, with a tab on top whose two diamonds light up
+    // for the refreshes left (ShowRefreshesLeft).
+    private static readonly Dictionary<string, (string plate, string label, Vector2 size)> Plates =
+        new Dictionary<string, (string, string, Vector2)>
+        {
+            { "continue", ("ButtonPlates/Green", "Continue", new Vector2(156f, 36f)) },
+            { "next", ("ButtonPlates/Green", "Next", new Vector2(116f, 36f)) },
+            { "submit", ("ButtonPlates/Green", "Submit", new Vector2(100f, 32f)) },
+            { "menu", ("ButtonPlates/Blue", "Menu", new Vector2(100f, 32f)) },
+            { "refresh2", ("ButtonPlates/Refresh", "Refresh", new Vector2(108f, 42f)) },
+        };
+    private const float LabelSize = 10f; // a little under the title screen's, for room round it
+    private static readonly Color GreenInk = new Color32(0x18, 0x29, 0x37, 0xFF); // the title screen's ink, darker on the green plate
+
+    // The Refresh plate's 628 x 244 art: its face below the tab (for the
+    // label), and where each lit diamond (Resources/ButtonPlates/
+    // RefreshDiamondLeft/Right) sits in the tab's slots, in texels from the top left.
+    private const float RefreshArtW = 628f, RefreshArtH = 244f;
+    private static readonly Rect RefreshFace = Rect.MinMaxRect(20f, 52f, 607f, 195f);
+    private static readonly Rect[] RefreshDiamonds = { new Rect(266f, 14f, 34f, 34f), new Rect(328f, 14f, 34f, 34f) };
+
+    private GameObject[] _diamonds; // the Refresh plate's lit diamonds, left then right
+    private bool _diamondsShown;
+
+    private static RectTransform Replate(RectTransform canvas, RectTransform t, Button button, Image image,
+        (string plate, string label, Vector2 size) redone)
+    {
+        var sprite = Resources.Load<Sprite>(redone.plate);
+        if (sprite == null || MenuButtonPlates.Font == null)
+        {
+            Debug.LogWarning($"[PixelButton] Resources/{redone.plate} or the title font is missing; leaving {t.name} as it is.");
+            return null;
+        }
+
+        foreach (var text in t.GetComponentsInChildren<TMP_Text>(true)) text.enabled = false;
+        Vector2 center = LocalRect(canvas, t).center;
+        MenuButtonPlates.Restyle(button, image, sprite, redone.label, redone.size,
+            redone.plate == "ButtonPlates/Green" ? GreenInk : MenuButtonPlates.Ink);
+        if (t.Find("Plate/PlateLabel") is Transform label && label.TryGetComponent(out TMP_Text written))
+        {
+            written.enableAutoSizing = true;
+            written.fontSizeMin = 8f;
+            written.fontSizeMax = LabelSize;
+            if (redone.plate == "ButtonPlates/Refresh") AddRefreshTab(t, written);
+        }
+        Place(canvas, t, center, new Vector2(0.5f, 0.5f));
+        return t;
+    }
+
+    // On the Refresh plate: the label on the face below the tab (shrinking if
+    // it must), and the lit diamonds over the tab's slots, on the plate so
+    // they lift with it.
+    private static void AddRefreshTab(RectTransform t, TMP_Text label)
+    {
+        var plate = (RectTransform)t.Find("Plate");
+        Anchor(label.rectTransform, RefreshFace);
+        label.rectTransform.offsetMin = new Vector2(10f, 0f);
+        label.rectTransform.offsetMax = new Vector2(-10f, 0f);
+
+        var pixel = t.gameObject.AddComponent<PixelButton>();
+        pixel._button = t.GetComponent<Button>();
+        pixel._diamonds = new GameObject[RefreshDiamonds.Length];
+        string[] names = { "RefreshDiamondLeft", "RefreshDiamondRight" };
+        for (int i = 0; i < names.Length; i++)
+        {
+            var go = new GameObject(names[i], typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(plate, false);
+            Anchor((RectTransform)go.transform, RefreshDiamonds[i]);
+            var image = go.GetComponent<Image>();
+            image.sprite = Resources.Load<Sprite>("ButtonPlates/" + names[i]);
+            image.raycastTarget = false;
+            pixel._diamonds[i] = go;
+        }
+    }
+
+    // Stretches a child over a rectangle of the Refresh art (texels from its top left).
+    private static void Anchor(RectTransform rt, Rect texels)
+    {
+        rt.anchorMin = new Vector2(texels.xMin / RefreshArtW, 1f - texels.yMax / RefreshArtH);
+        rt.anchorMax = new Vector2(texels.xMax / RefreshArtW, 1f - texels.yMin / RefreshArtH);
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+    }
+
     // A kept label, set on the plate in the art's cream. The plate sits half
     // a unit above the image's middle (the drop shadow is below it).
     private static void StyleLabel(TMP_Text label)
@@ -197,8 +289,31 @@ public class PixelButton : MonoBehaviour
         if (_label != null) _label.color = _button.IsInteractable() ? LabelInk : LabelDimInk;
     }
 
+    // A diamond lit for each refresh left, from the left; with none left the
+    // plate greys out as Refresh can't be pressed (GameManager disables it).
     public void ShowRefreshesLeft(int left)
     {
+        if (_diamonds != null)
+        {
+            for (int i = 0; i < _diamonds.Length; i++)
+            {
+                GameObject d = _diamonds[i];
+                LeanTween.cancel(d);
+                bool lit = i < left;
+                // A spent diamond swells and pops away; the first call (the hand
+                // being shown, maybe from a save) just sets them.
+                if (!lit && d.activeSelf && _diamondsShown)
+                {
+                    LeanTween.scale(d, Vector3.one * 1.6f, 0.1f).setEaseOutQuad().setOnComplete(() =>
+                        LeanTween.scale(d, Vector3.zero, 0.15f).setEaseInBack().setOnComplete(() => d.SetActive(false)));
+                    continue;
+                }
+                d.transform.localScale = Vector3.one;
+                d.SetActive(lit);
+            }
+            _diamondsShown = true;
+            return;
+        }
         Show(left <= 0 ? "refresh0" : "refresh" + Mathf.Min(left, 2));
     }
 

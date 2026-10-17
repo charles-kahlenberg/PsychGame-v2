@@ -9,7 +9,7 @@ public static class ScenarioFit
     private const string ResourcePath = "scenario_fit";
 
     // Feature.GoodFitCards deals only terms scoring this or better.
-    public const float GoodFit = 2.5f;
+    public const float GoodFit = 1.5f;
 
     private static Dictionary<string, float[]> _byTerm;
 

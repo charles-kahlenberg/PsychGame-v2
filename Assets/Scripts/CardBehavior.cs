@@ -700,9 +700,23 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
 
         helpButton.name = "HintButton";
         var label = helpButton.GetComponentInChildren<TMP_Text>(true);
-        if (label != null) label.text = "Hint";
+        if (label != null)
+        {
+            label.text = "Hint";
+            label.color = MenuButtonPlates.Ink;
+            label.fontSize = HintFontSize;
+        }
 
+        // A slightly blue white, complementing the card front's cream; white on hover.
+        var colors = helpButton.colors;
+        colors.normalColor = HintColor;
+        colors.highlightedColor = Color.white;
+        helpButton.colors = colors;
+
+        // Bigger, to suit the card; its top stays put, so the term keeps its room.
         var rect = (RectTransform)helpButton.transform;
+        rect.anchoredPosition += new Vector2(0f, (rect.sizeDelta.y - HintSize.y) / 2f);
+        rect.sizeDelta = HintSize;
 
         // The button always shows under the term, so the term's box stops
         // just above it: a three-line term like "Variable-Ratio Schedule"
@@ -720,6 +734,9 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
     }
 
     private const float TermButtonGap = 3f;
+    private static readonly Color HintColor = new Color32(0xEA, 0xEE, 0xF6, 0xFF);
+    private static readonly Vector2 HintSize = new Vector2(62f, 26f); // was 42 x 20, on a 98 x 140 card
+    private const float HintFontSize = 13f; // was 10
 
     // PUBLIC so you can wire it in Button OnClick exactly like BrainHint.OnBrainClicked.
     public void OnHelpButtonPressed()

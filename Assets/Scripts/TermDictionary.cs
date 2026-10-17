@@ -5,8 +5,9 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // Feature.Dictionary (groups 2 and 3): the terms in the player's hand and
-// their definitions, in a book that sits closed in the bottom-right corner of the response screen
-// (Resources/DictionaryBook; FitBesideHand shrinks it on narrow screens, and
+// their definitions, in a book that sits closed just right of the hand, at the
+// bottom of the response screen (Resources/DictionaryBook; FitBesideHand
+// shrinks it on narrow screens, and
 // it pops on hover like the other buttons). Clicking it opens the book
 // (DictionaryBookOpen) and slowly carries it up to the middle of the screen,
 // where its pages hold the dictionary: on the left the hand, card by card,
@@ -14,11 +15,11 @@ using UnityEngine.UI;
 // card still face-down; on the right the chosen card's term and definition.
 // It opens with nothing chosen, so every definition read is a click, and
 // each click is logged (ClickLogger card event "definition").
-// Esc or a click off the book carries it back to its corner.
+// Esc or a click off the book carries it back to its spot.
 public class TermDictionary : MonoBehaviour
 {
     private const string IconPath = "DictionaryBook", OpenIconPath = "DictionaryBookOpen";
-    private const float BookHeight = 110f;     // the closed book, in canvas units (the canvas is 450 tall), when there's room
+    private const float BookHeight = 126f;     // the closed book, in canvas units (the canvas is 450 tall), when there's room
     private const float OpenHeight = 400f;     // the open book in the middle, if the screen's wide enough
     private const float OpenMargin = 12f;      // ...otherwise it fits the width, this far from each side
     private const float OpenTime = 0.7f, CloseTime = 0.45f, FadeTime = 0.2f;
@@ -72,7 +73,7 @@ public class TermDictionary : MonoBehaviour
         if (back != null) book.SetSiblingIndex(back.GetSiblingIndex()); // with the other buttons, under the overlays
         var image = book.gameObject.AddComponent<Image>();
         image.sprite = icon;
-        FitBesideHand.Pin(book, new Vector2(BookHeight * icon.rect.width / icon.rect.height, BookHeight), right: true);
+        FitBesideHand.Pin(book, new Vector2(BookHeight * icon.rect.width / icon.rect.height, BookHeight), right: true, atHand: true);
 
         var d = book.gameObject.AddComponent<TermDictionary>();
         d._game = game;

@@ -166,11 +166,11 @@ public class IntroductionManager : MonoBehaviour
     private void AddScenarioImage()
     {
         int number = ScenarioNumber();
-        string folder = "ScenarioImages/" + number + "/"; // layered art, animated by PhoneScenarioArt, ChocolateScenarioArt, SurgeonScenarioArt or TeacherScenarioArt
+        string folder = "ScenarioImages/" + number + "/"; // layered art, animated by PhoneScenarioArt, ChocolateScenarioArt, SurgeonScenarioArt, TeacherScenarioArt, JuryScenarioArt or MeditationScenarioArt
         Sprite sprite = Resources.Load<Sprite>(folder + "Background") ?? Resources.Load<Sprite>("ScenarioImages/" + number) ?? Resources.Load<Sprite>("ScenarioImages/Placeholder");
         if (sprite == null) return;
 
-        const float gap = 16f, maxHeight = 320f, mat = 3f;
+        const float gap = 16f, maxHeight = 320f, mat = 5.5f;
 
         // Under the bubble's left 85%, clear of its tail; the frame fits
         // inside at the picture's aspect.
@@ -190,10 +190,7 @@ public class IntroductionManager : MonoBehaviour
         fit.aspectRatio = (sprite.rect.width / sprite.rect.height * (maxHeight - 2f * mat) + 2f * mat) / maxHeight;
         TextPanel.AddPaper(frame);
         frame.GetComponent<Image>().raycastTarget = false; // don't drag-scroll the bubble
-        // A quarter of the panels' corner radius (2.5 units, under the mat),
-        // so the corners keep the same margin around the picture as the sides.
-        frame.Find("Paper").GetComponent<Image>().pixelsPerUnitMultiplier = PanelSprites.Density * 4f;
-        frame.Find("Shadow").GetComponent<Image>().pixelsPerUnitMultiplier = PanelSprites.Density * 4f;
+        // The frame's stepped corners stay clear of the picture's at this mat.
 
         var picture = new GameObject("Picture", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
         picture.SetParent(frame, false);
@@ -209,6 +206,8 @@ public class IntroductionManager : MonoBehaviour
         ChocolateScenarioArt.Add(picture, folder);
         SurgeonScenarioArt.Add(picture, folder);
         TeacherScenarioArt.Add(picture, folder);
+        JuryScenarioArt.Add(picture, folder);
+        MeditationScenarioArt.Add(picture, folder);
     }
 
     public void OnContinueClicked()

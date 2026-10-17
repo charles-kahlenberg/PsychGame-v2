@@ -37,8 +37,7 @@ public class MenuButtonPlates : MonoBehaviour, IPointerEnterHandler, IPointerExi
     // from each end, so the label centres on the face.
     private const float FaceBottom = 0.25f, FaceTop = 0.94f, FaceInset = 10f;
     // The title art's (Resources/MenuTitle) dark slate blue (#2D3539), a little bluer.
-    private static readonly Color Ink = new Color32(0x24, 0x3A, 0x4C, 0xFF);
-    private static readonly Color DimInk = new Color32(0x24, 0x3A, 0x4C, 0x80); // Load Game with no save
+    public static readonly Color Ink = new Color32(0x24, 0x3A, 0x4C, 0xFF);
 
     // As the PixelButtons: up a unit on hover, down two (onto the shadow)
     // when pressed, a step darker when pressed and grey when disabled.
@@ -76,15 +75,24 @@ public class MenuButtonPlates : MonoBehaviour, IPointerEnterHandler, IPointerExi
         };
     }
 
+    // Righteous, made into a TMP font the first time it's asked for.
+    public static TMP_FontAsset Font
+    {
+        get
+        {
+            if (_font == null)
+            {
+                var source = Resources.Load<Font>(FontResource);
+                if (source != null) _font = TMP_FontAsset.CreateFontAsset(source);
+            }
+            return _font;
+        }
+    }
+
     private static void Apply(Scene scene)
     {
         var plate = Resources.Load<Sprite>(PlateResource);
-        if (_font == null)
-        {
-            var source = Resources.Load<Font>(FontResource);
-            if (source != null) _font = TMP_FontAsset.CreateFontAsset(source);
-        }
-        if (plate == null || _font == null)
+        if (plate == null || Font == null)
         {
             Debug.LogWarning($"[MenuButtonPlates] {PlateResource} or {FontResource} is missing; keeping the drawn buttons.");
             return;
@@ -105,7 +113,7 @@ public class MenuButtonPlates : MonoBehaviour, IPointerEnterHandler, IPointerExi
                 if (!Labels.TryGetValue(button.name, out string label)) continue;
                 var hitArea = button.GetComponent<Image>();
                 if (hitArea == null) continue;
-                Restyle(button, hitArea, plate, label);
+                Restyle(button, hitArea, plate, label, new Vector2(Width, Height), Ink);
             }
         }
     }
@@ -113,18 +121,20 @@ public class MenuButtonPlates : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private Button _button;
     private RectTransform _plate;
     private TMP_Text _label;
+    private Color _ink;
     private bool _hovered, _pressed;
 
     // The button's own image stays as the invisible click target; the plate
-    // is drawn by a child so it can move without moving the button.
-    private static void Restyle(Button button, Image hitArea, Sprite sprite, string label)
+    // is drawn by a child so it can move without moving the button. Also
+    // used by PixelButton for the other screens' plates (Resources/ButtonPlates).
+    public static void Restyle(Button button, Image hitArea, Sprite sprite, string label, Vector2 size, Color ink)
     {
         var animator = button.GetComponent<Animator>();
         if (animator != null) animator.enabled = false;
         var pop = button.GetComponent<ButtonHoverPop>();
         if (pop != null) Destroy(pop);
         button.transform.localScale = Vector3.one;
-        ((RectTransform)button.transform).sizeDelta = new Vector2(Width, Height);
+        ((RectTransform)button.transform).sizeDelta = size;
 
         hitArea.sprite = null;
         hitArea.color = Color.clear;
@@ -140,7 +150,7 @@ public class MenuButtonPlates : MonoBehaviour, IPointerEnterHandler, IPointerExi
         image.sprite = sprite;
         image.type = Image.Type.Sliced;
         // Draw the ends at the same scale the height is drawn at.
-        image.pixelsPerUnitMultiplier = sprite.rect.height / (Height * image.pixelsPerUnit);
+        image.pixelsPerUnitMultiplier = sprite.rect.height / (size.y * image.pixelsPerUnit);
         image.raycastTarget = false;
 
         button.targetGraphic = image;
@@ -155,7 +165,8 @@ public class MenuButtonPlates : MonoBehaviour, IPointerEnterHandler, IPointerExi
         var plates = button.gameObject.AddComponent<MenuButtonPlates>();
         plates._button = button;
         plates._plate = plate;
-        plates._label = AddLabel(plate, label);
+        plates._ink = ink;
+        plates._label = AddLabel(plate, label, ink);
     }
 
     public void OnPointerEnter(PointerEventData e) { _hovered = true; Move(); }
@@ -173,7 +184,7 @@ public class MenuButtonPlates : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
     private void Update()
     {
-        _label.color = _button.IsInteractable() ? Ink : DimInk;
+        _label.color = _button.IsInteractable() ? _ink : new Color(_ink.r, _ink.g, _ink.b, 0.5f);
     }
 
     // Hidden mid-hover (the scene changing), it comes back at rest.
@@ -185,7 +196,7 @@ public class MenuButtonPlates : MonoBehaviour, IPointerEnterHandler, IPointerExi
         _plate.anchoredPosition = Vector2.zero;
     }
 
-    private static TMP_Text AddLabel(Transform plate, string label)
+    private static TMP_Text AddLabel(Transform plate, string label, Color ink)
     {
         var go = new GameObject("PlateLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
         go.transform.SetParent(plate, false);
@@ -196,9 +207,9 @@ public class MenuButtonPlates : MonoBehaviour, IPointerEnterHandler, IPointerExi
         rt.offsetMax = new Vector2(-FaceInset, 0f);
 
         var text = go.GetComponent<TextMeshProUGUI>();
-        text.font = _font;
+        text.font = Font;
         text.text = label;
-        text.color = Ink;
+        text.color = ink;
         text.alignment = TextAlignmentOptions.Center;
         text.textWrappingMode = TextWrappingModes.NoWrap;
         text.fontSize = FontSize;

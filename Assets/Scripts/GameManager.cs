@@ -75,6 +75,16 @@ public class GameManager : MonoBehaviour
         {
             currentScenario = PlayerPrefs.GetString("LastScenario", "");
 
+            // This scene is new each round: the shown cards (and answers so
+            // far) come back from the save OnSubmitResponse wrote, slot -1
+            // included, or every round dealt from the whole deck again.
+            if (SaveManager.HasSave(currentSaveSlot))
+            {
+                SaveData data = SaveManager.Load(currentSaveSlot);
+                usedVocab = data.usedVocab ?? new List<string>();
+                responseHistory = data.responses ?? new List<ScenarioResponse>();
+            }
+
             string cardsString = PlayerPrefs.GetString("LastCards", "");
             currentCards = string.IsNullOrEmpty(cardsString)
                 ? new List<string>()
@@ -180,7 +190,8 @@ public class GameManager : MonoBehaviour
     }
 
     // -------------------- CARD GENERATION --------------------
-    // IMPORTANT: DOES NOT burn cards
+    // Dealt without replacement: every card shown (refreshes included) is
+    // burned, and comes back only once all the others have been shown.
     void GenerateNewCards()
     {
         currentCards.Clear();
@@ -188,17 +199,31 @@ public class GameManager : MonoBehaviour
         // Group 3 (Feature.GoodFitCards): only terms that fit this scenario well.
         bool goodFitOnly = TestGroups.IsEnabled(Feature.GoodFitCards);
 
-        List<string> pool = new List<string>();
+        List<string> deck = new List<string>();
         foreach (string v in allVocab)
-            if (!usedVocab.Contains(v) && (!goodFitOnly || ScenarioFit.Fits(v, currentScenario)))
-                pool.Add(v);
+            if (!goodFitOnly || ScenarioFit.Fits(v, currentScenario))
+                deck.Add(v);
 
-        while (currentCards.Count < 5 && pool.Count > 0)
+        List<string> pool = deck.FindAll(v => !usedVocab.Contains(v));
+
+        while (currentCards.Count < 5 && deck.Count > 0)
         {
+            if (pool.Count == 0)
+            {
+                // All shown: shuffle the deck back in, minus this hand.
+                usedVocab.RemoveAll(deck.Contains);
+                pool = deck.FindAll(v => !currentCards.Contains(v));
+                if (pool.Count == 0) break;
+            }
+
             int index = Random.Range(0, pool.Count);
             currentCards.Add(pool[index]);
             pool.RemoveAt(index); // prevent duplicates in same hand
         }
+
+        foreach (string card in currentCards)
+            if (!usedVocab.Contains(card))
+                usedVocab.Add(card);
 
         PlayerPrefs.SetString("LastCards", string.Join("|", currentCards));
         PlayerPrefs.Save();
@@ -258,9 +283,9 @@ public class GameManager : MonoBehaviour
 
     private const float HandScale = 0.85f;        // card size and spread
     private const float HandFanFlatten = 0.8f;    // outer cards' tilt and droop
-    private const float HandBottomMargin = 12f;   // room for the idle bob and hover pop
+    private const float HandBottomMargin = 30f;   // room under the middle card for Refresh (PixelButton), with the idle bob and hover pop
     private const float HandToBoxGap = 4f;        // between the hand's top and the response box
-    private const float BoxMaxRaise = 4f;         // any higher and the box meets the speech bubble's tail
+    private const float BoxMaxRaise = 22f;        // the box moves up with the hand (the scenario bubble above shrinks to fit, TextBoxTheme)
 
     void RaiseHand()
     {
@@ -412,18 +437,11 @@ public class GameManager : MonoBehaviour
             pixel.ShowRefreshesLeft(refreshUsesRemaining);
     }
 
-    // -------------------- SUBMIT (BURN HAPPENS HERE) --------------------
+    // -------------------- SUBMIT --------------------
 
     public void OnSubmitResponse(TMP_InputField field)
     {
         string userResponse = field.text.Trim();
-
-        // Burn ONLY the cards currently visible
-        foreach (string card in currentCards)
-        {
-            if (!usedVocab.Contains(card))
-                usedVocab.Add(card);
-        }
 
         responseHistory.Add(new ScenarioResponse
         {
