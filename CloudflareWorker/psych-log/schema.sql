@@ -102,7 +102,8 @@ CREATE TABLE IF NOT EXISTS csv_session_reports (
   session_id TEXT PRIMARY KEY,
   session_num INTEGER NOT NULL,
   overview_line TEXT NOT NULL,
-  attempt_lines TEXT NOT NULL      -- JSON array of CSV lines
+  attempt_lines TEXT NOT NULL,     -- JSON array of CSV lines
+  study_line TEXT                  -- this session's row in Study Data.csv
 );
 
 -- Sync lock lease and README version.

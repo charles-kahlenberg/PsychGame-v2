@@ -84,7 +84,16 @@ export const ATTEMPT_COLUMNS = [
   "Session ID",
 ];
 
-const TIMELINE_COLUMNS = ["Time (ET)", "Elapsed", "Screen", "Event", "Scenario", "Details"];
+// Matches the research team's ExampleData.xlsx layout: one row per
+// participant, ten columns per scenario (S1 = scenario 1 in Scenarios.txt).
+const STUDY_FIELDS = ["StartTime", "Refresh", "Words", "WordDefs", "Hints", "Help", "Narrative", "Score", "Feedback", "EndTime"];
+
+export function studyColumns(scenarioCount) {
+  const s = Array.from({ length: scenarioCount }, (_, i) => `S${i + 1}`);
+  return ["Participant", "Condition", ...s.flatMap((p) => STUDY_FIELDS.map((f) => p + f)), "", ...s.map((p) => `${p}Time`), "TotalTime"];
+}
+
+const TIMELINE_COLUMNS =["Time (ET)", "Elapsed", "Screen", "Event", "Scenario", "Details"];
 
 const dateFmt = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" });
 const timeFmt = new Intl.DateTimeFormat("en-US", {
@@ -113,6 +122,12 @@ function fmtElapsed(ms) {
   const m = Math.floor((total % 3600) / 60);
   const s = String(total % 60).padStart(2, "0");
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
+}
+
+// Minutes never roll over into hours ("75:03"), like the example sheet.
+function fmtMinSec(ms) {
+  const total = Math.max(0, Math.round(ms / 1000));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
 
 // Free-text cells (participant answers, AI text) can start with "-" or "=",
@@ -282,6 +297,9 @@ export function buildSessionReport(session, rows, scenarioTexts) {
         timeMs: 0,
         initialCards: "",
         refreshes: 0,
+        definitions: 0,
+        respondStart: null,
+        respondEnd: null,
         hints: 0,
         conceptHelp: 0,
         responses: [],
@@ -296,11 +314,16 @@ export function buildSessionReport(session, rows, scenarioTexts) {
   };
 
   for (const v of visits) {
-    if (v.menu === "respond") attemptFor(v.scenario, v.start).timeMs += v.durationMs;
+    if (v.menu !== "respond") continue;
+    const a = attemptFor(v.scenario, v.start);
+    a.timeMs += v.durationMs;
+    a.respondStart = Math.min(a.respondStart ?? v.start, v.start);
+    a.respondEnd = Math.max(a.respondEnd ?? v.end, v.end);
   }
   for (const c of rows.cardEvents) {
     const a = attemptFor(scenarioOf(c.scenario), t(c.timestamp));
     if (c.event_type === "refresh") a.refreshes++;
+    else if (c.event_type === "definition") a.definitions++;
     else if (c.event_type === "initial" && !a.initialCards) a.initialCards = formatCards(c.cards);
   }
   for (const u of rows.userResponses) {
@@ -321,6 +344,7 @@ export function buildSessionReport(session, rows, scenarioTexts) {
   const sortedAttempts = [...attempts.values()].sort((a, b) => a.firstSeen - b.firstSeen);
   const date = fmtDate(startedAt);
   const separator = "\n\n---\n\n";
+  const lastScore = (a) => (a.scores.length > 0 ? a.scores[a.scores.length - 1] : "");
 
   const attemptLines = sortedAttempts.map((a) => {
     const response = a.responses.join(separator);
@@ -339,7 +363,7 @@ export function buildSessionReport(session, rows, scenarioTexts) {
       a.conceptHelp,
       a.responses.length,
       wordCount(response),
-      a.scores.length > 0 ? a.scores[a.scores.length - 1] : "",
+      lastScore(a),
       response,
       a.feedback.join(separator),
       a.helpTexts.join(separator),
@@ -384,12 +408,42 @@ export function buildSessionReport(session, rows, scenarioTexts) {
     fileName,
   ]);
 
-  return { fileName, timelineCsv, overviewLine, attemptLines };
+  // Times are elapsed m:ss since the session started; a scenario runs from
+  // first opening its Responding screen to last leaving it.
+  const byNum = new Map(sortedAttempts.filter((a) => a.desc.num).map((a) => [a.desc.num, a]));
+  const slots = scenarioTexts.map((_, i) => byNum.get(i + 1));
+  const span = (a) => (a?.respondEnd != null ? a.respondEnd - (a.respondStart ?? a.firstSeen) : null);
+  const studyTimes = slots.map((a) => (span(a) == null ? "" : Number((span(a) / 60000).toFixed(2))));
+  const studyLine = csvLine([
+    session.username || "",
+    testGroup,
+    ...slots.flatMap((a) =>
+      a
+        ? [
+            fmtMinSec((a.respondStart ?? a.firstSeen) - firstMs),
+            a.refreshes,
+            a.initialCards,
+            a.definitions,
+            a.hints,
+            a.conceptHelp,
+            a.responses.join(separator),
+            lastScore(a),
+            a.feedback.join(separator),
+            a.respondEnd != null ? fmtMinSec(a.respondEnd - firstMs) : "",
+          ]
+        : STUDY_FIELDS.map(() => "")
+    ),
+    "",
+    ...studyTimes,
+    Number(studyTimes.reduce((sum, x) => sum + (x || 0), 0).toFixed(2)),
+  ]);
+
+  return { fileName, timelineCsv, overviewLine, attemptLines, studyLine };
 }
 
 // Bump whenever report columns or README text change: the sync then
 // re-uploads the README and re-renders every session's reports.
-export const LAYOUT_VERSION = 2;
+export const LAYOUT_VERSION = 3;
 
 export function buildReadme(scenarioTexts) {
   const scenarioList = scenarioTexts
@@ -418,6 +472,17 @@ Scenario Responses.csv
   the AI grading feedback and score they got back, any hints/concept help
   they were given, which vocab cards they were dealt, and how long they
   spent on the scenario. Use this for coding/grading responses.
+
+Study Data.csv
+  Same data in the study's analysis layout: one row per session, with a
+  block of columns per scenario (S1 = scenario 1 below, S2 = scenario 2, ...).
+  Participant = username, Condition = test group. StartTime / EndTime are
+  minutes:seconds since the session started, from first opening that
+  scenario's Responding screen to last leaving it (Excel shows them as h:mm;
+  read the hours as minutes). Refresh = card refreshes, Words = the dealt
+  vocab cards, WordDefs = dictionary definitions viewed, Hints = hints,
+  Help = concept help, Narrative = the response, Score / Feedback = the AI
+  grade and feedback. SnTime and TotalTime are in minutes.
 
 Session Timelines/
   One file per session, named "Session #### - date time - username". A

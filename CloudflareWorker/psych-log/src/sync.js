@@ -21,6 +21,7 @@ import {
   buildSessionReport,
   csvFile,
   parseScenarioList,
+  studyColumns,
 } from "./reports.js";
 
 const SCENARIO_TEXTS = parseScenarioList(scenariosFile);
@@ -203,16 +204,16 @@ async function refreshDirtySessions(env, dropbox, limit) {
     await dropbox.upload(`${folder(env)}/Session Timelines/${report.fileName}`, report.timelineCsv);
     await env.DB.batch([
       env.DB.prepare(
-        `INSERT INTO csv_session_reports (session_id, session_num, overview_line, attempt_lines) VALUES (?, ?, ?, ?)
+        `INSERT INTO csv_session_reports (session_id, session_num, overview_line, attempt_lines, study_line) VALUES (?, ?, ?, ?, ?)
          ON CONFLICT(session_id) DO UPDATE SET session_num = excluded.session_num,
-           overview_line = excluded.overview_line, attempt_lines = excluded.attempt_lines`
-      ).bind(sessionId, session.row_id, report.overviewLine, JSON.stringify(report.attemptLines)),
+           overview_line = excluded.overview_line, attempt_lines = excluded.attempt_lines, study_line = excluded.study_line`
+      ).bind(sessionId, session.row_id, report.overviewLine, JSON.stringify(report.attemptLines), report.studyLine),
       done,
     ]);
   }
 
   const { results: reports } = await env.DB.prepare(
-    `SELECT overview_line, attempt_lines FROM csv_session_reports ORDER BY session_num`
+    `SELECT overview_line, attempt_lines, study_line FROM csv_session_reports ORDER BY session_num`
   ).all();
   await dropbox.upload(
     `${folder(env)}/Sessions Overview.csv`,
@@ -226,6 +227,13 @@ async function refreshDirtySessions(env, dropbox, limit) {
     csvFile(
       ATTEMPT_COLUMNS,
       reports.flatMap((r) => JSON.parse(r.attempt_lines))
+    )
+  );
+  await dropbox.upload(
+    `${folder(env)}/Study Data.csv`,
+    csvFile(
+      studyColumns(SCENARIO_TEXTS.length),
+      reports.filter((r) => r.study_line).map((r) => r.study_line) // NULL until re-rendered after the layout bump
     )
   );
   return dirty.length;
@@ -275,10 +283,10 @@ export async function syncToDropbox(env) {
     await applyLayoutVersion(env, dropbox);
 
     // Keep going while there's work, so rows written during this sync (whose
-    // own trigger hit the lock) still get picked up. Each pass reserves 4
-    // calls for the raw append + the two summary files.
+    // own trigger hit the lock) still get picked up. Each pass reserves 5
+    // calls for the raw append + the three summary files.
     while (true) {
-      const room = MAX_DROPBOX_CALLS - dropbox.calls - 4;
+      const room = MAX_DROPBOX_CALLS - dropbox.calls - 5;
       if (room <= 0) break;
       const appended = await appendNewRawRows(env, dropbox);
       const refreshed = await refreshDirtySessions(env, dropbox, Math.min(room, MAX_SESSIONS_PER_PASS));
