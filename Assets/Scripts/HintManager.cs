@@ -103,9 +103,9 @@ public class HintManager : MonoBehaviour
     {
         if (hintText != null) hintText.text = text;
 
-        // If something else already opened the overlay, great. If not, opening it is fine.
-        if (hintOverlay != null && !hintOverlay.activeSelf)
-            hintOverlay.SetActive(true);
+        // Callers open the overlay themselves. Never reopen it here: a reply
+        // landing after the player closed the bubble would leave the screen
+        // dimmed with no bubble.
 
         Canvas.ForceUpdateCanvases();
         if (hintScrollView != null)

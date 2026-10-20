@@ -6725,7 +6725,8 @@ MonoBehaviour:
   hintText: {fileID: 1211065673}
   closeOnRightClick: 1
   closeOnEscape: 1
-  keepOpenWhenClicked: []
+  keepOpenWhenClicked:
+  - {fileID: 574129081}
 --- !u!1 &1816280624
 GameObject:
   m_ObjectHideFlags: 0

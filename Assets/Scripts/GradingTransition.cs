@@ -31,7 +31,7 @@ public class GradingTransition : MonoBehaviour
     private const int CoverSortingOrder = 200; // over the intro, below SceneTransition's fade
 
     private static Transform _grading; // GradingScene's canvas, tucked under the response screen
-    private static bool _showing;      // the grading screen is up (for the click log)
+    private static Scene _showingIn;   // the GameScene whose grading screen is up (for the click log)
     private static Transform _cover;   // the last grading screen, over the next synopsis
     private static bool _leaving;
 
@@ -46,7 +46,10 @@ public class GradingTransition : MonoBehaviour
     public static bool Covering => _cover != null;
 
     // Whether GameScene is (for now) showing grading, for the click log.
-    public static bool ShowsGrading(Scene scene) => _showing && scene.name == "GameScene";
+    // Tied to the scene instance, not a flag reset on load: the click log's
+    // own sceneLoaded handler can run first and would see a stale "showing"
+    // for the next round's freshly loaded GameScene (and its synopsis).
+    public static bool ShowsGrading(Scene scene) => scene.name == "GameScene" && scene == _showingIn;
 
     // The response screen's leavers on top of what slid in with SynopsisTransition.
     private static readonly (string name, Vector2 side, float delay)[] GameOuts =
@@ -81,7 +84,7 @@ public class GradingTransition : MonoBehaviour
         {
             if (scene.name == "GameScene" && mode == LoadSceneMode.Single)
             {
-                _leaving = _showing = false;
+                _leaving = false;
                 _grading = null;
                 Shown = null; // anything left from a grading screen that was never shown
                 SceneManager.LoadSceneAsync("GradingScene", LoadSceneMode.Additive); // in the background: it's hidden until Submit
@@ -146,7 +149,7 @@ public class GradingTransition : MonoBehaviour
         if (grading.TryGetComponent(out GraphicRaycaster raycaster)) raycaster.enabled = true;
         SynopsisTransition.SetBackgroundPaused(grading.gameObject.scene, false); // renders it now
 
-        _showing = true;
+        _showingIn = game.gameObject.scene;
         ClickLogger.SwitchScreen("GradingScene");
 
         Action shown = Shown;

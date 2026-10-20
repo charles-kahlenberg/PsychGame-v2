@@ -36,7 +36,8 @@ public class BrainHint : MonoBehaviour
 
     public void OnBrainClicked()
     {
-        if (hintShown) return;
+        // Already up beside an open bubble (a card's definition): nothing to do.
+        if (hintShown || (hintOverlay != null && hintOverlay.activeSelf)) return;
 
         hintShown = true;
 

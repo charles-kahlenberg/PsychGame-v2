@@ -218,6 +218,10 @@ public class BrainBehavior : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
     void ResetBrain()
     {
+        // Clicked away before the bubble opened: don't open it later.
+        CancelInvoke(nameof(ShowHint));
+        awaitingBubble = false;
+
         LeanTween.moveLocal(gameObject, originalPos, 0.4f).setEaseInOutExpo();
         LeanTween.scale(gameObject, originalScale, 0.4f);
 
