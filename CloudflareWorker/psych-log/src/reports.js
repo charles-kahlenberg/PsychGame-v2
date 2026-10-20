@@ -213,9 +213,14 @@ export function buildSessionReport(session, rows, scenarioTexts) {
   const t = (iso) => Date.parse(iso);
   const scenarioOf = (text) => describeScenario(text, scenarioTexts);
 
+  const startedAt = t(session.started_at);
   const visits = rows.menuDurations.map((m) => {
     const end = t(m.timestamp);
-    return { start: end - m.duration_ms, end, menu: m.menu_name, scenario: scenarioOf(m.scenario), durationMs: m.duration_ms };
+    // Unity editor sessions can log a duration counted from the year 1 (a
+    // script recompile mid-play resets the start time). No visit can start
+    // before its session did.
+    const start = Math.min(end, Math.max(end - m.duration_ms, startedAt));
+    return { start, end, menu: m.menu_name, scenario: scenarioOf(m.scenario), durationMs: end - start };
   });
   const visitAt = (time) => visits.find((v) => v.start <= time && time <= v.end);
 
@@ -232,7 +237,6 @@ export function buildSessionReport(session, rows, scenarioTexts) {
     });
   };
 
-  const startedAt = t(session.started_at);
   const device = describeDevice(session.user_agent);
   // Sessions from before test groups existed are NULL; they all played the
   // original game, which is group 1.
@@ -414,7 +418,10 @@ export function buildSessionReport(session, rows, scenarioTexts) {
   const slots = scenarioTexts.map((_, i) => byNum.get(i + 1));
   const span = (a) => (a?.respondEnd != null ? a.respondEnd - (a.respondStart ?? a.firstSeen) : null);
   const studyTimes = slots.map((a) => (span(a) == null ? "" : Number((span(a) / 60000).toFixed(2))));
-  const studyLine = csvLine([
+  // Sessions where nothing was written (page loads, click-through tests that
+  // submit blank responses) are left out: they'd be rows of empty cells.
+  const wroteSomething = rows.userResponses.some((u) => (u.response || "").trim());
+  const studyLine = !wroteSomething ? null : csvLine([
     session.username || "",
     testGroup,
     ...slots.flatMap((a) =>
@@ -443,7 +450,7 @@ export function buildSessionReport(session, rows, scenarioTexts) {
 
 // Bump whenever report columns or README text change: the sync then
 // re-uploads the README and re-renders every session's reports.
-export const LAYOUT_VERSION = 3;
+export const LAYOUT_VERSION = 4;
 
 export function buildReadme(scenarioTexts) {
   const scenarioList = scenarioTexts
@@ -474,7 +481,8 @@ Scenario Responses.csv
   spent on the scenario. Use this for coding/grading responses.
 
 Study Data.csv
-  Same data in the study's analysis layout: one row per session, with a
+  Same data in the study's analysis layout: one row per session in which
+  the player wrote at least one response, with a
   block of columns per scenario (S1 = scenario 1 below, S2 = scenario 2, ...).
   Participant = username, Condition = test group. StartTime / EndTime are
   minutes:seconds since the session started, from first opening that

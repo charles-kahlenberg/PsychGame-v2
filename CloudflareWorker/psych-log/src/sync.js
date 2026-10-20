@@ -188,7 +188,12 @@ async function loadSessionRows(env, sessionId) {
 
 // Returns how many sessions were refreshed.
 async function refreshDirtySessions(env, dropbox, limit) {
-  const { results: dirty } = await env.DB.prepare(`SELECT session_id FROM csv_dirty_sessions LIMIT ?`).bind(limit).all();
+  // Newest first, so after a layout bump the latest players show up soonest.
+  const { results: dirty } = await env.DB.prepare(
+    `SELECT d.session_id FROM csv_dirty_sessions d LEFT JOIN sessions s USING (session_id) ORDER BY s.rowid DESC LIMIT ?`
+  )
+    .bind(limit)
+    .all();
   if (dirty.length === 0) return 0;
 
   for (const { session_id: sessionId } of dirty) {
@@ -233,7 +238,7 @@ async function refreshDirtySessions(env, dropbox, limit) {
     `${folder(env)}/Study Data.csv`,
     csvFile(
       studyColumns(SCENARIO_TEXTS.length),
-      reports.filter((r) => r.study_line).map((r) => r.study_line) // NULL until re-rendered after the layout bump
+      reports.filter((r) => r.study_line).map((r) => r.study_line) // NULL: no responses, or not yet re-rendered
     )
   );
   return dirty.length;
