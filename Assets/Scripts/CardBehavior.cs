@@ -11,7 +11,10 @@ public class CardBehavior : MonoBehaviour, IPointerClickHandler, IPointerDownHan
     private bool isFocused = false;
     private bool isFlipped = false;  // group 1: definition side showing
     private bool isRevealed = false; // group 2: term showing (cards are dealt face-down)
-    public bool IsRevealed => !FaceDownCards || isRevealed; // the dictionary hides face-down cards' terms
+    // The dictionary hides face-down cards' terms. A card mid-flip counts: it
+    // turns its term up only halfway through, and the dictionary opened in
+    // that moment listed it as Unknown.
+    public bool IsRevealed => !FaceDownCards || isRevealed || isFlippingInHand;
 
     [Header("Faces")]
     public TextMeshProUGUI frontText;        // the term
