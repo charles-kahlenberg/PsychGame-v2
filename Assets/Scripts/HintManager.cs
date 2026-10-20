@@ -19,11 +19,18 @@ public class HintManager : MonoBehaviour
     // BrainHint subscribes to this
     public Action<string> OnHintReady;
 
+    // One click on Brainy asks twice: its Button calls BrainHint, and
+    // BrainBehavior handles the same click. The second ask is dropped while
+    // the first is out, or the player got (and the log counted) two hints.
+    private bool hintPending;
+
     // ---------------- Public API ----------------
 
     // Brain hint (scenario + cards)
     public void RequestHint(string scenarioText, List<string> cards)
     {
+        if (hintPending) return;
+
         var payload = new WorkerRequest
         {
             mode = "hint",
@@ -32,7 +39,14 @@ public class HintManager : MonoBehaviour
             concept = "" // not used for hint
         };
 
-        StartCoroutine(PostToWorker(payload, fallbackMessage: "Failed to load hint. Please try again."));
+        StartCoroutine(PostHint(payload));
+    }
+
+    private IEnumerator PostHint(WorkerRequest payload)
+    {
+        hintPending = true;
+        yield return PostToWorker(payload, fallbackMessage: "Failed to load hint. Please try again.");
+        hintPending = false;
     }
 
     // Concept help (scenario + single concept)

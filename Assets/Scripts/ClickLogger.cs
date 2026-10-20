@@ -10,6 +10,10 @@ using UnityEngine.UI;
 // logging backend (Cloudflare Worker -> D1): clicks, AI-generated text,
 // user-written responses, card deals/refreshes, and time spent per screen.
 // Bootstraps itself on startup so it doesn't need to be placed in any scene.
+// Runs before the EventSystem (-1000), so a click whose press and release
+// land in one frame is named before its button changes the screen (the
+// dictionary's book hides itself on open, and was logged as "Canvas").
+[DefaultExecutionOrder(-1001)]
 public class ClickLogger : MonoBehaviour
 {
     private const string WorkerUrl = "https://psych-log.charliekahlenberg.workers.dev";

@@ -29,8 +29,20 @@ const SCENARIO_LABELS = [
   ["eyewitness", "Eyewitness testimony"],
   ["chocolate", "Chocolate & happiness"],
   ["haunted", "Haunted apartment"],
+  ["elementary teacher", "Classroom decorations"],
   ["sleep deprivation", "Sleep deprivation"],
 ];
+
+// Builds before late October 2026 asked the AI twice per click on Brainy (its
+// Button and BrainBehavior both did); the second reply replaced the first on
+// screen. Real repeat requests come 6s+ apart, the doubles within ~3s.
+const DUPLICATE_HINT_MS = 4000;
+
+// A visit can't really start a day before its session: that's a Unity editor
+// duration counted from the year 1 (a script recompile mid-play resets the
+// start time). Anything shorter is real, e.g. the main menu, which opens
+// before the session row is written once the username prompt is answered.
+const MAX_PRE_SESSION_MS = 24 * 60 * 60 * 1000;
 
 const AI_EVENT_LABELS = {
   hint: "Received hint",
@@ -216,11 +228,25 @@ export function buildSessionReport(session, rows, scenarioTexts) {
   const startedAt = t(session.started_at);
   const visits = rows.menuDurations.map((m) => {
     const end = t(m.timestamp);
-    // Unity editor sessions can log a duration counted from the year 1 (a
-    // script recompile mid-play resets the start time). No visit can start
-    // before its session did.
-    const start = Math.min(end, Math.max(end - m.duration_ms, startedAt));
+    const claimed = end - m.duration_ms;
+    const start = Math.min(end, claimed < startedAt - MAX_PRE_SESSION_MS ? startedAt : claimed);
     return { start, end, menu: m.menu_name, scenario: scenarioOf(m.scenario), durationMs: end - start };
+  });
+  // Builds before late October 2026 logged the synopsis after a grading screen as
+  // more grading (GradingTransition's flag outlived the scene). Grading never
+  // leads straight into responding, so a "grading" visit that does was the synopsis.
+  if ((session.features || "").includes("GradingTransition")) {
+    visits.forEach((v, i) => {
+      const next = visits[i + 1];
+      if (v.menu === "grading" && next?.menu === "respond" && Math.abs(next.start - v.end) < 1000) v.menu = "introduction";
+    });
+  }
+  // The earlier of two hints within DUPLICATE_HINT_MS is dropped: the
+  // player was left reading the later one.
+  const aiResponses = rows.aiResponses.filter((a, i, all) => {
+    if (a.kind !== "hint") return true;
+    const next = all.slice(i + 1).find((b) => b.kind === "hint");
+    return !next || t(next.timestamp) - t(a.timestamp) >= DUPLICATE_HINT_MS;
   });
   const visitAt = (time) => visits.find((v) => v.start <= time && time <= v.end);
 
@@ -274,7 +300,7 @@ export function buildSessionReport(session, rows, scenarioTexts) {
   for (const u of rows.userResponses) {
     push(t(u.timestamp), 6, "Submitted response", scenarioOf(u.scenario), u.response || "");
   }
-  for (const a of rows.aiResponses) {
+  for (const a of aiResponses) {
     push(t(a.timestamp), 7, AI_EVENT_LABELS[a.kind] || a.kind, scenarioOf(a.scenario), a.content || "");
   }
 
@@ -333,7 +359,7 @@ export function buildSessionReport(session, rows, scenarioTexts) {
   for (const u of rows.userResponses) {
     attemptFor(scenarioOf(u.scenario), t(u.timestamp)).responses.push(u.response || "");
   }
-  for (const r of rows.aiResponses) {
+  for (const r of aiResponses) {
     const a = attemptFor(scenarioOf(r.scenario), t(r.timestamp));
     if (r.kind === "grading_feedback") {
       a.feedback.push(r.content || "");
@@ -383,9 +409,9 @@ export function buildSessionReport(session, rows, scenarioTexts) {
       ? minutes(visits.filter((v) => v.menu === menu).reduce((sum, v) => sum + v.durationMs, 0))
       : ""
   );
-  const countAi = (kind) => rows.aiResponses.filter((r) => r.kind === kind).length;
+  const countAi = (kind) => aiResponses.filter((r) => r.kind === kind).length;
   const knownAttempts = sortedAttempts.filter((a) => a.desc.label !== "(scenario not recorded)");
-  const scores = rows.aiResponses.filter((r) => r.kind === "grading_feedback" && r.score != null).map((r) => r.score);
+  const scores = aiResponses.filter((r) => r.kind === "grading_feedback" && r.score != null).map((r) => r.score);
   const avgScore = scores.length > 0 ? Number((scores.reduce((s, x) => s + x, 0) / scores.length).toFixed(1)) : "";
 
   const overviewLine = csvLine([
@@ -450,7 +476,7 @@ export function buildSessionReport(session, rows, scenarioTexts) {
 
 // Bump whenever report columns or README text change: the sync then
 // re-uploads the README and re-renders every session's reports.
-export const LAYOUT_VERSION = 4;
+export const LAYOUT_VERSION = 5;
 
 export function buildReadme(scenarioTexts) {
   const scenarioList = scenarioTexts
@@ -520,6 +546,12 @@ NOTES
   averages all graded responses in the session; on Scenario Responses, if a
   scenario was graded more than once, the latest score is shown. Blank means
   no score was recorded (e.g. sessions before scores were logged).
+- Builds before late October 2026 asked the AI twice for each click on
+  Brainy. The reports count that as one hint and show the reply the player
+  was left reading; Raw Data/all_events.csv still has both rows.
+- Group 2/3 builds before late October 2026 logged the scenario intro
+  shown after each grading screen as more "grading" time. The reports count
+  it as Introduction; Raw Data/all_events.csv keeps the original rows.
 - "Clicked (empty space)" means the player clicked somewhere that wasn't a
   button, card, or other interactive object.
 - Multiple responses / feedback messages for the same scenario in one

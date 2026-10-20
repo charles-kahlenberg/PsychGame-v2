@@ -505,6 +505,17 @@ public static class TextBoxTheme
         input.selectionColor = new Color(Accent.r, Accent.g, Accent.b, 0.3f);
         input.scrollSensitivity = 3f;
 
+        // TMP slides the text left whenever the caret (after a word that just
+        // fits) pokes past the viewport's right edge, even though the text
+        // wraps; with the mask unpadded that slide clipped the first letter
+        // of every line. Wrapping a caret's width short of the edge leaves
+        // the caret room.
+        if (input.textComponent != null)
+        {
+            var textArea = input.textComponent.rectTransform;
+            textArea.offsetMax = new Vector2(textArea.offsetMax.x - (input.caretWidth + 1f), textArea.offsetMax.y);
+        }
+
         var scrollbar = TextPanel.MakeScrollbar(box, topInset: 9f, bottomInset: 9f);
         input.verticalScrollbar = scrollbar;
         box.gameObject.AddComponent<ScrollbarWhenOverflowing>().Init(input, scrollbar);
