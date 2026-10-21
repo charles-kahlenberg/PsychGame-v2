@@ -111,6 +111,7 @@ public class MenuButtonPlates : MonoBehaviour, IPointerEnterHandler, IPointerExi
             foreach (Button button in container.GetComponentsInChildren<Button>(true))
             {
                 if (!Labels.TryGetValue(button.name, out string label)) continue;
+                if (button.name == "Review" && CreditsScreen.Enabled) label = "Credits";
                 var hitArea = button.GetComponent<Image>();
                 if (hitArea == null) continue;
                 Restyle(button, hitArea, plate, label, new Vector2(Width, Height), Ink);
