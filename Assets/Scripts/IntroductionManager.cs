@@ -148,7 +148,7 @@ public class IntroductionManager : MonoBehaviour
         };
 
         string resp = null;
-        yield return Worker.Post(introductionWorkerUrl, JsonUtility.ToJson(payload), r => resp = r);
+        yield return Worker.Post(introductionWorkerUrl, JsonUtility.ToJson(payload), r => resp = r, tries: 3);
 
         string intro = Worker.Read(resp, r => r.intro);
         if (resp != null && intro == null)

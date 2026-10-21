@@ -169,7 +169,7 @@ public class GradingManager : MonoBehaviour
         };
 
         string resp = null;
-        yield return Worker.Post(gradingWorkerUrl, JsonUtility.ToJson(payload), r => resp = r);
+        yield return Worker.Post(gradingWorkerUrl, JsonUtility.ToJson(payload), r => resp = r, tries: 3);
         onDone?.Invoke(Worker.Read(resp, r => r.feedback) ?? "");
     }
 

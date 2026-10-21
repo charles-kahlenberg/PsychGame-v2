@@ -37,7 +37,7 @@ public class CardArt : ScriptableObject
         [Tooltip("The face-up side (behind the term), bottom layer first.")]
         public Layer[] frontLayers;
 
-        [Tooltip("Small icon shown beside the area's terms in the dictionary. A term in several areas gets all their icons.")]
+        [Tooltip("The area's small icon. Unused for now: the dictionary no longer shows them.")]
         public Sprite icon;
 
         [Tooltip("The card back's main color. The glow around a hovered face-down card is a soft, bright light of the same hue (white if left black).")]
@@ -62,16 +62,5 @@ public class CardArt : ScriptableObject
             Debug.LogWarning($"[CardArt] No art for {area.Value}; using {areas[0].area}.");
         }
         return areas[0];
-    }
-
-    // The icons for each of the given areas that has one, in order.
-    public Sprite[] IconsFor(PsychArea[] termAreas)
-    {
-        var icons = new System.Collections.Generic.List<Sprite>();
-        if (areas == null) return icons.ToArray();
-        foreach (var area in termAreas)
-            foreach (var a in areas)
-                if (a != null && a.area == area && a.icon != null) icons.Add(a.icon);
-        return icons.ToArray();
     }
 }

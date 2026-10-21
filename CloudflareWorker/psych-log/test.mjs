@@ -43,7 +43,9 @@ assert.ok(report.timelineCsv.includes(",second"));
 
 const study = report.studyLine.split(",");
 const field = (name) => study[studyColumns(scenarios.length).indexOf(name)];
-assert.equal(field("S1Hints"), "2");
+assert.equal(field("S1BrainyHelp"), "2");
+assert.equal(field("S1CardHint"), "0");
+assert.equal(col("Credits time (min)"), "0");
 assert.equal(field("S1Score"), "40");
 assert.equal(field("S4Narrative"), "");             // the blank answer leaves empty cells, not an error
 assert.equal(field("S4Score"), "");

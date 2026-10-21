@@ -24,6 +24,12 @@ public class HintManager : MonoBehaviour
     // the first is out, or the player got (and the log counted) two hints.
     private bool hintPending;
 
+    // Each answer, by the request that got it: asking again (same scenario
+    // and cards, or the same card's concept) shows it without a new query.
+    // Static, so it outlasts leaving and coming back to the scene. Failures
+    // aren't kept, so those are asked again.
+    private static readonly Dictionary<string, string> Answers = new Dictionary<string, string>();
+
     // ---------------- Public API ----------------
 
     // Brain hint (scenario + cards)
@@ -94,20 +100,25 @@ public class HintManager : MonoBehaviour
             yield break;
         }
 
-        string resp = null;
-        yield return Worker.Post(workerUrl, JsonUtility.ToJson(payload), r => resp = r);
-
-        string hint = Worker.Read(resp, r => r.hint);
-        if (string.IsNullOrWhiteSpace(hint))
+        string json = JsonUtility.ToJson(payload);
+        if (!Answers.TryGetValue(json, out string trimmedHint))
         {
-            if (resp != null) Debug.LogWarning("[HintManager] Could not parse worker response. Raw: " + resp);
-            SafeOpenOverlay(fallbackMessage);
-            OnHintReady?.Invoke(fallbackMessage);
-            yield break;
-        }
+            string resp = null;
+            yield return Worker.Post(workerUrl, json, r => resp = r, tries: 3);
 
-        string trimmedHint = hint.Trim();
-        ClickLogger.LogAiResponse(payload.mode == "concept" ? "concept_help" : "hint", payload.scenario, trimmedHint);
+            string hint = Worker.Read(resp, r => r.hint);
+            if (string.IsNullOrWhiteSpace(hint))
+            {
+                if (resp != null) Debug.LogWarning("[HintManager] Could not parse worker response. Raw: " + resp);
+                SafeOpenOverlay(fallbackMessage);
+                OnHintReady?.Invoke(fallbackMessage);
+                yield break;
+            }
+
+            trimmedHint = hint.Trim();
+            Answers[json] = trimmedHint;
+            ClickLogger.LogAiResponse(payload.mode == "concept" ? "concept_help" : "hint", payload.scenario, trimmedHint);
+        }
 
         SafeOpenOverlay(trimmedHint);
         OnHintReady?.Invoke(trimmedHint);

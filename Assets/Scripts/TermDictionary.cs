@@ -11,8 +11,8 @@ using UnityEngine.UI;
 // it pops on hover like the other buttons). Clicking it opens the book
 // (DictionaryBookOpen) and slowly carries it up to the middle of the screen,
 // where its pages hold the dictionary: on the left the hand, card by card,
-// each term with its areas' icons (CardArt) on its left, or "Unknown" for a
-// card still face-down; on the right the chosen card's term and definition.
+// or "Unknown" for a card still face-down; on the right the chosen card's
+// term and definition.
 // It opens with nothing chosen, so every definition read is a click, and
 // each click is logged (ClickLogger card event "definition").
 // Esc or a click off the book carries it back to its spot.
@@ -29,7 +29,6 @@ public class TermDictionary : MonoBehaviour
     private const float IndexLineSpacing = -8f, IndexTermSpacing = 70f;
     private const float TitleScale = 1.3f, TitleDilate = 0.2f, TitleGap = 12f; // the right page's term, thickened past SemiBold (there's no Bold font)
     private const string UnknownTerm = "Unknown";
-    private const float IconHeight = 22f, IconGap = 3f; // the index's area icons
 
     // The pages' writing areas in DictionaryBookOpen, as fractions of the
     // picture (from its bottom left): below the light band along the pages'
@@ -48,8 +47,6 @@ public class TermDictionary : MonoBehaviour
     private readonly CardBehavior[] _cards = new CardBehavior[5]; // Card1..Card5, in the same order as GameManager.currentCards
     private int _chosen = -1;                                      // which card the right page shows (-1: none yet)
     private int _hovered = -1;                                     // which card's line the pointer is over
-    private Sprite[][] _slotIcons = new Sprite[0][];               // each listed card's area icons (none while face-down)
-    private readonly List<Image> _iconImages = new List<Image>();
     private bool _closing;
 
     // From GameManager.Awake, once the hand is raised.
@@ -120,7 +117,6 @@ public class TermDictionary : MonoBehaviour
             _hovered = link != null && int.TryParse(link, out int i) ? i : -1;
             ShowIndex();
         };
-        TMPro_EventManager.TEXT_CHANGED_EVENT.Add(OnTextChanged);
 
         // Right page: the chosen term, and its definition filling the rest of the page.
         var right = Area(contents, "RightPage", RightPage);
@@ -225,9 +221,9 @@ public class TermDictionary : MonoBehaviour
     // -------------------- THE PAGES --------------------
 
     // The hand, card by card, the chosen one in bold in the accent colour; a
-    // card still face-down is listed as Unknown, dimmed, with no icons. The
-    // one under the pointer is underlined in the accent colour, so the
-    // lines read as something to click.
+    // card still face-down is listed as Unknown, dimmed. The one under the
+    // pointer is underlined in the accent colour, so the lines read as
+    // something to click.
     private void ShowIndex()
     {
         List<string> hand = _game.currentCards;
@@ -235,18 +231,10 @@ public class TermDictionary : MonoBehaviour
         string accent = ColorUtility.ToHtmlStringRGB(TextBoxTheme.Accent);
         string dimInk = ColorUtility.ToHtmlStringRGB(TextBoxTheme.Ink) + "99";
 
-        CardArt art = CardArt.Load();
-        _slotIcons = new Sprite[hand.Count][];
-        float column = 0f;
         var sb = new StringBuilder();
         for (int i = 0; i < hand.Count; i++)
         {
             bool known = Known(i);
-            _slotIcons[i] = known && art != null ? art.IconsFor(TermAreas.Get(hand[i])) : new Sprite[0];
-            float width = 0f;
-            foreach (Sprite icon in _slotIcons[i]) width += IconWidth(icon) + IconGap;
-            column = Mathf.Max(column, width);
-
             string name = known ? hand[i] : $"<i>{UnknownTerm}</i>";
             if (i == _chosen) name = $"<color=#{accent}><b>{name}</b></color>";
             else if (i == _hovered) name = $"<color=#{accent}>{name}</color>";
@@ -254,7 +242,6 @@ public class TermDictionary : MonoBehaviour
             if (i == _hovered) name = $"<u>{name}</u>";
             sb.Append($"<link=\"{i}\">{name}</link>\n");
         }
-        _index.margin = new Vector4(column, 0f, 0f, 0f); // room on the left for the most icons any card has
         _index.text = sb.ToString().TrimEnd();
 
         if (hand.Count == 0)
@@ -289,69 +276,6 @@ public class TermDictionary : MonoBehaviour
         // What the player saw: the term, or Unknown for a face-down card.
         string term = Known(i) ? _game.currentCards[i] : UnknownTerm;
         ClickLogger.LogCardEvent(_game.currentScenario, "definition", new List<string> { term }, -1);
-    }
-
-    // -------------------- AREA ICONS --------------------
-
-    private static float IconWidth(Sprite icon) => IconHeight * icon.rect.width / icon.rect.height;
-
-    // The index's lines only have their final places once TextMeshPro has
-    // laid it out (it re-lays it out whenever the text or its width changes).
-    // That happens inside the canvas rebuild, where touching the icon Images
-    // is an error, so they're placed next frame instead.
-    private bool _iconsDirty;
-
-    private void OnTextChanged(Object text)
-    {
-        if (text == _index) _iconsDirty = true;
-    }
-
-    private void LateUpdate()
-    {
-        if (!_iconsDirty) return;
-        _iconsDirty = false;
-        PlaceIcons();
-    }
-
-    // Each listed term's icons, left to right in the column, level with its
-    // (first) line. Images are reused, and those left over are hidden.
-    private void PlaceIcons()
-    {
-        TMP_TextInfo info = _index.textInfo;
-        float left = _index.rectTransform.rect.xMin;
-        int used = 0;
-        for (int i = 0; i < info.linkCount && i < _slotIcons.Length; i++)
-        {
-            TMP_LineInfo line = info.lineInfo[info.characterInfo[info.linkInfo[i].linkTextfirstCharacterIndex].lineNumber];
-            float x = left;
-            foreach (Sprite icon in _slotIcons[i])
-            {
-                if (used == _iconImages.Count) _iconImages.Add(NewIcon());
-                Image image = _iconImages[used++];
-                image.sprite = icon;
-                image.rectTransform.sizeDelta = new Vector2(IconWidth(icon), IconHeight);
-                image.rectTransform.anchoredPosition = new Vector2(x, (line.ascender + line.descender) / 2f);
-                image.gameObject.SetActive(true);
-                x += IconWidth(icon) + IconGap;
-            }
-        }
-        for (int i = used; i < _iconImages.Count; i++) _iconImages[i].gameObject.SetActive(false);
-    }
-
-    // Placed in the index text's own space (from its pivot), so it scrolls with it.
-    private Image NewIcon()
-    {
-        var rt = NewChild("AreaIcon", _index.transform);
-        rt.anchorMin = rt.anchorMax = _index.rectTransform.pivot;
-        rt.pivot = new Vector2(0f, 0.5f);
-        var image = rt.gameObject.AddComponent<Image>();
-        image.raycastTarget = false; // clicks go to the term
-        return image;
-    }
-
-    private void OnDestroy()
-    {
-        TMPro_EventManager.TEXT_CHANGED_EVENT.Remove(OnTextChanged);
     }
 
     // -------------------- HELPERS --------------------

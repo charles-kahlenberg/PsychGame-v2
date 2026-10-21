@@ -11,6 +11,8 @@ public class SplashUI : MonoBehaviour
         bool hasSave = SaveManager.HasSave(0) || SaveManager.HasSave(1) || SaveManager.HasSave(2);
         if (continueButton != null)
             continueButton.interactable = hasSave;
+
+        CreditsScreen.SetUpMenu(gameObject.scene);
     }
 
     // NEW GAME BUTTON

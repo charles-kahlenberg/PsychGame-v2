@@ -10,22 +10,33 @@ using UnityEngine.Networking;
 public static class Worker
 {
     // Hands onDone the response body, or null when the request failed.
-    public static IEnumerator Post(string url, string json, Action<string> onDone, int timeoutSeconds = 20)
+    // With tries > 1 a timeout, dropped connection or 5xx is asked again;
+    // a 4xx isn't, since asking again can't fix it.
+    public static IEnumerator Post(string url, string json, Action<string> onDone, int timeoutSeconds = 20, int tries = 1)
     {
-        using (var req = UnityWebRequest.Post(url, json, "application/json"))
+        for (int attempt = 1; ; attempt++)
         {
-            req.SetRequestHeader("Accept", "application/json");
-            req.timeout = timeoutSeconds;
-
-            yield return req.SendWebRequest();
-
-            if (req.result != UnityWebRequest.Result.Success)
+            using (var req = UnityWebRequest.Post(url, json, "application/json"))
             {
-                Debug.LogWarning($"[Worker] {url} failed: {req.error}\n{req.downloadHandler.text}");
-                onDone(null);
-                yield break;
+                req.SetRequestHeader("Accept", "application/json");
+                req.timeout = timeoutSeconds;
+
+                yield return req.SendWebRequest();
+
+                if (req.result == UnityWebRequest.Result.Success)
+                {
+                    onDone(req.downloadHandler.text);
+                    yield break;
+                }
+
+                Debug.LogWarning($"[Worker] {url} failed (try {attempt}/{tries}): {req.error}\n{req.downloadHandler.text}");
+                bool retryable = req.result == UnityWebRequest.Result.ConnectionError || req.responseCode >= 500;
+                if (attempt >= tries || !retryable)
+                {
+                    onDone(null);
+                    yield break;
+                }
             }
-            onDone(req.downloadHandler.text);
         }
     }
 

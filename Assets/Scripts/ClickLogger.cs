@@ -33,6 +33,7 @@ public class ClickLogger : MonoBehaviour
         { "GradingScene", "grading" },
         { "ReviewScene", "review" },
         { "GameEndScene", "game_end" },
+        { "CreditsScene", "credits" }, // not a scene: CreditsScreen lays it over the menu
     };
 
     private static ClickLogger _instance;
@@ -46,9 +47,10 @@ public class ClickLogger : MonoBehaviour
     private bool _sessionReady;
 
     // All logging events are cached here rather than sent as they happen,
-    // and are only flushed to the backend once per menu load (see
-    // FlushBatch), to keep network chatter to one request per screen instead
-    // of one per click/response/card event.
+    // and are flushed to the backend once per menu load (see FlushBatch),
+    // to keep network chatter to one request per screen instead of one per
+    // click/response/card event -- and every 30 seconds as a backstop
+    // (FlushPeriodically), so a long screen or a killed tab loses little.
     private readonly List<ClickLogPayload> _pendingClicks = new List<ClickLogPayload>();
     private readonly List<AiResponsePayload> _pendingAiResponses = new List<AiResponsePayload>();
     private readonly List<UserResponsePayload> _pendingUserResponses = new List<UserResponsePayload>();
@@ -76,6 +78,19 @@ public class ClickLogger : MonoBehaviour
 
         SceneManager.sceneLoaded += OnSceneLoaded;
         StartCoroutine(EnterInitialMenuNextFrame());
+        StartCoroutine(FlushPeriodically());
+    }
+
+    // Redundancy for the menu-load flush: realtime, so a paused timeScale
+    // can't stall it.
+    private IEnumerator FlushPeriodically()
+    {
+        var wait = new WaitForSecondsRealtime(30f);
+        while (true)
+        {
+            yield return wait;
+            FlushBatch();
+        }
     }
 
     private void OnDestroy()

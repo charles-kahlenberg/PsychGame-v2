@@ -16,6 +16,7 @@ const SCREEN_LABELS = {
   grading: "Grading",
   review: "Review",
   game_end: "Game end",
+  credits: "Credits",
 };
 // Builds before 2026-09-24 only timed these three screens.
 const LEGACY_SCREENS = new Set(["main_menu", "respond", "review"]);
@@ -98,7 +99,7 @@ export const ATTEMPT_COLUMNS = [
 
 // Matches the research team's ExampleData.xlsx layout: one row per
 // participant, ten columns per scenario (S1 = scenario 1 in Scenarios.txt).
-const STUDY_FIELDS = ["StartTime", "Refresh", "Words", "WordDefs", "Hints", "Help", "Narrative", "Score", "Feedback", "EndTime"];
+const STUDY_FIELDS = ["StartTime", "Refresh", "Words", "WordDefs", "BrainyHelp", "CardHint", "Narrative", "Score", "Feedback", "EndTime"];
 
 export function studyColumns(scenarioCount) {
   const s = Array.from({ length: scenarioCount }, (_, i) => `S${i + 1}`);
@@ -476,7 +477,7 @@ export function buildSessionReport(session, rows, scenarioTexts) {
 
 // Bump whenever report columns or README text change: the sync then
 // re-uploads the README and re-renders every session's reports.
-export const LAYOUT_VERSION = 5;
+export const LAYOUT_VERSION = 6;
 
 export function buildReadme(scenarioTexts) {
   const scenarioList = scenarioTexts
@@ -514,8 +515,9 @@ Study Data.csv
   minutes:seconds since the session started, from first opening that
   scenario's Responding screen to last leaving it (Excel shows them as h:mm;
   read the hours as minutes). Refresh = card refreshes, Words = the dealt
-  vocab cards, WordDefs = dictionary definitions viewed, Hints = hints,
-  Help = concept help, Narrative = the response, Score / Feedback = the AI
+  vocab cards, WordDefs = dictionary definitions viewed, BrainyHelp =
+  hints asked of Brainy, CardHint = hints asked from a card (concept
+  help), Narrative = the response, Score / Feedback = the AI
   grade and feedback. SnTime and TotalTime are in minutes.
 
 Session Timelines/
@@ -536,7 +538,8 @@ NOTES
   exactly which experimental features that player saw. Sessions from before
   test groups existed are shown as group 1, which is what they all played.
 - Screens, in game order: Main menu, Introduction, Rules, Save select,
-  Loading, Responding (the scenario screen), Grading, Review, Game end.
+  Loading, Responding (the scenario screen), Grading, Review, Game end,
+  Credits (opened from the main menu, groups 2 and 3).
   Screen time is measured from when a screen opens until the player leaves
   it. If a player closes the tab abruptly, their last screen may be missing.
 - Early builds only timed Main menu, Responding and Review. For those

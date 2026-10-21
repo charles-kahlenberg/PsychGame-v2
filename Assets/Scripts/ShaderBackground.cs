@@ -94,21 +94,36 @@ public class ShaderBackground : MonoBehaviour
         };
     }
 
-    private static void AddTo(Scene scene, LoadSceneMode mode)
+    // Kept for the whole session. Left to unload between scenes, they had to
+    // be compiled again on the next screen's first frame, which froze it for
+    // about a second (hidden by the fades, but not by SynopsisTransition's
+    // switch). False where they can't run.
+    private static bool LoadShaders()
     {
-        // Kept for the whole session. Left to unload between scenes, they
-        // had to be compiled again on the next screen's first frame, which
-        // froze it for about a second (hidden by the fades, but not by
-        // SynopsisTransition's switch).
         if (_shader == null) _shader = Resources.Load<Shader>(ShaderResource);
         if (_fieldShader == null) _fieldShader = Resources.Load<Shader>(FieldShaderResource);
-        Shader shader = _shader, fieldShader = _fieldShader;
-        if (shader == null || !shader.isSupported || fieldShader == null || !fieldShader.isSupported ||
+        if (_shader == null || !_shader.isSupported || _fieldShader == null || !_fieldShader.isSupported ||
             FieldFormat() == null)
         {
             Debug.LogWarning($"[ShaderBackground] {ShaderResource} isn't available here; keeping the image background.");
-            return;
+            return false;
         }
+        return true;
+    }
+
+    // The calm look filling `parent`, for a screen laid over another
+    // (CreditsScreen). False where the shader can't run.
+    public static bool AddCalm(RectTransform parent)
+    {
+        if (!LoadShaders()) return false;
+        Excite = Heat = Mono = 0f;
+        Create(parent);
+        return true;
+    }
+
+    private static void AddTo(Scene scene, LoadSceneMode mode)
+    {
+        if (!LoadShaders()) return;
 
         // GameScene opening under a synopsis shows only this until the intro
         // is laid over it (SynopsisTransition), so it starts out the same.
@@ -129,14 +144,20 @@ public class ShaderBackground : MonoBehaviour
             var canvas = root.GetComponent<Canvas>();
             if (canvas == null) continue;
 
-            CreateUnder(canvas, shader, fieldShader);
+            Create(canvas.transform);
+
+            // The old background (the Canvas's own Image, or the intro's plain
+            // "Background" panel) stays as an invisible click target.
+            Hide(canvas.GetComponent<Image>());
+            Hide(canvas.transform.Find("Background")?.GetComponent<Image>());
         }
     }
 
-    private static void CreateUnder(Canvas canvas, Shader shader, Shader fieldShader)
+    // The shader on a new bottom child of `parent`, filling it.
+    private static void Create(Transform parent)
     {
         var go = new GameObject("ShaderBackground", typeof(RectTransform), typeof(Image));
-        go.transform.SetParent(canvas.transform, false);
+        go.transform.SetParent(parent, false);
         go.transform.SetAsFirstSibling();
 
         var rt = (RectTransform)go.transform;
@@ -145,21 +166,16 @@ public class ShaderBackground : MonoBehaviour
         rt.offsetMin = Vector2.zero;
         rt.offsetMax = Vector2.zero;
 
-        var material = new Material(shader) { name = "ThoughtCurrents (runtime)" };
+        var material = new Material(_shader) { name = "ThoughtCurrents (runtime)" };
         var image = go.GetComponent<Image>();
         image.material = material;
         image.raycastTarget = false;
         // Still drawn while SynopsisTransition hides the rest of the canvas.
         go.AddComponent<CanvasGroup>().ignoreParentGroups = true;
 
-        // The old background (the Canvas's own Image, or the intro's plain
-        // "Background" panel) stays as an invisible click target.
-        Hide(canvas.GetComponent<Image>());
-        Hide(canvas.transform.Find("Background")?.GetComponent<Image>());
-
         var background = go.AddComponent<ShaderBackground>();
         background._material = material;
-        background._fieldMaterial = new Material(fieldShader) { name = "ThoughtCurrentsField (runtime)" };
+        background._fieldMaterial = new Material(_fieldShader) { name = "ThoughtCurrentsField (runtime)" };
     }
 
     private static void Hide(Image image)

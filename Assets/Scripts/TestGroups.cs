@@ -35,6 +35,7 @@ public enum Feature
     GameOverview,             // before the first scenario's synopsis, Brainy first explains the game in the same speech bubble; Continue swaps it for the scenario's picture and synopsis (IntroductionManager)
     GradingTabs,              // with ThemedTextBoxes, the grading screen leads with Brainy's feedback, in a panel fitted to its text beside Brainy and the score (the background shows below it); the scenario and response sit behind two tabs along the top and open above the feedback, pushing it down, when clicked (GradingTabs, TextBoxTheme, TextPanel, GradingTransition)
     TrophyEnd,                // the end screen's picture becomes the shader background, excited, in black and white with a floating pixel-art trophy (Resources/GoldTrophy) and a ring of card backs, one per area, circling it; the title and line from the old picture are written on top (TrophyEnd, ShaderBackground)
+    CreditsMenu,              // the title screen's Review button becomes Credits, at the bottom of the buttons, opening a blank screen on the calm shader background with a Menu button back (to be filled in later); Rules is greyed out for now (CreditsScreen, SplashUI, ShaderBackground, ClickLogger)
 }
 
 // The study's conditions, all in one place: which features each test group
@@ -81,6 +82,7 @@ public static class TestGroups
         Feature.GameOverview,
         Feature.GradingTabs,
         Feature.TrophyEnd,
+        Feature.CreditsMenu,
     };
 
     private static readonly Dictionary<int, HashSet<Feature>> Groups = new Dictionary<int, HashSet<Feature>>
