@@ -18,6 +18,7 @@ public static class Sfx
     public static void CardDeal() => Play("CardDeal");
     public static void CardFan() => Play("CardFan");
     public static void Button() => Play("Button");
+    public static void Horse() => Play("Horse"); // CreditsScreen's jump scare
 
     private static void Play(string name)
     {
@@ -28,7 +29,7 @@ public static class Sfx
         }
         if (!_clips.TryGetValue(name, out AudioClip clip))
             _clips[name] = clip = Resources.Load<AudioClip>("Sounds/" + name);
-        _source.PlayOneShot(clip);
+        if (clip != null) _source.PlayOneShot(clip); // a sound not added yet is just quiet
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]

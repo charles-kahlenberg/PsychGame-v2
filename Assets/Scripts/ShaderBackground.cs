@@ -51,6 +51,7 @@ public class ShaderBackground : MonoBehaviour
     private static readonly int ExciteFlowSpeedId = Shader.PropertyToID("_ExciteFlowSpeed");
     private static readonly int HeatId = Shader.PropertyToID("_Heat");
     private static readonly int MonoId = Shader.PropertyToID("_Mono");
+    private static readonly int OffsetId = Shader.PropertyToID("_Offset");
 
     // 0 is the calm look, 1 the intro's lively one; 1 on the intro screen and
     // 0 everywhere else as each loads.
@@ -112,14 +113,17 @@ public class ShaderBackground : MonoBehaviour
     }
 
     // The calm look filling `parent`, for a screen laid over another
-    // (CreditsScreen). False where the shader can't run.
-    public static bool AddCalm(RectTransform parent)
+    // (CreditsScreen). Null where the shader can't run.
+    public static ShaderBackground AddCalm(RectTransform parent)
     {
-        if (!LoadShaders()) return false;
+        if (!LoadShaders()) return null;
         Excite = Heat = Mono = 0f;
-        Create(parent);
-        return true;
+        return Create(parent);
     }
+
+    // How far the pattern has scrolled up, in screen heights: the credits
+    // carry it with them, and it just carries on below.
+    public float Offset;
 
     private static void AddTo(Scene scene, LoadSceneMode mode)
     {
@@ -154,7 +158,7 @@ public class ShaderBackground : MonoBehaviour
     }
 
     // The shader on a new bottom child of `parent`, filling it.
-    private static void Create(Transform parent)
+    private static ShaderBackground Create(Transform parent)
     {
         var go = new GameObject("ShaderBackground", typeof(RectTransform), typeof(Image));
         go.transform.SetParent(parent, false);
@@ -176,6 +180,7 @@ public class ShaderBackground : MonoBehaviour
         var background = go.AddComponent<ShaderBackground>();
         background._material = material;
         background._fieldMaterial = new Material(_fieldShader) { name = "ThoughtCurrentsField (runtime)" };
+        return background;
     }
 
     private static void Hide(Image image)
@@ -237,6 +242,7 @@ public class ShaderBackground : MonoBehaviour
         _fieldMaterial.SetFloat(ScaleId, Mathf.Lerp(_material.GetFloat(ScaleId), _material.GetFloat(ExciteScaleId), e));
         _fieldMaterial.SetFloat(WarpId, Mathf.Lerp(_material.GetFloat(WarpId), _material.GetFloat(ExciteWarpId), e));
         _fieldMaterial.SetFloat(AspectId, aspect);
+        _fieldMaterial.SetFloat(OffsetId, Offset);
 
         // Advanced by speed rather than computed from the time, so changing
         // speed never jumps the pattern; once a frame, however many are drawn.

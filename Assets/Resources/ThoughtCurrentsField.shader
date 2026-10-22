@@ -17,6 +17,7 @@ Shader "Hidden/PsychGame/ThoughtCurrentsField"
         _Warp ("Warp Amount", Float) = 2.2
         _Aspect ("Aspect", Float) = 1.7778
         _FlowTime ("Flow Time", Float) = 0
+        _Offset ("Scroll Offset", Float) = 0
     }
 
     SubShader
@@ -38,6 +39,7 @@ Shader "Hidden/PsychGame/ThoughtCurrentsField"
             float _Warp;
             float _Aspect;
             float _FlowTime;
+            float _Offset; // screen heights the pattern has scrolled up (CreditsScreen)
 
             // Sine-free hash, so it looks the same on every GPU (WebGL included).
             float hash12(float2 p)
@@ -76,7 +78,7 @@ Shader "Hidden/PsychGame/ThoughtCurrentsField"
 
             float4 frag(v2f_img IN) : SV_Target
             {
-                float2 p = (IN.uv - 0.5) * float2(_Aspect, 1.0) * _Scale;
+                float2 p = (IN.uv - float2(0.5, 0.5 + _Offset)) * float2(_Aspect, 1.0) * _Scale;
                 float t = _FlowTime;
 
                 // Two rounds of domain warping: noise pushes noise around, and
