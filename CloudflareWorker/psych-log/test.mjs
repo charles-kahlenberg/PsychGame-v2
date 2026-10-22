@@ -55,3 +55,20 @@ assert.equal(field("S2StartTime"), "");             // not played
 const blankOnly = { ...rows, userResponses: [rows.userResponses[1]] };
 assert.equal(buildSessionReport(session, blankOnly, scenarios).studyLine, null); // nothing written: no Study Data row
 console.log("ok");
+
+// Backup round trip: dump a seeded database, restore it into an empty one.
+const { DatabaseSync } = await import("node:sqlite");
+const { buildDump } = await import("./src/backup.js");
+const d1Shim = (db) => ({ prepare: (sql) => ({ all: async () => ({ results: db.prepare(sql).all().map((r) => ({ ...r })) }) }) });
+const source = new DatabaseSync(":memory:");
+source.exec(readFileSync(new URL("./schema.sql", import.meta.url), "utf8"));
+source.exec(`INSERT INTO sessions (session_id, started_at, started_at_et, test_group) VALUES ('s1', 't', 'et', 2);
+  INSERT INTO user_responses (session_id, timestamp, timestamp_et, response) VALUES ('s1', 't', 'et', 'it''s "quoted",
+multi-line; DROP TABLE x;');
+  INSERT INTO menu_durations (session_id, timestamp, timestamp_et, menu_name, duration_ms) VALUES ('s1', 't', 'et', 'review', 1.5);`);
+const restored = new DatabaseSync(":memory:");
+restored.exec(await buildDump(d1Shim(source)));
+for (const t of ["sessions", "user_responses", "menu_durations"]) {
+  assert.deepEqual(restored.prepare(`SELECT * FROM ${t}`).all(), source.prepare(`SELECT * FROM ${t}`).all());
+}
+console.log("backup ok");

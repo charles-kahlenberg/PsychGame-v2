@@ -11,7 +11,7 @@
 // pass or by the cron fallback.
 
 import scenariosFile from "../../../Assets/Resources/Scenarios.txt";
-import { createDropboxClient, isDropboxConfigured } from "./dropbox.js";
+import { createDropboxClient, folder, isDropboxConfigured } from "./dropbox.js";
 import {
   ATTEMPT_COLUMNS,
   BOM,
@@ -31,8 +31,6 @@ const MAX_ROWS_PER_TABLE_PER_PASS = 2000;
 const MAX_DROPBOX_CALLS = 40; // stays under the free plan's 50 outbound fetches
 const MAX_SESSIONS_PER_PASS = 25;
 const LOCK_LEASE_MS = 90_000;
-
-const folder = (env) => env.DROPBOX_FOLDER || "/PsychGameLogs";
 
 // --- Raw event log (one row per event, all tables mixed) ------------------
 

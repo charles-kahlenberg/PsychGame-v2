@@ -2,7 +2,10 @@
 // and writes them to a D1 database. This is the only thing the client ever
 // talks to directly — the D1 binding (and any future secrets) stay server-side.
 
+import { backupToDropbox } from "./backup.js";
 import { syncToDropbox } from "./sync.js";
+
+const BACKUP_CRON = "0 4,16 * * *"; // must match wrangler.toml
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -179,8 +182,14 @@ export default {
     }
   },
 
-  // Fallback for anything a write-triggered sync skipped or failed on.
+  // The 12-hour cron backs up the database; the 5-minute one is the fallback
+  // for anything a write-triggered sync skipped or failed on. The backup is
+  // awaited, not caught, so a failure shows up in the dashboard's cron events.
   async scheduled(event, env, ctx) {
+    if (event.cron === BACKUP_CRON) {
+      await backupToDropbox(env);
+      return;
+    }
     triggerDropboxSync(ctx, env);
   },
 };

@@ -2,6 +2,8 @@
 // fetches per invocation (50 on the free plan), and a backfill can touch
 // many files.
 
+export const folder = (env) => env.DROPBOX_FOLDER || "/PsychGameLogs";
+
 export function isDropboxConfigured(env) {
   return Boolean(env.DROPBOX_REFRESH_TOKEN && env.DROPBOX_APP_KEY && env.DROPBOX_APP_SECRET);
 }
