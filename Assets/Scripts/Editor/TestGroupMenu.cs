@@ -25,6 +25,12 @@ public static class TestGroupMenu
     [MenuItem(MenuRoot + "Group 3", true)]
     private static bool ValidateGroup3() => Validate(MenuRoot + "Group 3", 3);
 
+    [MenuItem(MenuRoot + "Demo")]
+    private static void SelectDemo() => Select(TestGroups.DemoGroup);
+
+    [MenuItem(MenuRoot + "Demo", true)]
+    private static bool ValidateDemo() => Validate(MenuRoot + "Demo", TestGroups.DemoGroup);
+
     private static void Select(int group)
     {
         EditorPrefs.SetInt(TestGroups.EditorPrefsKey, group);

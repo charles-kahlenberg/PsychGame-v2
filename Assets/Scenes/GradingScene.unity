@@ -2014,7 +2014,7 @@ MonoBehaviour:
   aiResponseText: {fileID: 353335691}
   scoreText: {fileID: 1695875109}
   aiResponseScrollView: {fileID: 359635429}
-  gradingWorkerUrl: https://psych-ai.charliekahlenberg.workers.dev/grade
+  gradingWorkerUrl: https://psych-ai.superscaryskeleton.workers.dev/grade
   timeoutSeconds: 20
 --- !u!4 &1125775958
 Transform:

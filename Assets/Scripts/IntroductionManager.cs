@@ -13,8 +13,8 @@ public class IntroductionManager : MonoBehaviour
     public Button continueButton;
 
     [Header("Cloudflare Worker")]
-    [Tooltip("Your Worker URL, e.g. https://psych-ai.charliekahlenberg.workers.dev/intro")]
-    public string introductionWorkerUrl = "https://psych-ai.charliekahlenberg.workers.dev/intro";
+    [Tooltip("Your Worker URL, e.g. https://psych-ai.superscaryskeleton.workers.dev/intro")]
+    public string introductionWorkerUrl = "https://psych-ai.superscaryskeleton.workers.dev/intro";
 
     private string currentScenario;
     private bool skipTyping = false;

@@ -16,7 +16,7 @@ using UnityEngine.UI;
 [DefaultExecutionOrder(-1001)]
 public class ClickLogger : MonoBehaviour
 {
-    private const string WorkerUrl = "https://psych-log.charliekahlenberg.workers.dev";
+    private const string WorkerUrl = "https://psych-log.superscaryskeleton.workers.dev";
 
     // What to call each scene in the data. Every scene's time-on-screen is
     // reported; a scene missing from this map is logged under its raw scene
@@ -67,14 +67,25 @@ public class ClickLogger : MonoBehaviour
         if (_instance != null) return;
 
         var go = new GameObject("ClickLogger");
-        _instance = go.AddComponent<ClickLogger>();
+        var logger = go.AddComponent<ClickLogger>();
         DontDestroyOnLoad(go);
+
+        // The demo logs nothing: with no _instance every static Log call is a no-op.
+        if (!TestGroups.IsDemo) _instance = logger;
     }
 
     private void Awake()
     {
         _sessionId = Guid.NewGuid().ToString();
         StartCoroutine(BootstrapUsernamePrompt());
+
+        // The demo (?group=demo) asks no username and starts no session;
+        // disabled, it caches no clicks either.
+        if (TestGroups.IsDemo)
+        {
+            enabled = false;
+            return;
+        }
 
         SceneManager.sceneLoaded += OnSceneLoaded;
         StartCoroutine(EnterInitialMenuNextFrame());
@@ -144,6 +155,12 @@ public class ClickLogger : MonoBehaviour
         // Not over the title screen's intro (Feature.MenuIntro).
         while (MenuIntro.Playing) yield return null;
 
+        if (TestGroups.IsDemo)
+        {
+            ShowGraphicsNotice();
+            yield break;
+        }
+
         string savedUsername = PlayerPrefs.GetString("LastUsername", "");
         UsernamePromptUI.Show(savedUsername, username =>
         {
@@ -154,10 +171,14 @@ public class ClickLogger : MonoBehaviour
                 PlayerPrefs.Save();
             }
             StartCoroutine(StartSession());
-
-            if (TestGroups.IsEnabled(Feature.SlowGraphicsNotice) && GraphicsNotice.SoftwareRendering)
-                GraphicsNotice.Show();
+            ShowGraphicsNotice();
         });
+    }
+
+    private static void ShowGraphicsNotice()
+    {
+        if (TestGroups.IsEnabled(Feature.SlowGraphicsNotice) && GraphicsNotice.SoftwareRendering)
+            GraphicsNotice.Show();
     }
 
     private IEnumerator StartSession()

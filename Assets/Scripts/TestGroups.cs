@@ -95,7 +95,14 @@ public static class TestGroups
 
         // Group 3: group 2, but only dealt cards that fit the scenario well.
         { 3, new HashSet<Feature>(PolishedUI) { Feature.GoodFitCards } },
+
+        // ?group=demo, the public demo (LinkedIn): group 3's game, but no
+        // username prompt and nothing logged (ClickLogger). AI still runs.
+        { DemoGroup, new HashSet<Feature>(PolishedUI) { Feature.GoodFitCards } },
     };
+
+    public const int DemoGroup = 0;
+    public static bool IsDemo => CurrentGroup == DemoGroup;
 
     private static int? _currentGroup;
 
@@ -147,7 +154,8 @@ public static class TestGroups
 
     public const string EditorPrefsKey = "PsychGame.EditorTestGroup";
 
-    // Reads ?group=N from the page URL (WebGL). Null when absent or not a number.
+    // Reads ?group=N (or ?group=demo) from the page URL (WebGL). Null when
+    // absent or not recognized.
     private static int? ReadGroupFromUrl()
     {
         string url = Application.absoluteURL;
@@ -162,11 +170,9 @@ public static class TestGroups
         foreach (string pair in url.Substring(query + 1).Split('&'))
         {
             string[] kv = pair.Split('=');
-            if (kv.Length == 2 && kv[0].Equals("group", StringComparison.OrdinalIgnoreCase) &&
-                int.TryParse(kv[1], out int group))
-            {
-                return group;
-            }
+            if (kv.Length != 2 || !kv[0].Equals("group", StringComparison.OrdinalIgnoreCase)) continue;
+            if (kv[1].Equals("demo", StringComparison.OrdinalIgnoreCase)) return DemoGroup;
+            if (int.TryParse(kv[1], out int group)) return group;
         }
         return null;
     }
